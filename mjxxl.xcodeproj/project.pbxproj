@@ -883,11 +883,11 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
-					"../LayaRuntime-iOS/libs",
+					"LayaRuntime-iOS/libs",
 					"$(PROJECT_DIR)/WxSDK",
 				);
 				MARKETING_VERSION = 0.0.1;
-				OTHER_CFLAGS = "-I../LayaRuntime-iOS/include/";
+				OTHER_CFLAGS = "-ILayaRuntime-iOS/include/";
 				OTHER_LDFLAGS = (
 					"-lconch",
 					"-ObjC",
@@ -925,11 +925,11 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = (
-					"../LayaRuntime-iOS/libs",
+					"LayaRuntime-iOS/libs",
 					"$(PROJECT_DIR)/WxSDK",
 				);
 				MARKETING_VERSION = 0.0.1;
-				OTHER_CFLAGS = "-I../LayaRuntime-iOS/include/";
+				OTHER_CFLAGS = "-ILayaRuntime-iOS/include/";
 				OTHER_LDFLAGS = (
 					"-lconch",
 					"-ObjC",
