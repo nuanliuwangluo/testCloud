@@ -1,0 +1,1021 @@
+// 对象皮肤工具类
+class SkinUtils {
+
+    /**
+     * 用户头像
+     * @param {Laya.Sprite} target 
+     * @param {皮肤地址} skinUrl 
+     */
+    static load(target, skinUrl) {
+        this.setSkin(target, skinUrl)
+    }
+
+    /**
+     * @param {Laya.Sprite} target 
+     * @param {string} skinUrl 
+     * @param {Boolean} noneUrlDebugger 
+     */
+    static setSkin(target, skinUrl, noneUrlDebugger = false) {
+        if (!target) throw new Error('SkinUtils the target is null.');
+        else {
+            if (noneUrlDebugger) {
+                let t = Laya.loader.getRes(skinUrl);
+                if (!t) debugger;
+            }
+            if (target instanceof Laya.Image) {
+                if (target.skin != skinUrl) {
+                    target.skin = skinUrl;
+                }
+            } else if (target instanceof Laya.Sprite) {
+                target.SHOWURL = skinUrl;
+                if (skinUrl) {
+                    let t = Laya.loader.getRes(skinUrl);
+                    if (t) {
+                        target.texture = t;
+                    } else {
+                        Laya.loader.load(skinUrl, Laya.Handler.create(this, (view, url) => {
+                            if (view.SHOWURL == url) {
+                                let texture = Laya.loader.getRes(url);
+                                target.texture = texture;
+                            }
+                        }, [target, skinUrl]), undefined, Laya.Loader.IMAGE);
+                    }
+                } else {
+                    target.texture = skinUrl;
+                }
+                // if (!target.texture) {
+                //     target.texture = skinUrl;
+                // } else {
+                //     if (!target.texture.url) {
+                //         target.texture = skinUrl;
+                //     } else if (target.texture.url != skinUrl) {
+                //         target.texture = skinUrl;
+                //     }
+                // }
+            }
+        }
+    }
+
+    /**
+     * 元素添加灰色滤镜
+     * @param {Node} __target  变灰的元素
+     * @param {boolean} __gray 是否为变灰  默认true
+     * @param {boolean} __mouseEnabled 是否接收鼠标事件 默认false 不接受
+     */
+    static gray(__target, __gray, __mouseEnabled) {
+        SkinUtils.grayFilter = this.__getGrayFilter();
+        if ('filters' in __target) {
+            if (__gray || __gray == null) {
+                __target.filters = [SkinUtils.grayFilter];
+                __target.mouseEnabled = __mouseEnabled ? __mouseEnabled : false;
+            } else {
+                __target.filters = [];
+                __target.mouseEnabled = true;
+            }
+        }
+    }
+
+    /**
+     * 创建一个灰色滤镜
+     * @returns 
+     */
+    static __getGrayFilter() {
+        if (SkinUtils.grayFilter) {
+            return SkinUtils.grayFilter;
+        } else {
+            SkinUtils.grayFilter = new Laya.ColorFilter();
+            SkinUtils.grayFilter.gray();
+            return SkinUtils.grayFilter;
+        }
+    }
+}
+SkinUtils.grayFilter = null;
+
+
+// 本地存储工具类
+class LocalUtils {
+
+    static init() {
+        LocalUtils.music.value = this.get(LocalUtils.music.key) || 0;
+        LocalUtils.sound.value = this.get(LocalUtils.sound.key) || 0;
+        LocalUtils.wall.value = this.get(LocalUtils.wall.key) || 0;
+        LocalUtils.speed.value = this.get(LocalUtils.speed.key) || 1;
+        LocalUtils.desk.value = this.get(LocalUtils.desk.key) || 0;
+        LocalUtils.card.value = this.get(LocalUtils.card.key) || 0;
+        LocalUtils.sex.value = this.get(LocalUtils.sex.key) || 0;
+        LocalUtils.gift.value = this.get(LocalUtils.gift.key) || 0;
+
+        __data.mahjong_set.bgIndex = parseInt(LocalUtils.desk.value);
+        __data.mahjong_set.cardIndex = parseInt(LocalUtils.card.value);
+        __data.mahjong_set.wallIndex = parseInt(LocalUtils.wall.value);
+        __data.mahjong_set.speedIndex = parseInt(LocalUtils.speed.value);
+        __data.mahjong_set.sexIndex = parseInt(LocalUtils.sex.value);
+        __data.mahjong_set.giftIndex = parseInt(LocalUtils.gift.value);
+    }
+
+    /**
+     * 保存到本地
+     * @param {string} key 
+     * @param {any} value 
+     */
+    static save(key, value) {
+        try {
+            miniApi.setItem(key, value)
+        } catch (e) {
+            localStorage.setItem(key, value);
+        }
+    }
+    
+    static set(key, value) {
+        this.save(key, value);
+    }
+
+    /**
+     * 根据key获取本地存储内容
+     * @param {string} key 
+     * @returns 
+     */
+    static get(key) {
+        let value = null;
+        try {
+            value = miniApi.getItem(key)
+        } catch (e) {
+            value = localStorage.getItem(key);
+        }
+        return value;
+    }
+
+
+    /**
+     * 保存到本地
+     * @param {string} key 
+     * @param {any} value 
+     */
+    static saveByToday(key, value) {
+        try {
+            miniApi.setItem(this._today + '_' + __data.uid + '_' + key, value)
+        } catch (e) {
+            localStorage.setItem(this._today + '_' + __data.uid + '_' + key, value);
+        }
+    }
+
+    /**
+     * 根据key获取本地存储内容
+     * @param {string} key 
+     * @returns 
+     */
+    static getByToday(key) {
+        let value = null;
+        try {
+            value = miniApi.getItem(this._today + '_' + __data.uid + '_' + key)
+        } catch (e) {
+            value = localStorage.getItem(this._today + '_' + __data.uid + '_' + key);
+        }
+        return value;
+    }
+
+    /**
+     * 获取今日的日期
+     * @returns {string} yyyy-mmmm-dddd
+     */
+    static get _today() {
+        var d = new Date();
+        var year = d.getFullYear()
+        var month = (d.getMonth() + 1)
+        month = month < 10 ? '0' + month : month
+        var date = d.getDate()
+        date = date < 10 ? '0' + date : date
+        return year + '-' + month + '-' + date;
+    }
+}
+LocalUtils.music = {
+    key: 'hymj_game_local_music_setting',
+    value: 0
+};
+LocalUtils.sound = {
+    key: 'hymj_game_local_sound_setting',
+    value: 0
+};
+LocalUtils.wall = {
+    key: 'hymj_game_local_wall_setting',
+    value: 0
+};
+LocalUtils.speed = {
+    key: 'hymj_game_local_speed_setting',
+    value: 0
+};
+LocalUtils.desk = {
+    key: 'hymj_game_local_desk_setting',
+    value: 0
+};
+LocalUtils.card = {
+    key: 'hymj_game_local_card_setting',
+    value: 0
+};
+LocalUtils.sex = {
+    key: 'hymj_game_local_sex_setting',
+    value: 0
+};
+LocalUtils.gift = {
+    key: 'hymj_game_local_gift_setting',
+    value: 0
+};
+
+
+
+// 计时器
+class TimerUtils {
+    static start() {
+        if (TimerUtils.running) {
+            return
+        }
+        TimerUtils.running = true;
+        Laya.timer.loop(1000, this, this.__update);
+    }
+
+    /**
+     * 刷新列表
+     */
+    static __update() {
+        for (let i in TimerUtils.list) {
+            TimerUtils.list[i] && TimerUtils.list[i]();
+        }
+
+
+        let __event = (TimerUtils.attrList.length) ? true : false;
+        // 倒计时的一些值
+        for (let i = 0; i < TimerUtils.attrList.length; i++) {
+            let __value = TimerUtils.attrList[i].value;
+            let __name = TimerUtils.attrList[i].name;
+            // 倒计时 如果为0 结束了
+            if (parseInt(__value[__name]) - 1 <= 0) {
+                __value[__name] = 0;
+                TimerUtils.attrList.splice(i, 1);
+                i--;
+                // 通知计算结束
+                if (__value.event) { // 指定结束事件
+                    game.cb.event(__value.event);
+                } else { // 统一结束事件
+                    game.cb.event(TimerUtils.TIMERUTILS_COMPLETE_EVENT);
+                }
+            } else {
+                __value[__name] = parseInt(__value[__name]) - 1;
+            }
+        }
+        if (__event) game.cb.event(TimerUtils.TIMERUTILS_SECOND_EVENT);
+    }
+
+
+    /**
+     * 函数添加到列表内
+     * @param {*} __name 
+     * @param {*} func 
+     */
+    static addFunc(__name, func) {
+        TimerUtils.list[__name] = func;
+    }
+
+    /**
+     * 删除列表内的函数
+     *  @param {*} __name 
+     *  @param {*} func 
+     */
+    static removeFunc(__name) {
+        if (TimerUtils.list[__name]) TimerUtils.list[__name] = null;
+    }
+
+
+    /**
+     * 添加可倒计时的
+     * @param {object} value object属性所在的对象
+     * @param {string} attrName 属性名
+     * @param {string} eventName 计时归零后派发事件名
+     */
+    static pushAttr(value, attrName, zeroEventName) {
+        let __inValue = TimerUtils.attrList.some(a => {
+            return a.value == value && a.name == attrName
+        });
+        // 如果 列表里没有这个属性
+        if (!__inValue) {
+            TimerUtils.attrList.push({
+                value: value,
+                name: attrName,
+                event: zeroEventName
+            })
+        }
+    }
+}
+TimerUtils.list = [];
+TimerUtils.attrList = [];
+TimerUtils.running = false;
+TimerUtils.TIMERUTILS_SECOND_EVENT = 'timerUtils_second_event';
+TimerUtils.TIMERUTILS_COMPLETE_EVENT = 'timerUtils_complete_event';
+
+
+
+
+
+
+class HtmlTextUtils {
+    static text() {
+        var htmlTxt = arguments[0];
+        var htmlStyle = arguments[1];
+        var strArr = []; //存储 文本内容
+        var customArr = []; //存储文本样式
+        var defaultColor = htmlStyle['color'] ? htmlStyle['color'] : '#ffffff';
+
+        for (let index in htmlStyle) {
+            htmlTxt[index] = htmlStyle[index];
+            htmlTxt.style[index] = htmlStyle[index];
+        }
+
+        for (let i = 2; i < arguments.length; i++) {
+            strArr.push(arguments[i]);
+            customArr.push(arguments[i + 1]);
+            i += 1;
+        }
+
+        var htmlStr = ''
+        for (let i = 0; i < strArr.length; i++) {
+            var color = customArr[i].color ? customArr[i].color : defaultColor;
+            var underline = customArr[i].underline ? "href='" + customArr[i].underline + "'" : "";
+            var bold = customArr[i].bold ? 'bold' : 'normal';
+
+            var br = strArr[i].toString().match('/br');
+            if (br) {
+                var __son_str = strArr[i].toString().split('/br');
+                for (let j = 0; j < __son_str.length; j++) {
+                    htmlStr += "<span color='" + color + "' style='font-weight:" + bold + "' " + underline + ">" + __son_str[j] + "</span>";
+                    htmlStr += "<br/>";
+                }
+            } else {
+                htmlStr += "<span color='" + color + "' style='font-weight:" + bold + "' " + underline + ">" + strArr[i] + "</span>"
+            }
+        }
+        htmlTxt.innerHTML = htmlStr;
+    }
+}
+
+let ResUtils_cdn_filedor = [
+    'cdn/',
+]
+if (!window.wx) ResUtils_cdn_filedor = [];
+let cdnHead = ResUtils_cdn_filedor.length ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+let ResUtils_hashUrl = {};
+class ResUtils {
+    static getFileName(_array) {
+        _array = [...new Set(_array)]
+        let _arr1 = [];
+        for (let i = 0; _array && i < _array.length; i++) {
+            if (fileNameConfig[_array[i]]) {
+                _arr1.push(...fileNameConfig[_array[i]]);
+            }
+        }
+        let _arr2 = []
+        _arr1.forEach(e => {
+            let isCnd = ResUtils_cdn_filedor.some((e1) => {
+                return e.includes(e1)
+            })
+            if (isCnd) {
+                // 资源使用路径
+                ResUtils_hashUrl[e] = e + __version.res
+                // 加载路径
+                _arr2.push('https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' + ResUtils_hashUrl[e])
+            } else {
+                _arr2.push(config.urlHead + e + __version.res)
+            }
+        });
+        return _arr2;
+    }
+    static clearAtlas(url) {
+        if (miniApi.getWxDeviceName() === 'devtools') {
+            // 微信开发者工具清理图集 再重新加载 图片报错 403
+        } else {
+            Laya.loader.clearTextureRes(url)
+        }
+    }
+    static clearTextureRes(_array, excludeRes = []) {
+        // let n1 = _array.filter((e) => {
+        //     return !excludeResFolder.includes(e)
+        // })
+        let g1 = ResUtils.getFileName(_array)
+        for (const iterator of g1) {
+            if (excludeRes.includes(iterator)) {
+                continue
+            }
+            Laya.loader.clearTextureRes(iterator)
+        }
+    }
+    static clearClassTextureRes(CLASS, excludeResFolder = []) {
+        let b = CLASS.clearResFolder.filter((e) => {
+            return !excludeResFolder.includes(e)
+        })
+        let a = b.filter((e) => {
+            if (e == 'common') return false;
+            return true
+        })
+        let g1 = ResUtils.getFileName(a)
+        for (const iterator of g1) {
+            Laya.loader.clearTextureRes(iterator)
+        }
+    }
+}
+
+class RankUtils {
+
+    /**
+     * 是否发生段位变化
+     * @param {number} cup1 
+     * @param {number} cup2 
+     * @return {Boolean} true 发生变化  false 没有发生变化
+     */
+    static rankDrop(cup1, cup2) {
+        let cityId = this.getCityId(__data.uid);
+        let data1 = RankUtils.getRankLvDataByScore(cup1, __data.uid, cityId);
+        let data2 = RankUtils.getRankLvDataByScore(cup2, __data.uid, cityId);
+        // 都是雀神
+        if (data1.toNextLevelNeedCup == 0 && data2.toNextLevelNeedCup == 0) { return false; }
+        if (data1.name != data2.name) {
+            return true;
+        }
+        return false;
+    }
+
+    static async getCityId(uid) {
+        if (__data.othersVO[uid])
+            return __data.othersVO[uid].area;
+        else {
+            await game.server.send(2005, uid);
+            return __data.othersVO[uid].area;
+        }
+    }
+
+    static getPlayerAreaRank(uid) {
+        if (__data.othersVO[uid] && __data.othersVO[uid].scores) {
+            let cups = __data.othersVO[uid].scores[__data.othersVO[uid].area];
+            return RankUtils.getRankLvDataByScore(cups, uid, __data.othersVO[uid].area);
+        }
+        return {};
+    }
+
+    static getRankLvDataByScore(score, uid = __data.uid, cityId = null, useLastLegend = false) {
+        if (!score) return __data.rankLvData[0];
+        for (let index = 0, length = __data.rankLvData.length; index < length; index++) {
+            let e = __data.rankLvData[index];
+            let ne = __data.rankLvData[index + 1];
+            if (!ne || (score >= e.minCup && score < ne.minCup)) {
+                if (e.toNextLevelNeedCup == 0 && __data.rank.xingyaoQueshen.minCup == 0) {
+                    __data.rank.xingyaoQueshen.minCup = e.minCup
+                    __data.rank.chuanqiQueshen.minCup = e.minCup
+                }
+                if (e.toNextLevelNeedCup == 0 && score - e.minCup >= __data.rank.rank_exceed_queshen_score) {
+                    // 使用前一个传奇雀神
+                    if (useLastLegend) {
+                        if (uid == __data.chuanqi.lastPlayer.uid && cityId == __data.chuanqi.lastPlayer.cityId)
+                            return __data.rank.chuanqiQueshen;
+                        // e.name = '传奇雀神'
+                        else
+                            return __data.rank.xingyaoQueshen;
+                        // e.name = '星耀雀神'
+                    }
+                    else {
+                        if (uid == __data.chuanqi.player.uid && cityId == __data.chuanqi.player.cityId)
+                            return __data.rank.chuanqiQueshen;
+                        // e.name = '传奇雀神'
+                        else
+                            return __data.rank.xingyaoQueshen;
+                        // e.name = '星耀雀神'
+                    }
+                } else
+                    return e;
+            }
+        };
+    }
+
+    static isSpecialRank(score, uid = __data.uid, cityId = null) {
+        if (!score) return false;
+        let rd = this.getRankLvDataByScore(score, uid, cityId);
+        if (rd) {
+            if (rd.name == __data.rank.chuanqiQueshen.name || rd.name == __data.rank.xingyaoQueshen.name) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    static getRankLvDataByLv(lv) {
+        for (let index = 0, length = __data.rankLvData.length; index < length; index++) {
+            let e = __data.rankLvData[index];
+            if (e.level == lv) return e
+        };
+    }
+
+    static getCnReg(name) {
+        // let reg = /[\u4e00-\u9fa5]/g;
+        // let content = name.match(reg).join('');
+        // return content;
+        return name;
+    }
+
+    /**
+     * 获取今日提升段位记录
+     * @param {string} name 
+     * @returns 
+     */
+    static getTodayRecord(name) {
+        let mix_name = this._createTodayName(name);
+        let value = miniApi.getItem(mix_name);
+        if (value)
+            return true;
+        return false;
+    }
+
+    /**
+     * 保存今日提升段位记录
+     * @param {string} name 
+     */
+    static setTodayRecord(name) {
+        let mix_name = this._createTodayName(name);
+        miniApi.setItem(mix_name, 'true');
+    }
+
+
+    static _createTodayName(name) {
+        return `${this._today}-${name}-${__data.uid}-${HallPlay.lastCityId}`;
+    }
+
+    /**
+     * 获取今日的日期
+     * @returns {string} yyyy-mmmm-dddd
+     */
+    static get _today() {
+        var d = new Date();
+        var year = d.getFullYear()
+        var month = (d.getMonth() + 1)
+        month = month < 10 ? '0' + month : month
+        var date = d.getDate()
+        date = date < 10 ? '0' + date : date
+        return year + '-' + month + '-' + date;
+    }
+
+
+    static getAreaRankInfo(rank) {
+        if (rank == -1)
+            return '未上榜';
+        else if (rank <= 100)
+            return `第${rank}名`;
+        else if (rank > 100)
+            return `第100+名`;
+        else
+            return '';
+    }
+
+    static getAreaEasyName(area) {
+        if (__data.othersVO[__data.uid] && __data.othersVO[__data.uid].area != area) {
+            let a = excelUtils.getEasyName(area)
+            return `[${a}]`;
+        } else {
+            return '';
+        }
+    }
+}
+
+
+class SortUtils {
+    static sort(list, descend = false, field = '') {
+        list.sort((a, b) => {
+            if (descend) {
+                if (field && typeof a == 'object' && typeof b == 'object') {
+                    return b[field] - a[field];
+                } else {
+                    return b - a;
+                }
+            } else {
+                if (field && typeof a == 'object' && typeof b == 'object') {
+                    return a[field] - b[field];
+                } else {
+                    return a - b;
+                }
+            }
+        })
+    }
+}
+
+
+class ImageFont extends Laya.Sprite {
+    constructor(urls__, align, valign, distance) {
+        super();
+        if (urls__) this.init(urls__, align, valign, distance);
+    }
+
+    set skins(value) { this.urls__ = value; }
+
+    init(urls__, align, valign, distance) {
+        this.urls__ = urls__;
+        this._text = 0;
+        this._id = Laya.Pool.getItemByClass('ImageFont_Image', Laya.Image);
+        this._width$ = 0;
+        this._height$ = 0;
+        this._distance = distance ? distance : 0;
+        //2张图片文本间隔
+        this.dis = 0;
+        this.align = align || 'left';
+        this.valign = valign || 'top';
+        this.container = new Laya.Sprite();
+        this.addChild(this.container);
+    }
+
+    get text() {
+        return this._text;
+    }
+    set text(value) {
+        this._text = value;
+
+        let __fontContainer = this.__createFont();
+        this.container.addChild(__fontContainer);
+        this.size(__fontContainer.width, __fontContainer.height);
+
+        if (this.align == 'left') this.container.x = 0;
+        else if (this.align == 'right') this.container.x = -this.width;
+        else if (this.align == 'center') { this.container.x = -this.width / 2; }
+
+
+        if (this.valign == 'top') this.container.y = 0;
+        else if (this.valign == 'bottom') this.container.y = -this.height;
+        else if (this.valign == 'center') { this.container.y = -this.height / 2; }
+    }
+
+
+    set numberText(value) {
+
+    }
+
+
+
+    __createFont() {
+        this._width$ = this._height$ = 0;
+        this.__sp = this.__sp || new Laya.Sprite();
+        try {
+            while (this.__sp.numChildren) {
+                let node = this.__sp.removeChildAt(0);
+                node.skin = '';
+                Laya.Pool.recover('ImageFont_Image', node);
+            }
+        } catch (e) {
+            if (this.__sp) {
+                this.__sp.destroy();
+                this.__sp = null;
+            }
+            this.__sp = new Laya.Sprite();
+            log('创建字体容器错误：', e);
+        }
+
+        var str = String(this._text);
+        var l = str.length;
+        //根据str内容重新排序数字
+        for (var i = 0; i < l; i++) {
+            var a = str.charAt(i);
+            var s = Laya.Pool.getItemByClass('ImageFont_Image', Laya.Image);
+            if (!this.urls__[a]) throw new Error("NumText 字符 " + a + " 没有对应URL");
+            s.skin = this.urls__[a];
+            this.__sp.addChild(s);
+            // var d = i >= 1 ? this.dis : 0;
+            // s.x = this._width$ + d + this._distance;
+            // this._width$ = this._width$ + s.width + d + this._distance;
+
+            var d = i >= 1 ? this._distance : 0;
+            s.x = this._width$ + d;
+            this._width$ = this._width$ + s.width + d;
+            this._height$ = Math.max(this._height$, s.height);
+        }
+
+        this.__sp.size(this._width$, this._height$);
+        return this.__sp;
+    }
+}
+
+
+/**
+ * 数值转换工具
+ */
+class GoldFormatUtils {
+
+    /**
+     * 字符串数值
+     * @param {*} value 要转换的数值
+     * @param {*} toFixed 转换后是否需要已小数显示 0 不显示 >0 小数显示的位数
+     * @param {*} rule 格式规则，默认 万，千万
+     * @returns 
+     */
+    static format(value = '', toFixed = 0, rule = GoldFormatUtils.FORMATRULE) {
+        value = value.toString();
+        // 是否为负值
+        GoldFormatUtils._minus = value.indexOf('-') === 0 ? '-' : '';
+        // 如果为负值 扣除负号进行格式化
+        value = value.indexOf('-') === 0 ? value.substring(1) : value;
+
+        toFixed = toFixed;
+        let formatValue, tempValue;
+        /**
+         * 当前value是否为小数
+         */
+        let _decimalIndex = this.decimalIndex(value);
+        // 不是小数
+        if (_decimalIndex == -1) {
+            formatValue = this._formatByRule(value, toFixed, rule);
+        } else { // 是小数
+            tempValue = value.substring(0, _decimalIndex);
+            formatValue = this._formatByRule(tempValue, toFixed, rule);
+        }
+        // console.log('数值转换：' + value + '--->' + formatValue);
+        return GoldFormatUtils._minus + formatValue;
+    }
+
+    /**
+     * 是否为小数
+     * @param {*} value 
+     * @returns -1不是小数 > -1 为小数点得index
+     */
+    static decimalIndex(value) {
+        return value.toString().indexOf('.');
+    }
+
+    /**
+     * 根据规则进行检测
+     * @param {*} value 
+     * @param {*} toFixed 
+     * @returns 
+     */
+    static _formatByRule(value, toFixed, rule) {
+        for (let i = 0; i < rule.length; i++) {
+            let ruleValue = rule[i].value;
+            // 字符串长度不匹配  继续下一个检测
+            if (value.length < ruleValue.length) { continue }
+            // 长度匹配
+            else {
+                /**
+                 * 获取整数值
+                 * value 取0~(value.length-ruleValue.length+1)  长度差值+1 为数值的末尾位置
+                 */
+                let _intValue = value.substring(0, value.length - ruleValue.length + 1);
+                /**
+                 * 获取小数值 取(value.length-ruleValue.length+1)~(value.length-ruleValue.length+1+toFixed)  整数值的末尾加上要取得长度
+                 */
+                let _decimalValue = this._checkFixed(value.substring(value.length - ruleValue.length + 1, value.length - ruleValue.length + 1 + toFixed));
+                /**
+                 * 返回拼接的新字符
+                 */
+                return _intValue + _decimalValue + rule[i].name;
+            }
+        }
+        /**
+         * 如果没有满足的情况 反馈原始值
+         */
+        return value;
+    }
+
+    /**
+     * 校验小数值 全部是0返回空字符   有一位不是0返回原始值
+     * @param {string} value 
+     * @returns 
+     */
+    static _checkFixed(value) {
+        if (value && value.length) {
+            while (true) {
+                let code = parseInt(value.charAt(value.length - 1));
+                if (code == 0) {
+                    value = value.substring(0, value.length - 1);
+                } else {
+                    break;
+                }
+            }
+        }
+        for (let i = value.length - 1; i >= 0; i++) {
+            let code = parseInt(value.charAt(i));
+            if (code > 0) { return '.' + value; }
+        }
+        return '';
+    }
+}
+/**
+ * 规则列表 如果有新需求  增加一个新的列表  然后通关format参数传递进行format
+ */
+GoldFormatUtils.FORMATRULE = [{ value: '10000000000000000', name: '京' }, { value: '1000000000000', name: '兆' }, { value: '100000000', name: '亿' }, { value: '10000', name: '万' }];
+window.GoldFormatUtils = GoldFormatUtils;
+
+
+
+
+class LabelHiddenUtils {
+    /**
+     * 
+     * @param {Laya.Label} label 
+     * @param {string} text 
+     * @param {string} replaceStr 默认...
+     * @returns 
+     */
+    static getAdapterContent(label, text, replaceStr = '...') {
+        try {
+            label.text = text;
+            // 超出了文本的长度
+            if (label.textField.textWidth > label.width) {
+                let index = -1;
+                let i = text.length;
+
+                let time = 1000;
+                while (index < 0 && time > 0) {
+                    time--;
+                    let subStr = text.substring(0, i);
+                    subStr += replaceStr;
+                    label.text = subStr;
+                    if (label.textField.textWidth > label.width) {
+                        i--
+                    } else {
+                        time = 0
+                        index = i
+                    }
+                }
+                return text.substring(0, index) + replaceStr;
+                // while (index < 0) {
+                //     let subStr = text.substring(0, i);
+                //     subStr += replaceStr;
+                //     label.text = subStr;
+                //     if (label.textField.textWidth > label.width) {
+                //         index = i - 1;
+                //     } else {
+                //         i++;
+                //     }
+                //     // 安全机制， 超过1000次  不再计算了
+                //     time--;
+                //     if (time <= 0) {
+                //         index = text.length;
+                //     }
+                // }
+                // return text.substring(0, index) + replaceStr;
+            } else {
+                return text || '';
+            }
+        } catch (e) {
+            return text || '';
+        }
+    }
+}
+
+// 处理excelconfig文件逻辑
+let uniqueId = 0;
+
+function memoize(fn) {
+    const cache = new Map(); // 创建缓存对象，用于存储已计算的结果
+    const functionName = fn.name || `anonymous_${uniqueId++}`; // 为匿名函数生成唯一的名称
+
+    return function (...args) {
+        const key = `${functionName}:${JSON.stringify(args)}`; // 将函数名和参数序列化为字符串作为缓存键
+        if (cache.has(key)) { // 如果缓存中有结果，直接返回
+            return cache.get(key);
+        }
+        const result = fn.apply(this, args); // 调用原函数并获取结果
+        cache.set(key, result); // 将结果存入缓存
+        return result;
+    };
+}
+
+let excelUtils = {
+    getModelByCityIdRuleId: (cityId, ruleId) => {
+        if (ruleId < 0) {
+            let a = __data.hashCityIdRuleIdToModel[0 + '-' + ruleId];
+            // let b = JSON.parse(JSON.stringify(a))
+            a.forEach(e => {
+                e.cityId = cityId
+            });
+            return a;
+        } else {
+            return __data.hashCityIdRuleIdToModel[cityId + '-' + ruleId] || [];
+        }
+        return [];
+    },
+    getEasyName: memoize((cityId) => {
+        let a = excelUtils.getUmEventName(cityId)
+        return a.charAt(0);
+    }),
+    getCityName_mj: memoize((cityId, ruleId) => {
+        if (ruleId == -1) return "黑龙江麻将";
+        else if (ruleId == -2) return "大众竞技麻将";
+        else if (ruleId == -3) return "红中赖子麻将";
+        else if (ruleId == -4) return "广东麻将";
+        else {
+            let a = excelUtils.getUmEventName(cityId)
+            return a + '麻将';
+        }
+    }),
+    getUmEventName: memoize((cityId) => {
+        // if (cityId == -1) return '黑龙江';
+        // if (cityId == -2) return '大众';
+        let a = __tool.gdp(__data, `excelConfig.hashCityIdVO[${cityId}].cityName`)
+        let e = a
+        return e || '未知'
+    }),
+    getCityIdByMjName_mj: memoize((cityName_mj) => {
+        // if (cityName_mj.includes('黑龙江')) return -1;
+        // if (cityName_mj.includes('大众')) return -2;
+        for (const key in __data.excelConfig.hashCityIdVO) {
+            let e = __data.excelConfig.hashCityIdVO[key]
+            if (cityName_mj.includes(e.cityName)) {
+                return e.cityId
+            }
+        }
+        return 0;
+    }),
+    getBigCityName: memoize((bigCityId) => {
+        for (const key in __data.excelConfig.hashCityIdVO) {
+            let e = __data.excelConfig.hashCityIdVO[key]
+            if (e.bigCityId == bigCityId) {
+                return e.bigCity
+            }
+        }
+        return null;
+    }),
+    getSmallCityListByBigCity: memoize((bigCityName) => {
+        let n = []
+        for (const key in __data.excelConfig.hashCityIdVO) {
+            let e = __data.excelConfig.hashCityIdVO[key]
+            if (e.bigCity == bigCityName) {
+                n.push({
+                    cityName: e.cityName,
+                    cityId: e.cityId
+                })
+            }
+        }
+        return n;
+    }),
+    getPlayIdName: memoize((playId) => {
+        if (playId == -1) {
+            return '经典黑龙江玩法'
+        } else if (playId == -2) {
+            return '大众竞技玩法'
+        } else if (playId == -3) {
+            return '红中赖子玩法'
+        } else if (playId == -4) {
+            return '广东推倒胡玩法'
+        } else {
+            for (const key in __data.excelConfig.hashCityIdVO) {
+                let e = __data.excelConfig.hashCityIdVO[key]
+                let n = e.onPlay + ',' + e.offPlay
+                if (n.toArray(',').includes(String(playId))) {
+                    return '正宗' + e.cityName + '玩法'
+                }
+            }
+        }
+        return null;
+    }),
+    getPlayOnOff: memoize((cityId) => {
+        let i = __data.excelConfig.hashCityIdVO[cityId]
+
+        let pon = i.onPlay && i.onPlay.split(',') || [];
+        let poff = i.offPlay && i.offPlay.split(',') || [];
+        let pall = [...pon, ...poff]
+
+        let friend_pon = i.onFriend && i.onFriend.split(',') || [];
+        let friend_poff = i.offFriend && i.offFriend.split(',') || [];
+        let friend_pall = [...friend_pon, ...friend_poff]
+
+        return {
+            onPlayId: pon,
+            offPlayId: poff,
+            allPlayId: pall,
+            defaultPlayId: i.defaultPlay,
+            allPlay: pall.map((e) => {
+                return { playId: e, playName: excelUtils.getPlayIdName(e) }
+            }),
+
+            friend_onPlayId: friend_pon,
+            friend_offPlayId: friend_poff,
+            friend_allPlayId: friend_pall,
+            friend_defaultPlayId: i.defaultFriend,
+            friend_allPlay: pall.map((e) => {
+                return { playId: e, playName: excelUtils.getPlayIdName(e) }
+            }),
+        }
+    }),
+
+}
+
+let effectUtils = {
+    async breathe(instance, normalScale, maxScale, time) {
+        if (instance.isBreathe) return;
+        instance.scaleX = normalScale
+        instance.scaleY = normalScale
+        instance.isBreathe = true
+        await __tool.tweenp(instance, { scaleX: maxScale, scaleY: maxScale }, time)
+        await __tool.tweenp(instance, { scaleX: normalScale, scaleY: normalScale }, time)
+        instance.isBreathe = false
+        this.breathe(instance, normalScale, maxScale, time)
+    },
+    stopBreathe(instance) {
+        instance.isBreathe = false
+        instance.scaleX = 1;
+        instance.scaleY = 1;
+        Laya.Tween.clearAll(instance)
+    }
+}
+

@@ -1,0 +1,150 @@
+class HallPlayRank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hall_play_rank',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = ''
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+        this.btn_share.addComponent(S_HallPlayRank_share)
+    }
+
+    added(mjIndex) {
+        let a1Name = excelUtils.getCityName_mj(HallPlay.lastCityId)
+        this.curMjName = a1Name;
+        this.txt_title.text = a1Name.replace('麻将', '') + '本地榜';
+        HallPlayRank.selectMJName = a1Name;
+
+        this.update_rank()
+        game.cb.on('update_city_rank_data', this, this.update_city_rank_data)
+        // game.cb.on('update_chuanqi_data', this, this.update_city_rank_data)
+    }
+
+    onDisable() {
+        game.cb.off('update_city_rank_data', this, this.update_city_rank_data)
+        // game.cb.off('update_chuanqi_data', this, this.update_city_rank_data)
+    }
+
+    updateItem(cell, index) {
+        let useData = __data[`rankCity${HallPlay.lastCityId}`]
+        if (!useData) {
+            console.error('update_city_rank_data 没有这个城市排行', HallPlay.lastIndex)
+            return
+        };
+        let array = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            array.push(...useData[page])
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !useData[nextPage]) {
+            game.server.send(2407, HallPlay.lastCityId, nextPage)
+        }
+    }
+    update_rank() {
+        this.update_city_rank_data()
+        this.__list.scrollTo(0, 0)
+    }
+    update_city_rank_data() {
+        let useData = __data[`rankCity${HallPlay.lastCityId}`]
+        if (!useData) {
+            console.error('update_city_rank_data 没有这个城市排行', HallPlay.lastIndex)
+            return
+        };
+        let data = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            data.push(...useData[page])
+        }
+        useData[`my`].isMy = true;
+        this.item_me.dataSource = useData[`my`]
+        this.item_me.img_line.visible = false;
+        this.__list.array = data;
+
+        if (useData[`my`].score < 60) {
+            this.item_me.visible = false;
+            this.txt_tips_rank1.visible = true;
+        } else {
+            this.item_me.visible = true;
+            this.txt_tips_rank1.visible = false;
+        }
+    }
+}
+
+class HallPlayRankItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hall_play_rankItem',
+            module: false
+        })
+        game.utils.updateLabelY(this.txt_lv)
+        game.utils.updateLabelY(this.txt_score)
+        game.utils.updateLabelY(this.txt_rank_name)
+        this.addComponent(S_click_HallPlayRankItem_showPlayerInfo)
+    }
+    onEnable() { }
+
+    onDisable() { }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        LabelHiddenUtils.getAdapterContent(this.txt_rank_name, vo.name)
+        // this.txt_rank_name.text = vo.name;
+        this.img_head.skin = __data.getHeadTestDefault(vo.head);
+        // let type = game.scene.get(Hall).default_rank_type;
+        let rd = RankUtils.getRankLvDataByScore(vo.score, vo.uid, vo.cityId)
+
+        this.img_lv.visible = false
+        this.img_lv1.visible = false
+        if (rd.toNextLevelNeedCup == 0) {
+            this.img_lv1.visible = true
+            this.txt_lv1.text = rd.name;
+            this.txt_score.text = vo.score - rd.minCup// bigNumberToCH(vo.score, 2);
+            this.img_lv1.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}1.png`
+        } else {
+            this.img_lv.visible = true
+            this.txt_lv.text = rd.name;
+            this.txt_lv_num.text = rd.level;
+            this.img_lv.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}.png`;
+        }
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.rank == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.rank <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.rank > 999 ? '999+' : vo.rank;
+        }
+        this.txt_mjName.text = game.scene.get(HallPlayRank).curMjName;
+        if (vo.isMy) {
+            this.img_line.visible = false;
+        }
+        this.img_head_frame.skin = PropIcon.icon[vo.headFrameId || 301].skin
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.hall_play_rankItemUI', HallPlayRankItem);
+
+class S_click_HallPlayRankItem_showPlayerInfo extends Laya.Script {
+    onClick(e) {
+        let vo = this.owner.__vo;
+        __showScene.show_playerInfo(vo)
+    }
+}
+
+class S_HallPlayRank_share extends Laya.Script {
+    onClick(e) {
+        miniApi.share({
+            titleId: __tool.randomRange(1, 5),
+            cityId: HallPlay.lastCityId,
+            params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+        })
+    }
+}

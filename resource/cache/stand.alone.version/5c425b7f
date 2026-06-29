@@ -1,0 +1,9 @@
+class LOGO extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/logo',
+            // scaleX: 1,
+            // scaleY: 1
+        })
+    }
+}

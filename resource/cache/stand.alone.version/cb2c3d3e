@@ -1,0 +1,62 @@
+class LoginAuth extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/LoginAuth',
+        })
+        this.btn_close.addComponent(S_no_loginAuth)
+        this.btn_no.addComponent(S_no_loginAuth)
+        this.btn_yes.addComponent(S_yes_loginAuth)
+    }
+    onEnable() {
+        this.htmlt.innerHTML = `
+        <span style='color:#000000; font-size: 40'>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;感谢您使用17好友麻将，在您使用本游戏过程中，我们可能会对您的部分
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        个人信息进行收集、使用和共享。请您仔细阅读
+        <span style='color:#4492db; font-size: 40 href="http://ask.layabox.com/"'>
+        <a href="xieyi" style='text-decoration:none;'>《用户协议》</a>
+        </span>
+        和
+        <span style='color:#4492db; font-size: 40'>
+        <a href="zhengce" style='text-decoration:none;'>《隐私政策》</a>
+        </span>
+        ，
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        并确定完全了解我们对您个人信息的处理规则。
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;如您同意《用户协议》与《隐私政策》，请点击“同意”开始使用本游戏，
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        我们会尽全力保护您的个人信息安全。
+        </span>
+        `
+        this.htmlt.style.leading = 30;
+        this.htmlt.on(Laya.Event.LINK, this, this.onLink);
+    }
+    onLink(e) {
+        console.log(e);
+        if (e == 'xieyi') {
+            new S_login_xieyi().onClick()
+            return
+        }
+        if (e == 'zhengce') {
+            new S_login_yinsi().onClick()
+            return
+        }
+    }
+}
+class S_no_loginAuth extends Laya.Script {
+    onClick(e) {
+        miniApi.exit()
+    }
+}
+class S_yes_loginAuth extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(LoginAuth)
+        miniApi.setItem('LoginAuthResult', 1)
+        app_test_show_loginBtn()
+    }
+}

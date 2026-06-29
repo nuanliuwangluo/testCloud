@@ -1,0 +1,30 @@
+class FriendRoom_input_replayId extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_input_replayId',
+            layer: 'panel'
+        })
+        this.s6 = this.addComponent(S_input_id_6).init('replayId')
+        this.btn_play.addComponent(S_replayId_play)
+        this.btn_paste.addComponent(S_replayId_paste)
+    }
+    onDisable() {
+        ResUtils.clearAtlas('res/atlas/cdn/friendRoom_input.atlas')
+    }
+}
+class S_replayId_play extends Laya.Script {
+    onClick(e) {
+        DeskReplayUtils.hallCityId = HallPlay.lastCityId;
+        DeskReplayUtils.lookOthers = true;
+        __showScene.wait();
+        game.server.send(14015, this.owner.parent.s6.getInputId());
+    }
+}
+class S_replayId_paste extends Laya.Script {
+    onClick(e) {
+        miniApi.paste((e) => {
+            this.owner.parent.s6.input_id = String(e).slice(0, 10)
+            this.owner.parent.id1.text = String(e).slice(0, 10)
+        })
+    }
+}

@@ -1,0 +1,434 @@
+let __socket_msg_hall_send = {
+    99(id) {
+        this.int = id
+    },
+    998() {
+        // trace('998 send')
+        // this.int = 0;
+        // this.int = 0;
+        // this.long = Date.now()
+    },
+    // 登陆
+    1001(openid, name, head, sex) {
+        // 'o4Xnfvwxv1pRA0IKMnBB9FCk473M'
+        // '%E6%98%B5%E7%A7%B0_1' 
+        this.string = openid;
+        this.string = encodeURIComponent(name);
+        this.string = head;
+        this.int = sex;
+        this.int = __data.clientType // 1 web 2 小程序 3 app
+        this.string = game.utils.getWebParams("kp") ? game.utils.getWebParams("kp") : "";
+        this.int = __data.loginType // 1 web 2 wx 3 ios 4 input
+
+    },
+    // 1111(code) {
+    //     this.string = code;
+    // },
+    // 切换城市
+    1002(cityId) {
+        this.int = cityId
+    },
+    // 同步用户数据
+    2201(realName, cardNo, phone, channelId, gold, stone) {
+        this.string = realName;
+        this.string = cardNo
+        this.string = phone
+        this.int = channelId
+        this.int = gold
+        this.int = stone
+    },
+    // 查询用户数据(
+    2202(uid) {
+        this.int = uid;
+    },
+    // 绑定微信
+    2203(wxId, platformId) {
+        this.string = wxId
+        this.int = platformId
+    },
+    // 实名认证
+    2204(realName, cardNo) {
+        this.string = realName;
+        this.string = cardNo;
+    },
+    // 绑定收货地址
+    2205(name, phone, address) {
+        this.string = name;
+        this.string = phone;
+        this.string = address;
+    },
+    // 设置邀请人(2006)
+    2206(invited_bind_uid) {
+        this.int = invited_bind_uid;
+    },
+    // 领取邀请奖励
+    2207(rewardId) {
+        // 领取哪一层的奖励，第一层是0，以此类推
+        this.int = rewardId;
+    },
+    // 邀请信息
+    2226() { },
+    // 查询领取记牌器CD
+    2209() { },
+    2210() { },
+    // 广告抽奖
+    2213() { },
+    2214() { },
+    2215() { }, // 救济金领取后台开关
+    // 1.设置并查询 “我的玩法” -1查询 其他设置 传入城市id
+    2216(cityId) { this.int = cityId },
+    2217(sex) { this.int = sex; },
+    // 查询连续登录天数和各档次奖励
+    2218() { },
+    // 领取连续登录奖励
+    2219(isVideo) { this.int = isVideo },
+    // 查询首充豪礼是否已经购买
+    2220() { },
+    2221() { },
+
+    // 背包道具
+    2224() { },
+
+    // 用户信息
+    2005(uid) {
+        // delete __data.othersVO[uid];
+        this.int = uid;
+    },
+    2211() {
+        // 查询救济金剩余次数
+    },
+    2212(isMul) {
+        this.int = isMul;
+        // 领取救济金奖励
+    },
+    2230() {
+        //     // 每日输赢金币上限消息
+    },
+    2232() {
+        // 邮件列表
+    },
+    2233() {
+        // 删除已读邮件
+    },
+    2234(emailId) {
+        // 打开邮件
+        this.int = emailId
+    },
+    2235(emailId) {
+        // 领取邮件
+        this.int = emailId
+    },
+    2236(emailId) {
+        // delete邮件
+        this.int = emailId
+    },
+    2238(isEffect = 0) {
+        this.int = isEffect
+        // 查询财神树首页状态
+    },
+    2239(type) {
+        // 查询荣耀榜 int 0-全部地区 1-我的地区
+        this.int = type;
+    },
+    2240() {
+
+    },
+    2241(propId, num = 1) {
+        this.int = propId;
+        this.int = 1;
+    },
+    2242(isToday, page, isAni = 0) {
+        this.int = isToday;
+        this.int = page;
+        this.int = 10
+        this.int = isAni
+        // 查询个人贡献榜
+    },
+    2243() {
+        // 领取全部邮件
+    },
+    2244() {
+        // 模拟创建10个邮件
+    },
+    2245() {
+        // 查询新人礼包
+    },
+    2246() {
+        // 领取新人礼包
+    },
+    2247() { },
+    2404(goodsId, buyNum = 1, receiveType = 0) {
+        // 商城购买金币
+        this.int = goodsId;
+        this.int = buyNum;
+        this.int = receiveType;
+    },
+    2405() {
+        // 商城-购买钻石-查询是否达到每日充值上限
+    },
+    2406(goodsId) {
+        // 商城购买钻石
+        this.int = goodsId;
+        this.string = '';
+    },
+    2407(cityId, pageNum) {
+        // 查询地区排行榜-匹配页面用
+        this.int = cityId;
+        this.int = pageNum;
+    },
+    2409(type) {
+        // 领取七日签到奖励反馈
+        // 1看视频加成 0未看视频
+        this.int = type
+    },
+    2411() {
+        // 查询VIP剩余天数
+    },
+    2412(propId) {
+        // 开通VIP月卡
+        this.string = propId
+        this.int = 1
+    },
+    2413() {
+        // 领取VIP每日奖励反馈
+    },
+    2250() {
+
+    },
+    2251(seasonId, cityId) {
+        this.int = seasonId
+        this.int = cityId;
+    },
+    2252() { },
+    2253(headFrameId) {
+        this.int = headFrameId
+    },
+    // 结算双倍领取金币
+    3331(type) { this.int = type },
+    // 返回结算金币
+    3333(type) { this.int = type },
+    3334() { }, // 3331 3333开关 不发送3334 那么 3331 3333 不好使
+    16011() { },// 放弃胜利激励
+    16015() { },// 放弃失败激励
+    16020() { },// 查询支付
+    16021() { },// 招商开关
+    16022() { },// 祈福查询
+    16023(type, rate, radio) {
+        this.int = type;
+        this.int = rate;
+        this.int = radio;
+    },// 祈福购买
+    16024() { },// 祈福购买通知
+    // 所在队伍
+    3326(gameId) {
+        this.int = gameId;
+    },
+
+    // 查询修改次数
+    3328() { },
+    // 查询房间总人数
+    3329(ruleId) { this.int = ruleId },
+    3336(type, content, contact) {
+        // 投诉 3336  
+        // int 1 - 投诉 2 - 建议 3 - 吐槽 
+        // Strjing 内容
+        // String 联系方式
+        // 返回 int 1 成功 0 失败
+        this.int = type;
+        this.string = content;
+        this.string = contact;
+    },
+
+    //前端发送聊天内容
+    5002(a) {
+        this.writeString(a)
+        game.cb.dispatchEvent(__eh + 'chat_btn_goin_cd')
+    },
+    //发送道具
+    5003(playerID, giftID) {
+        this.writeInt(playerID)
+        this.writeInt(giftID)
+    },
+    5005(a, ai_uid) {
+        this.writeString(a);
+        this.writeInt(ai_uid);
+    },
+    5006(r_uid, giftId, ai_uid) {
+        this.writeInt(r_uid);
+        this.writeInt(giftId);
+        this.writeInt(ai_uid);
+    },
+    // 是否在房间里
+    3001() { },
+    10001(type) { this.int = type },
+    10002() { },
+    10003() { },
+    10004(type) { this.int = type },
+    10005() { },
+    10007() { },
+    10009(type) { this.int = type },
+    11001(name, head) {
+        this.string = encodeURIComponent(name);
+        this.string = head;
+    },
+    11002(type) {
+        this.int = type;
+        this.int = 1;
+    },
+    11003(clientType, advType) {
+        this.int = clientType;
+        this.int = advType;
+    },
+    11004(cityId) {
+        this.int = cityId;
+    },
+    11006() { },
+    11007() { },
+    11008() { },
+    11009() { }, // 统计累计跳过广告次数
+    // 查询商品当日购买次数
+    12001(goodsId) { this.int = goodsId },
+    // 查询商品总购买次数 
+    // 12002(goodsId) { this.int = goodsId },
+    13001() { },
+    13002() { },
+    13003(level) { this.int = level },
+    13004() { },
+    13005(channel) { this.string = channel },
+    13006(exchangeCode) { this.string = exchangeCode },
+    14001() { },
+    14003(uid) { this.int = uid },
+    14004(cityId) { this.int = cityId },
+    14013(uid, dayId, page, size = 10) {
+        this.int = uid;
+        this.int = dayId;
+        this.int = page;
+        this.int = size;
+    },
+    14014(roomId, page, size) {
+        this.int = roomId;
+        this.int = page;
+        this.int = size
+    },
+    14020() { },
+    14022(state) { this.int = state; }, // 设置自动状态 参数 int 状态 1-开启 0-关闭
+    14023() { }, // 查询自动状态 无参数 返回 1-开启中 0-未开启
+    15001() { },
+    15002() { },
+    15003() { },
+    15004(positionId, compId) {
+        S_garden_build_sure.compId = compId;
+        this.int = positionId
+        this.int = compId;
+    },
+    15005(branchTaskId, compId) {
+        S_garden_build_sure.compId = compId;
+        this.int = branchTaskId;
+        this.int = compId;
+    },
+    15006() { },
+    15007() { },
+    15008() { },
+    15009() { },
+    15010() { },
+    15011(page) { this.int = page },
+    15012() { },
+    15013(otherUid) { this.int = otherUid },
+
+    15014() {
+        this.string = JSON.stringify(__data.serverRecord)
+    },
+    15015() { },
+    15017(uid) { this.int = uid },
+
+    16001() { },
+    16002(gold) { this.int = gold },
+    16003() { },
+    16004() { },
+    16005(type) {
+        // 查询 1活动 2系统
+        this.int = type
+    },
+    16006(type) {
+        // 订阅 1活动 2系统
+        this.int = type
+    },
+    16007() { },
+    16008(page, size = 10) {
+        this.int = page;
+        this.int = size
+    },
+    16009() { },
+    16010() { },
+    16013() { },
+    16014() { },
+    16016() { },
+    16017() { },
+    16018() { },
+    16026(code, iv, data) {
+        this.string = code;
+        this.string = iv;
+        this.string = data;
+    },
+    16027() { },
+    16028(str) { this.string = str },
+    16029() { },
+    16030() { },
+    17001() { },
+    17002(goodsId) { this.int = goodsId },
+    17003() { },
+    17004() { },
+    18001() { },
+    18002() { },
+    18003() { },
+    18004() { },
+    18005() { },
+    18006(i) { this.int = i; },
+    18007() { this.int = 1; },
+    18008() { },
+    18009() { },
+    18010() { },
+    18011() { },
+    18012() { },
+    18013() { },
+    18014() { },
+    18015() { },
+    18016() { },
+    18017() { },
+    18018() { },
+    // rType: 1, // 1 主动查询 0 被动查询 3 结算界面查询
+    18019(uid, rType = 1) { this.int = uid; this.int = rType; },
+    18020() { },
+    18021(playId, winId, receiveMsgId) {
+        this.int = playId;
+        this.int = winId;
+        this.int = receiveMsgId;
+    },
+    // 领取任务 18022 参数：int t
+    18022(t) { this.int = 1; },
+    // 复活 18023 参数：int t
+    18023(t) { this.int = 1; },
+
+    18026() { },
+    18027() { },
+    18028() { },
+    18029(index) { this.int = index; },
+    18030() { },
+    18031() { },
+    70001(page) { this.int = page },
+    70002(level) { this.int = level },
+    70003(level) { this.int = level },
+    70005() { },
+
+    19003() { },
+    19004() { },
+    19005() { },
+    19006() { },
+    19007() { },
+    19008(transactionId) { this.string = transactionId; },
+
+    19009(query) { this.string = query; },
+    20001(redId) { this.int = redId },
+    20002() { },
+    20004(redId) { this.int = redId; this.string = 'SUCCESS'; },
+}

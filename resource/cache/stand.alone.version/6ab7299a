@@ -1,0 +1,748 @@
+(function () {
+    'use strict';
+
+    class ClipL extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:urlPrefix, tips:"图片路径 cdn/a_seven_hand/", type:String, default:''}*/
+            this.urlPrefix = '';
+            /** @prop {name:startIndex, tips:"路径后缀开始索引", type:Number, default:0}*/
+            this.startIndex = 0;
+            /** @prop {name:endIndex, tips:"路径后缀结束索引", type:Number, default:0}*/
+            this.endIndex = 0;
+            /** @prop {name:onEnablePlay, tips:"显示自动播放", type:Boolean, default:true}*/
+            this.onEnablePlay = true;
+            /** @prop {name:onEnablePlayDelay, tips:"首次显示自动播放延迟", type:Number, default:1000}*/
+            this.onEnablePlayDelay = 1000;
+            /** @prop {name:delay, tips:"播放间隔", type:Number, default:100}*/
+            this.delay = 100;
+            /** @prop {name:repeat, tips:"重复播放", type:Boolean, default:true}*/
+            this.repeat = true;
+            /** @prop {name:playComToNextPlayDelay, tips:"播放一遍后下次播放间隔", type:Number, default:5000}*/
+            this.playComToNextPlayDelay = 5000;
+            /** @prop {name:finallyUseNullSkin, tips:"播放后使用空皮肤", type:Boolean, default:true}*/
+            this.finallyUseNullSkin = true;
+        }
+        onAwake() {
+            this.arraySkin = [];
+            for (let index = this.startIndex, length = this.endIndex; index <= length; index++) {
+                this.arraySkin.push(this.urlPrefix + index + '.png');
+            };
+            this.finallyUseNullSkin && this.arraySkin.push('');
+            this.__index = 0;
+            this.__playing = false;
+            this.owner.clipPlay = this.play.bind(this);
+            this.owner.clipStop = this.stop.bind(this);
+        }
+        onEnable() {
+            if (this.onEnablePlay) {
+                // this.owner.visible = false
+                Laya.timer.once(this.onEnablePlayDelay, this, this.play, [0]);
+            }
+        }
+        onDisable() {
+            this.stop();
+        }
+        play(value) {
+            // this.owner.visible = true;
+            parseInt(value) >= 0 && this.index(value);
+            this.stop();
+            this.__playing = true;
+            Laya.timer.loop(this.delay, this, this.clip_update);
+        }
+        index(value) {
+            this.__index = value;
+            this.owner.skin = this.arraySkin[value];
+        }
+        clip_update() {
+            this.__index++;
+            if (this.__index < this.arraySkin.length) {
+                this.owner.skin = this.arraySkin[this.__index];
+            } else
+                if (this.repeat) {
+                    if (this.playComToNextPlayDelay > 0) {
+                        this.stop();
+                        // this.owner.visible = false;
+                        Laya.timer.once(this.playComToNextPlayDelay, this, this.play, [0]);
+                    } else {
+                        this.__index = 0;
+                        this.owner.skin = this.arraySkin[this.__index];
+                    }
+                } else {
+                    this.stop();
+                    this.owner.completeHandler && this.owner.completeHandler(this.owner);
+                }
+        }
+        stop() {
+            this.__playing = false;
+            Laya.timer.clearAll(this);
+        }
+    }
+    window.ClipL = ClipL;
+
+    class Btn_Scale extends Laya.Script {
+
+        constructor() {
+            super();
+
+            /** @prop {name:scale_coe, tips:"按钮按下缩放程度", type:Number, default:0.92}*/
+            this.scale_coe = 0.92;
+            /** @prop {name:scale_time, tips:"按钮按下缩放程度消耗时间", type:Number, default:100}*/
+            this.scale_time = 100;
+        }
+        onAwake() {
+            this.owner.right = NaN;
+            this.owner.left = NaN;
+            this.owner.top = NaN;
+            this.owner.bottom = NaN;
+            this.owner.centerX = NaN;
+            this.owner.centerY = NaN;
+            this.scaleX_origin = this.owner.scaleX;
+            this.scaleY_origin = this.owner.scaleY;
+            if (this.owner.anchorX != undefined) {
+                if (this.owner.anchorX != 0.5 && this.owner.anchorY != 0.5) {
+                    this.owner.anchorX = 0;
+                    this.owner.anchorY = 0;
+                    this.owner.anchorX = 0.5;
+                    this.owner.anchorY = 0.5;
+                    this.owner.x += this.owner.width * this.scaleX_origin / 2;
+                    this.owner.y += this.owner.height * this.scaleY_origin / 2;
+                }
+            } else if (this.owner.pivotX != this.owner.width / 2 && this.owner.pivotY != this.owner.height / 2) {
+                this.owner.pivotX = 0;
+                this.owner.pivotY = 0;
+                this.owner.pivotX = this.owner.width / 2;
+                this.owner.pivotY = this.owner.height / 2;
+                this.owner.x += this.owner.width * this.scaleX_origin / 2;
+                this.owner.y += this.owner.height * this.scaleY_origin / 2;
+            }
+        }
+        onMouseDown(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: this.scale_coe * this.scaleX_origin,
+                scaleY: this.scale_coe * this.scaleY_origin
+            }, this.scale_time);
+        }
+        onMouseOut(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: 1 * this.scaleX_origin,
+                scaleY: 1 * this.scaleY_origin
+            }, this.scale_time);
+        }
+        onMouseUp(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: 1 * this.scaleX_origin,
+                scaleY: 1 * this.scaleY_origin
+            }, this.scale_time);
+        }
+        onDisable() {
+            Laya.Tween.clearAll(this.owner);
+            this.owner.scaleX = 1 * this.scaleX_origin;
+            this.owner.scaleY = 1 * this.scaleY_origin;
+        }
+    }
+    window.Btn_Scale = Btn_Scale;
+
+    class Btn_Move extends Laya.Script {
+
+        constructor() {
+            super();
+            /** @prop {name:moveDis, tips:"点击按钮移动距离", type:Number, default:2}*/
+            this.moveDis = 2;
+        }
+        onAwake() {
+            this.init_x = this.owner.x;
+            this.init_y = this.owner.y;
+        }
+        onMouseDown(e) {
+            this.owner.x += this.moveDis;
+            this.owner.y += this.moveDis;
+        }
+        onMouseOut(e) {
+            this.owner.x = this.init_x;
+            this.owner.y = this.init_y;
+        }
+        onMouseUp(e) {
+            this.owner.x = this.init_x;
+            this.owner.y = this.init_y;
+        }
+    }
+    window.Btn_Move = Btn_Move;
+
+    class Btn_MoveY extends Laya.Script {
+
+        constructor() {
+            super();
+            /** @prop {name:moveDis, tips:"点击按钮移动距离", type:Number, default:2}*/
+            this.moveDis = 2;
+        }
+        onAwake() {
+            // this.init_x = this.owner.x;
+            this.init_y = this.owner.y;
+        }
+        onMouseDown(e) {
+            // this.owner.x += this.moveDis;
+            this.owner.y += this.moveDis;
+        }
+        onMouseOut(e) {
+            // this.owner.x = this.init_x
+            this.owner.y = this.init_y;
+        }
+        onMouseUp(e) {
+            // this.owner.x = this.init_x
+            this.owner.y = this.init_y;
+        }
+    }
+    window.Btn_MoveY = Btn_MoveY;
+
+    class Btn_Sound extends Laya.Script {
+        constructor() {
+            super();
+        }
+        onClick(e) {
+            e && __sound.button();
+        }
+    }
+    window.Btn_Sound = Btn_Sound;
+
+    class Btn_Close extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:tween_time, tips:"tween时间", type:Number, default:100}*/
+            this.tween_time = 100;
+        }
+        onClick(e) {
+            Laya.Tween.clearAll(this.owner.parent);
+            Laya.Tween.to(this.owner.parent, {
+                alpha: 0
+            }, this.tween_time, null, new Laya.Handler(this, function () {
+                game.scene.remove(this.owner.parent);
+            }));
+        }
+    }
+    window.Btn_Close = Btn_Close;
+
+    class Btn_Group extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:btn_index, tips:"按钮索引", type:Number, default:0}*/
+            this.btn_index = 0;
+            /** @prop {name:group_name, tips:"按钮组名字", type:String, default:''}*/
+            this.group_name = '';
+            /** @prop {name:select_skin, tips:"选中皮肤", type:String, default:''}*/
+            this.select_skin = '';
+            this.select_index = 0;
+        }
+        onAwake() {
+            this.unselect_skin = this.owner.skin;
+            this.owner.group_name = this.group_name;
+            this.owner.selectedIndex = (index) => {
+                game.cb.event('btn_group_index_' + this.group_name, [index]);
+            };
+        }
+        onClick(e) {
+            this.select();
+        }
+        onEnable() {
+            game.cb.on('btn_group_index_' + this.group_name, this, this.update);
+        }
+        onDisable() {
+            game.cb.off('btn_group_index_' + this.group_name, this, this.update);
+        }
+        select() {
+            game.cb.event('btn_group_index_' + this.group_name, [this.btn_index]);
+        }
+        update(index) {
+            if (this.btn_index == index) {
+                this.owner.skin = this.select_skin;
+            } else {
+                this.owner.skin = this.unselect_skin;
+            }
+            this.select_index = index;
+        }
+    }
+    window.Btn_Group = Btn_Group;
+
+    class Panel_Tween_Add extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:tween_time, tips:"tween时间", type:Number, default:100}*/
+            this.tween_time = 150;
+        }
+        updateXY() {
+            this.owner.pivotX = this.owner.width / 2;
+            this.owner.pivotY = this.owner.height / 2;
+            this.owner.scale_after_panelTweenAdd = this.owner.scaleX;
+            this.owner.x += this.owner.pivotX * this.owner.scale_after_panelTweenAdd;
+            this.owner.y += this.owner.pivotY * this.owner.scale_after_panelTweenAdd;
+        }
+        async startTween() {
+            this.owner.scaleX = this.owner.scaleY = 0.3 * this.owner.scale_after_panelTweenAdd;
+            this.owner.alpha = 0;
+            Laya.Tween.clearAll(this.owner);
+
+            await __tool.tweenPromise(this.owner, {
+                alpha: 1,
+                scaleX: this.owner.scale_after_panelTweenAdd,
+                scaleY: this.owner.scale_after_panelTweenAdd,
+            }, this.tween_time);
+
+            await __tool.tweenPromise(this.owner, {
+                alpha: 1,
+                scaleX: this.owner.scale_after_panelTweenAdd * 0.985,
+                scaleY: this.owner.scale_after_panelTweenAdd * 0.985,
+            }, 100);
+
+            await __tool.tweenPromise(this.owner, {
+                alpha: 1,
+                scaleX: this.owner.scale_after_panelTweenAdd * 1,
+                scaleY: this.owner.scale_after_panelTweenAdd * 1,
+            }, 100);
+        }
+    }
+    window.Panel_Tween_Add = Panel_Tween_Add;
+
+    class Scroll_Rect extends Laya.Script {
+
+        constructor() {
+            super();
+        }
+        onAwake() {
+            this.rect = new Laya.Rectangle();
+            this.rect.width = this.owner.width;
+            this.rect.height = this.owner.height;
+            this.owner.scrollRect = this.rect;
+        }
+    }
+    window.Scroll_Rect = Scroll_Rect;
+
+    class Panel_Close extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:closeTarget, tips:"要关闭的面板(关闭的是target的parent)", type:Node}*/
+            this.closeTarget = null;
+        }
+        onEnable() {
+            this.closeTarget = this.closeTarget || this.owner.parent;
+        }
+        onClick(e) {
+            Laya.timer.callLater(this, this.close);
+        }
+        close() {
+            this.closeTarget && game.scene.remove(this.closeTarget.parent);
+        }
+    }
+    window.Panel_Close = Panel_Close;
+
+    class Btn_Scale_Sound extends Laya.Script {
+
+        constructor() {
+            super();
+
+            /** @prop {name:scale_coe, tips:"按钮按下缩放程度", type:Number, default:0.92}*/
+            this.scale_coe = 0.92;
+            /** @prop {name:scale_time, tips:"按钮按下缩放程度消耗时间", type:Number, default:100}*/
+            this.scale_time = 100;
+            /** @prop {name:useSound, tips:"点击是否有音效", type:Boolean, default:true}*/
+            this.useSound = 100;
+        }
+        onAwake() {
+            this.owner.right = NaN;
+            this.owner.left = NaN;
+            this.owner.top = NaN;
+            this.owner.bottom = NaN;
+            this.owner.centerX = NaN;
+            this.owner.centerY = NaN;
+
+            this.scaleX_origin = this.owner.scaleX;
+            this.scaleY_origin = this.owner.scaleY;
+
+            if (game.utils.getClassName(this.owner) == 'Image') {
+                if (this.owner.anchorX != 0.5 && this.owner.anchorY != 0.5) {
+                    this.owner.anchorX = 0;
+                    this.owner.anchorY = 0;
+                    this.owner.anchorX = 0.5;
+                    this.owner.anchorY = 0.5;
+                    this.owner.x += this.owner.width * this.scaleX_origin / 2;
+                    this.owner.y += this.owner.height * this.scaleY_origin / 2;
+                }
+            } else if (this.owner.pivotX != this.owner.width / 2 && this.owner.pivotY != this.owner.height / 2) {
+                this.owner.pivotX = 0;
+                this.owner.pivotY = 0;
+                this.owner.pivotX = this.owner.width / 2;
+                this.owner.pivotY = this.owner.height / 2;
+                this.owner.x += this.owner.width * this.scaleX_origin / 2;
+                this.owner.y += this.owner.height * this.scaleY_origin / 2;
+            }
+        }
+
+        onMouseDown(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: this.scale_coe * this.scaleX_origin,
+                scaleY: this.scale_coe * this.scaleY_origin
+            }, this.scale_time);
+        }
+        onMouseOut(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: 1 * this.scaleX_origin,
+                scaleY: 1 * this.scaleY_origin
+            }, this.scale_time);
+        }
+        onMouseUp(e) {
+            Laya.Tween.clearAll(this.owner);
+            Laya.Tween.to(this.owner, {
+                scaleX: 1 * this.scaleX_origin,
+                scaleY: 1 * this.scaleY_origin
+            }, this.scale_time);
+        }
+
+        onClick(e) {
+            e && this.useSound && __sound.button();
+        }
+    }
+    window.Btn_Scale_Sound = Btn_Scale_Sound;
+
+    class Btn_Click_Sound extends Btn_Sound { constructor() { super(); } }
+
+    class Click_Stage_Remove extends Laya.Script {
+
+        constructor() {
+            super();
+
+            /** @prop {name:clickSelfRemove, tips:"点击自己是否也移除", type:Boolean, default:false}*/
+            this.clickSelfRemove = false;
+        }
+
+        self() {
+            this.clickSelfRemove = true;
+        }
+
+        onClick(e) {
+            e && e.stopPropagation();
+            if (this.clickSelfRemove) this.onStageClick();
+        }
+
+        onStageClick() {
+            this.owner && game.utils.remove(this.owner);
+        }
+    }
+    window.Click_Stage_Remove = Click_Stage_Remove;
+
+    class Btn_Show_UI extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:ui, tips:"要显示的UI", type:Node, default:null}*/
+            /** @prop {name:uiParent, tips:"UI的父容器，默认为绑定组件对象的父容器", type:Node, default:null}*/
+            this.ui = null;
+            this.uiParent = null;
+        }
+
+        onClick(e) {
+            e && e.stopPropagation();
+            if (this.ui) {
+                if (this.uiParent) {
+                    this.uiParent.addChild(this.ui);
+                } else {
+                    this.owner.parent.addChild(this.ui);
+                }
+            }
+        }
+    }
+
+    class VideoCountDown extends Laya.Script {
+
+        constructor() {
+            super();
+            /** @prop {name:time, tips:"倒计时时间（单位毫秒）", type:Number, default:10000}*/
+            this.time = 10000;
+        }
+
+        onAwake() {
+            this.rect = new Laya.Rectangle();
+            this.owner.scrollRect = this.rect;
+            this.tween = null;
+        }
+
+        onEnable() {
+            this._start();
+        }
+
+        onDisable() {
+            this._clear();
+        }
+
+        /**
+         * 计时结束后调用
+         * @param {function} completeTodo 
+         */
+        setAfter(after) {
+            this._after = after;
+        }
+
+        /**
+         * 暂停缓动
+         */
+        pause() {
+            this.tween && this.tween.pause();
+        }
+
+        /**
+         * 恢复缓动
+         */
+        resume() {
+            this.tween && this.tween.resume();
+        }
+
+        /**
+         * 开始计时
+         */
+        _start() {
+            this.rect.width = this.owner.width;
+            this.rect.height = this.owner.height;
+            this._countDown();
+        }
+
+        /**
+         * 清理缓动
+         */
+        _clear() {
+            if (this.tween) {
+                this.tween.clear();
+                this.tween = null;
+            }
+        }
+
+        /**
+         * 开始计时
+         */
+        _countDown() {
+            Laya.Tween.clearAll(this.rect);
+            Laya.Tween.to(this.rect, {
+                width: 0
+            }, this.time, Laya.Ease.Linear, new Laya.Handler(this, this._complete));
+        }
+
+        /**
+         * 计时结束
+         */
+        _complete() {
+            this._after && this._after();
+        }
+
+        setProgress(progress) {
+            this.rect.width = this.owner.width * progress;
+        }
+    }
+    window.VideoCountDown = VideoCountDown;
+
+    /* 
+     * @Author: 相濡以沫
+     * @Date:   2019-12-23 13:27:54
+     * @Last Modified by:   相濡以沫
+     * @Last Modified time: 2019-12-23 13:54:21
+     */
+
+    class Text_Scroll extends Laya.Script {
+
+        constructor() {
+            super();
+
+            /** @prop {name:reBack, tips:"是否文本发生改变回到文本上方", type:Boolean, default:false}*/
+            let reBack = null;
+        }
+
+        onEnable() {
+            this.owner.on('change', this, this.changeTextHandler);
+            this.changeTextHandler();
+        }
+
+        onDisable() {
+            this.owner.off('change', this, this.changeTextHandler);
+            this.reset();
+        }
+
+        reset() {
+            this.owner && (this.owner.textField.scrollY = 0);
+            this.startX = null;
+            this.startY = null;
+            this.prevX = null;
+            this.prevY = null;
+            //阀门关闭
+            this.valve = false;
+            this.clearTween();
+            this.clearScrollTween();
+        }
+
+        onMouseDown(e) {
+            this.clearTween();
+            this.clearScrollTween();
+            //阀门开启  留存坐标
+            this.valve = true;
+
+            this.time = new Date().getTime();
+            this.startX = this.owner.mouseX;
+            this.startY = this.owner.mouseY;
+            this.prevX = this.owner.mouseX;
+            this.prevY = this.owner.mouseY;
+        }
+
+        onStageMouseUp() {
+            if (isNaN(this.owner.textField.scrollY) || isNaN(this.owner.textField.scrollX)) { return; }
+            if (isNaN(this.startX) || isNaN(this.startY)) { return; }
+
+            this.nowX = this.owner.mouseX;
+            this.nowY = this.owner.mouseY;
+
+            //阀门关闭
+            this.valve = false;
+            let time = new Date().getTime();
+            let useTime = (time - this.time) / 1000; // 用时
+            let moveDistance = Math.abs(this.nowY - this.startY); // 距离
+            let speed = moveDistance / useTime * 1;
+
+            speed = parseInt(this.nowY) - parseInt(this.startY) < 0 ? speed : -speed;
+            let endY = this.owner.textField.scrollY + speed;
+            endY = Math.max(endY, 0);
+            endY = Math.min(this.owner.textField.textHeight - this.owner.textField.displayHeight + this.owner.textField.fontSize, endY);
+            this.tween = new Laya.Tween().to(this.owner.textField, { scrollY: endY }, 500, Laya.Ease.quartOut, Laya.Handler.create(this, this.clearTween));
+            this.tween.update = Laya.Handler.create(this, this.fixScrollXy);
+        }
+
+        clearTween() {
+            if (this.tween) {
+                this.tween.clear();
+                this.tween = null;
+            }
+        }
+
+        onMouseMove(e) {
+            if (!this.valve) return //开关阀门  如果为关闭状态不予滚动
+
+            this.nowX = this.owner.mouseX;
+            this.nowY = this.owner.mouseY;
+
+            this.owner.textField.scrollX += parseInt(this.prevX) - parseInt(this.nowX);
+            this.owner.textField.scrollY += parseInt(this.prevY) - parseInt(this.nowY);
+
+            this.fixScrollXy();
+
+            this.prevX = this.nowX;
+            this.prevY = this.nowY;
+        }
+
+        onLateUpdate() {
+            if (this.owner.mouseX == this.prevX && this.owner.mouseY == this.prevY) {
+                this.startX = this.owner.mouseX;
+                this.startY = this.owner.mouseY;
+            }
+        }
+
+        fixScrollXy() {
+            if (isNaN(this.owner.textField.scrollY) || isNaN(this.owner.textField.scrollX)) { return; }
+            this.owner.textField.scrollY = Math.max(this.owner.textField.scrollY, 0);
+            this.owner.textField.scrollY = Math.min(this.owner.textField.textHeight - this.owner.textField.displayHeight + this.owner.textField.fontSize, this.owner.textField.scrollY);
+
+            this.owner.textField.scrollX = Math.max(this.owner.textField.scrollX, 0);
+            this.owner.textField.scrollX = Math.min(this.owner.textField.textWidth - this.owner.textField.displayWidth + this.owner.textField.fontSize, this.owner.textField.scrollX);
+        }
+
+        // onMouseUp(e) { this.closeScroll(); }
+
+        // onMouseOut(e) { this.closeScroll(); }
+
+        // closeScroll() {
+        //     //阀门关闭
+        //     this.valve = false;
+        //     // this.prevX = this.prevY = this.nowX = this.nowY = 0;
+        // }
+
+
+        changeTextHandler(e) {
+            if (this.reBack && this.owner.textField.scrollY > 0) {
+                Laya.Tween.to(this.owner.textField, { scrollY: 0 }, 300, Laya.Ease.circIn, new Laya.Handler(this, this.clearScrollTween));
+            }
+        }
+
+        clearScrollTween() {
+            Laya.Tween.clearAll(this.owner.textField);
+        }
+    }
+    window.Text_Scroll = Text_Scroll;
+
+    class PanelAdListener extends Laya.Script {
+        constructor() {
+            super();
+            /** @prop {name:ignore, tips:"需要忽略的广告Name", type:string, default:''}*/
+            this.ignore = '';
+        }
+
+        onEnable() {
+            PanelAdListener.push(this.owner);
+        }
+
+        onUpdate() {
+            game && game.cb && game.cb.event('AdPanelListener', [true, this.ignore]);
+        }
+
+        onDisable() {
+            PanelAdListener.remove(this.owner);
+            if (!PanelAdListener.ots.length) {
+                game && game.cb && game.cb.event('AdPanelListener', [false, this.ignore]);
+            }
+        }
+
+        static get ots() {
+            if (!this._ote) {
+                this._ote = [];
+            }
+            return this._ote;
+        }
+        static push(view) {
+            if (!view) { return; }
+            let includes = this.ots.indexOf(view) != -1;
+            if (!includes) {
+                this.ots.push(view);
+            }
+        }
+        static remove(view) {
+            if (!view) { return; }
+            let index = this.ots.indexOf(view);
+            if (index != -1) {
+                this.ots.splice(index, 1);
+            }
+        }
+    }
+    window.PanelAdListener = PanelAdListener;
+
+    let reg = Laya.ClassUtils.regClass;
+    reg("script/ClipL.js", ClipL);
+    reg("script/Btn_Close.js", Btn_Close);
+    reg("script/Btn_Group.js", Btn_Group);
+    reg("script/Btn_Move.js", Btn_Move);
+    reg("script/Btn_MoveY.js", Btn_MoveY);
+    reg("script/Btn_Sound.js", Btn_Sound);
+    reg("script/Btn_Scale.js", Btn_Scale);
+    reg("script/Panel_Tween_Add.js", Panel_Tween_Add);
+    reg("script/Scroll_Rect.js", Scroll_Rect);
+    reg("script/Panel_Close.js", Panel_Close);
+    reg("script/Click_Stage_Remove.js", Click_Stage_Remove);
+    reg("script/Btn_Show_UI.js", Btn_Show_UI);
+    reg("script/VideoCountDown.js", VideoCountDown);
+    reg("script/Text_Scroll.js", Text_Scroll);
+    reg("script/PanelAdListener.js", PanelAdListener);
+
+    // 本身没什么用都是为了兼容以前的代码而产生的冗余组件
+    reg("script/Btn_Scale_Sound.js", Btn_Scale_Sound);
+    reg("script/Btn_Click_Sound.js", Btn_Click_Sound);
+
+
+    reg("laya.effect.ColorFilterSetter", Laya.ColorFilterSetter);
+    reg("laya.effect.GlowFilterSetter", Laya.GlowFilterSetter);
+    reg("laya.effect.BlurFilterSetter", Laya.BlurFilterSetter);
+
+}());

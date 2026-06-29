@@ -1,0 +1,22 @@
+class TestPopupAd extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestPopupAd',
+            layer: 'panel'
+        })
+
+        this.btn.on(Laya.Event.CLICK, this, this._close);
+    }
+
+    _close(){
+        game.scene.remove(this);
+    }
+
+
+    added(data){
+        try{
+            this.txt.text = data.des + '\n' + data.type + '\n' + data.id;
+        }catch(e){}
+    }
+}
+window.TestPopupAd = TestPopupAd;

@@ -1,0 +1,31 @@
+
+
+try { eruda.init(); } catch (e) { console.log('未引用 eruda') }
+try { config.log && (new VConsole()) } catch (e) { }
+
+config.useVersionIP = 0;
+// app平台配置
+if (APP_PACKAGE || window.AppApi) {
+    miniApi.clientType = 'app';
+    config.reqIpUrl = 'mjxcc.snyngame.com';
+    config.useVersionIP = true;
+    config.is_useRetinalCanvas = false;
+    config.log = false;
+}
+config.isCoreMinJS = miniApi.clientType == 'app' && window.AppApi ? true : false;
+config.isMusic = config.isSound = __tool.getHttpParams('isMusic') == 'false' ? false : true;
+let params_openid = __tool.getHttpParams('openid');
+__data.openid = params_openid || '1';
+__data.params_openid = params_openid;
+if (params_openid) {
+    // 网页输入参数登录 清理之前的登录
+    let b = miniApi.getItem('appLoginId');
+    if (params_openid != b) {
+        app_clear_all_cache()
+    }
+}
+__data.name = `昵称_${__data.openid}`;
+__data.head = __data.defaultHead;
+
+game.init();
+miniApi.isAuthorize = true;

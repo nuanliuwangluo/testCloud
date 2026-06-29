@@ -1,0 +1,53 @@
+class FriendRoom_hallPlay_center extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_hallPlay_center',
+        })
+
+        this.cityComp = this.btn_roomCardGo.addComponent(RoomCardGoScript);
+    }
+
+    get ui() {
+        return this.scene_play_select.playUI;
+    }
+
+    added() {
+        this.update_city()
+        game.cb.on('updatePlaySelect', this, this.update_city)
+    }
+    onDisable() {
+        game.cb.off('updatePlaySelect', this, this.update_city)
+    }
+    update_city() {
+        this.btn_roomCardGo.visible = false;
+        if (miniApi.clientType == 'app') {
+            if (__data.myCityId == HallPlay.lastCityId) {
+                if (__data.loginType == 2) {
+                    if (FriendRoom_hallPlay_center_cityId_haveRoomCard.includes(parseInt(HallPlay.lastCityId))) {
+                        this.btn_roomCardGo.visible = true;
+                        this.btn_roomCardGo.skin = `cdn/app_roomCardGate/bt_${HallPlay.lastCityId}.png`
+                        this.cityComp.toCityId(HallPlay.lastCityId);
+                    }
+                }
+            }
+        }
+    }
+}
+let FriendRoom_hallPlay_center_cityId_haveRoomCard = [
+    1, 5, 8, 9, 10, 12, 13, 14, 16, 17, 19
+]
+
+class RoomCardGoScript extends Laya.Script {
+    toCityId(cityId) {
+        this._toCityId = cityId;
+    }
+
+    onClick(e) {
+        trace('跳转房卡：', this._toCityId);
+        if (window.OpenHtml) {
+            game.scene.add(LoadingSmallSon, ['']);
+            window.FakeProgress && FakeProgress.start(LoadingSmallSon.PROGRESS_EVENT, LoadingSmallSon.CLOSE_EVENT);
+            window.OpenHtml.openFriend(HallPlay.lastCityId, this._toCityId);
+        }
+    }
+}

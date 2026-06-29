@@ -1,0 +1,886 @@
+class GameMainNewPlayerRedChallengeBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallengeBtn',
+            module: false
+        })
+        this.addComponent(S_rmc_show_btn).init(0)
+        this.btn_red_add_time.addComponent(S_hall_newPlayerRedChallenge_add_time_move)
+        this.img_tips.addComponent(S_hall_newPlayerRedChallenge_add_time_move)
+        this.btn_red_add_time.addComponent(S_newPlayerRedChallenge_add_time)
+        this.btn_red.addComponent(S_show_newPlayerRedChallenge)
+    }
+    onEnable() {
+        if (miniApi.getWxDeviceName() === 'windows') return
+        game.server.send(18001)
+        game.server.send(18007)
+    }
+    onDisable() {
+    }
+    scale(value) {
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_newPlayerChallengeBtnUI', GameMainNewPlayerRedChallengeBtn);
+
+class GameMainNewPlayerRedChallengeBtn1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallengeBtn1',
+            module: false
+        })
+        this.addComponent(S_rmc_show_btn).init(1)
+        this.btn_red_add_time.addComponent(S_hall_newPlayerRedChallenge_add_time_move)
+        this.img_tips.addComponent(S_hall_newPlayerRedChallenge_add_time_move)
+        this.btn_red_add_time.addComponent(S_newPlayerRedChallenge_add_time)
+        this.btn_red.addComponent(S_show_newPlayerRedChallenge)
+    }
+    onEnable() {
+        if (miniApi.getWxDeviceName() === 'windows') return
+        game.server.send(18001)
+        game.server.send(18007)
+    }
+    onDisable() {
+    }
+    scale(value) {
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_newPlayerChallengeBtn1UI', GameMainNewPlayerRedChallengeBtn1);
+
+class S_rmc_show_btn extends Laya.Script {
+    init(type) {
+        this.type = type;
+    }
+    onAwake() {
+        this.ix1 = this.ix1 || this.owner.parent.ix1;
+        this.ix2 = this.ix2 || this.owner.parent.ix2;
+        this.btn_red = this.owner.btn_red;
+        this.img_redPoint = this.owner.btn_red.getChildByName('img_red');
+        this.btn_red_add_time = this.owner.btn_red_add_time;
+        this.img_tips = this.owner.img_tips || {}
+        this.txt_tips = this.owner.txt_tips || {}
+        this.s_btnred_scale = this.btn_red.getComponent(Btn_Scale)
+        this.s_btnred_scale.enabled = true
+        if (miniApi.getWxDeviceName() === 'windows') return
+    }
+    onEnable() {
+        effectUtils.stopBreathe(this.btn_red)
+        this.owner.visible = false
+        this.img_redPoint.visible = false;
+        // console.log('miniApi.getWxDeviceName()', miniApi.getWxDeviceName());
+        if (miniApi.getWxDeviceName() === 'windows') return
+        game.cb.on('show_newPlayerRed_allPlayerRed_ani', this, this.show_newPlayerRed_allPlayerRed_ani)
+
+        game.cb.on('update_newPlayerRedChallenge_data', this, this.updateIconShow)
+        game.cb.on('update_allPlayerRed_data', this, this.updateIconShow)
+    }
+    onDisable() {
+        game.cb.off('update_newPlayerRedChallenge_data', this, this.updateIconShow)
+        game.cb.off('update_allPlayerRed_data', this, this.updateIconShow)
+        game.cb.off('show_newPlayerRed_allPlayerRed_ani', this, this.show_newPlayerRed_allPlayerRed_ani)
+        Laya.timer.clearAll(this)
+        effectUtils.stopBreathe(this.btn_red)
+    }
+    updateIconShow() {
+        Laya.loader.load('res/atlas/cdn/redIcon.atlas',
+            Laya.Handler.create(this, () => {
+
+                this.owner.visible = false
+                Laya.timer.clearAll(this)
+
+                if (__data.newPlayerRedChallenge.isHaveData === false) return;
+                if (__data.allPlayerRed.isHaveData === false) return;
+
+                this.btn_red.visible = false
+                this.btn_red_add_time.visible = false;
+                this.btn_red.filters = []
+                this.img_tips.visible = false;
+
+                let inDesk = (game.scene.get(Mahjong3DBG) && game.scene.get(Mahjong3DBG).parent && __data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND)
+                if (miniApi.clientType == 'app' || inDesk) {
+
+                } else {
+                    let hallbg__ = game.scene.get(HallBg)
+                    if (hallbg__ && hallbg__.parent) {
+                        // if (!miniApi.isIOS) {
+                        //     this.owner.x = this.ix2
+                        // } else {
+                        //     this.owner.x = this.ix1
+                        // }
+                    }
+
+                    this.updateEndTime()
+                    Laya.timer.loop(1000, this, this.updateEndTime)
+                }
+
+            }))
+    }
+    show_newPlayerRed_allPlayerRed_ani() {
+        this.colorFilter = this.colorFilter || new Laya.ColorFilter([]);
+        this.colorValue = 0
+        this.colorValueOff = 10
+        this.colorFilter.color(this.colorValue, this.colorValue, this.colorValue, 1)
+        this.btn_red.filters = [this.colorFilter];
+        Laya.timer.loop(30, this, this.updateColorFilter)
+    }
+    updateColorFilter() {
+        this.colorValue += this.colorValueOff
+        if (this.colorValue <= 0) {
+            this.colorValue = 0
+            this.colorValueOff = 10
+            Laya.timer.clear(this, this.updateColorFilter)
+            this.btn_red.filters = []
+        }
+        if (this.colorValue >= 255) {
+            this.colorValue = 255
+            this.colorValueOff = -10
+            miniApi.setItem(__data.uid + ':newPlayerRed_ani_remove', '1')
+            this.updateEndTime()
+        }
+        this.colorFilter.color(this.colorValue, this.colorValue, this.colorValue, 1)
+    }
+    updateEndTime() {
+        // trace('新人红包开关：', this.rookieState);
+        // trace('每日红包开关：', this.everyState);
+        if (__data.newPlayerRedChallenge.isRemove()) {
+            if (__data.redPacket.everyState) {
+                this.owner.visible = true;
+                this.btn_red_add_time.visible = false;
+                this.img_tips.visible = false;
+                this.btn_red.visible = true;
+
+                // if (this.type == 1) {
+                //     this.btn_red.skin = 'cdn/redIcon/bt_hb.png'
+                // } else
+                //     this.btn_red.skin = 'cdn/redIcon/bt_qhb.png'
+                let tt = this.owner.txt_time;
+                tt.visible = true;
+                tt.text = '全民红包'
+
+                let n = __data.allPlayerRed.isTimeIn(-1)
+                if (n > 0) {
+                    let n1 = __data.allPlayerRed.redNum[n - 1] || 0;
+                    if (n1 > 0) {
+                        let taskStatus = __data.allPlayerRed.taskData[n - 1].taskStatus
+                        if (taskStatus === 0) {
+                            tt.text = '挑战中'
+                        } else if (taskStatus === 1) {
+                            tt.text = '挑战成功'
+                        } else if (taskStatus === -1) {
+                            tt.text = '挑战失败'
+                            this.img_tips.visible = true;
+                            this.txt_tips.text = `还剩${n1}个红包`
+                        }
+                    }
+                }
+
+                this.img_redPoint.visible = __data.allPlayerRed.isRed()
+
+                let sr = game.scene.get(MahjongSmallResult);
+                if (sr && sr.parent && this.img_redPoint.visible) {
+
+                    let n = __data.allPlayerRed.isTimeIn(-1)
+                    let a1 = n && __data.allPlayerRed.taskData[n - 1].taskStatus == 1 && !__data.allPlayerRed.taskData[n - 1].isHasReceive && __data.allPlayerRed.redNum[n - 1] > 0;
+                    if (a1) {
+                        effectUtils.breathe(this.btn_red, 1, 1.1, 300)
+                        this.s_btnred_scale.enabled = false;
+                    }
+                }
+                if (!this.img_redPoint.visible || !sr || !sr.parent) {
+                    effectUtils.stopBreathe(this.btn_red)
+                }
+            }
+        } else if (__data.newPlayerRedChallenge.isEnd()) {
+            if (__data.redPacket.rookieState) {
+                this.owner.visible = true
+                this.btn_red.visible = true
+                this.btn_red_add_time.visible = false
+                this.img_tips.visible = false;
+                this.img_redPoint.visible = false
+                let tt = this.owner.txt_time;
+                tt.text = '已结束';
+                effectUtils.stopBreathe(this.btn_red)
+                if (S_rmc_show_btn.last_newPlayerRed_countdown_ing) {
+                    // 上次显示倒计时
+                    this.img_redPoint.visible = true;
+                } else {
+                    // 新人离线期间活动结束且未过当日24点，此时图标依然是新人红包，但不显示”已结束“而是显示红点
+                    tt.text = ''
+                    this.img_redPoint.visible = true;
+                }
+            }
+        } else {
+            if (__data.redPacket.rookieState) {
+                S_rmc_show_btn.last_newPlayerRed_countdown_ing = true;
+                // let ssm = __data.newPlayerRedChallenge.endTime - Date.now()
+                this.owner.visible = true
+                this.btn_red.visible = true
+                // var minute = Math.floor(ssm / 60 / 1000) % 60;
+                // var miao = Math.floor(ssm / 1000) % 60;
+                // let str1 = minute + ':' + (miao < 10 ? '0' + miao : miao)
+
+                let ssm = __data.newPlayerRedChallenge.endTime - Date.now()
+                var hour = Math.floor(ssm / 3600 / 1000);
+                var minute = Math.floor(ssm / 60 / 1000) % 60;
+                var miao = Math.floor(ssm / 1000) % 60;
+                let timeStr = (hour >= 10 ? hour : '0' + hour) + ':'
+                timeStr += (minute >= 10 ? minute : '0' + minute) + ':'
+                timeStr += miao >= 10 ? miao : '0' + miao
+
+                let tt = this.owner.txt_time;
+                tt.text = timeStr;
+
+                let a = this.btn_red_add_time.visible
+                this.btn_red_add_time.visible = __data.newPlayerRedChallenge.isShowAddTime();
+
+                this.img_redPoint.visible = __data.newPlayerRedChallenge.isRed()
+                let sr = game.scene.get(MahjongSmallResult);
+                if (sr && sr.parent && this.img_redPoint.visible && __data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need) {
+                    effectUtils.breathe(this.btn_red, 1, 1.1, 300)
+                    this.s_btnred_scale.enabled = false;
+                }
+                if (!this.img_redPoint.visible || !sr || !sr.parent) {
+                    effectUtils.stopBreathe(this.btn_red)
+                }
+                if (__data.newPlayerRedChallenge.taskStatus == -1) {
+                    tt.text = '挑战失败'
+                } else if (__data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need) {
+                    tt.text = '挑战成功'
+                }
+                // if (this.type == 1 && !this.btn_red_add_time.visible) {
+                if (!this.btn_red_add_time.visible) {
+                    let n = __data.newPlayerRedChallenge.rewards.filter((e) => {
+                        return e.hasGet == 1
+                    })
+                    if (n.length == 0) {
+                        if (__data.newPlayerRedChallenge.pro == 0 || __data.newPlayerRedChallenge.pro == 1) {
+                            this.txt_tips.text = '胜利抽现金红包'
+                            this.img_tips.visible = true
+                        }
+                    }
+                    if (n.length == 1) {
+                        if (__data.newPlayerRedChallenge.pro == 1) {
+                            this.txt_tips.text = '再玩1局可抽奖'
+                            this.img_tips.visible = true
+                        }
+                    }
+                    if (n.length == 2) {
+                        if (__data.newPlayerRedChallenge.pro == 1) {
+                            this.txt_tips.text = '再赢1局可抽奖'
+                            this.img_tips.visible = true
+                        }
+                    }
+                    if (n.length == 3) {
+                        if (__data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need) {
+
+                        } else {
+                            this.img_tips.visible = true
+                            this.txt_tips.text = '再抽奖必得红包'
+                        }
+                    }
+                } else {
+                    this.img_tips.visible = false;
+                }
+            }
+        }
+    }
+}
+class S_show_newPlayerRedChallenge extends Laya.Script {
+    onClick() {
+        __data.allPlayerRed.isRed_AlmostOevr = false;
+        let img_redPoint = this.owner.getChildByName('img_red');
+        img_redPoint.visible = false
+        if (__data.newPlayerRedChallenge.isRemove()) {
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '全民抢红包界面' })
+            __showScene.show_allPlayerRed()
+        } else {
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '新人红包挑战界面' })
+            __showScene.show_newPlayerRedChallenge()
+        }
+    }
+}
+class S_hall_newPlayerRedChallenge_add_time_move extends Laya.Script {
+    onAwake() {
+        this.ix = this.owner.x;
+    }
+    async onEnable() {
+        if (miniApi.getWxDeviceName() === 'windows') return
+        this.tweening = false;
+        await __tool.await(1)
+        this.startMove()
+    }
+    onDisable() {
+        this.clearAwait && this.clearAwait();
+        Laya.Tween.clearAll(this.owner)
+    }
+    async startMove() {
+        if (this.tweening) return
+        this.tweening = true
+        this.owner.x = this.ix
+        await __tool.tweenp(this.owner, { x: this.ix - 5 }, 500)
+        await __tool.tweenp(this.owner, { x: this.ix + 10 }, 1000)
+        await __tool.tweenp(this.owner, { x: this.ix }, 500)
+        this.tweening = false;
+        this.startMove()
+    }
+}
+class S_newPlayerRedChallenge_add_time extends Laya.Script {
+    async onClick(e) {
+        // let img_video = this.owner.getChildByName('img_video')
+        // let videoR = this.owner.videoR;
+        // if (img_video.visible) {
+        let adunitId = 'adunit-2239c08f5259c2d1'
+        await miniApi.video_ready(adunitId)
+        miniApi.video_show(adunitId, () => {
+            game.server.send(18004)
+            __data.newPlayerRedChallenge.total_addTimeCount()
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0);
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '新人红包挑战延时', 'Mj_Participation': n })
+    }
+}
+class GameMainNewPlayerRedChallenge extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallenge',
+            layer: 'panel'
+        })
+        this.btn_go.addComponent(S_gnprc_go)
+        this.btn_close.addComponent(S_click_close_remove_parent)
+        this.btn_raffle.addComponent(S_click_rec_raffle)
+        this.btn_reChallenge.addComponent(S_click_rec_reChallenge)
+        // this.btn_subscribe.addComponent(S_click_rec_subscribe)
+        this.btn_open_allPlayerRed.addComponent(S_rec_open_allPlayerRed)
+        this.srm = this.addComponent(S_rec_startLightMove)
+        this.btn_add_time.addComponent(S_newPlayerRedChallenge_add_time)
+        this.sbar = this.img_bar.addComponent(S_progress_bar)
+        // this.img_tips.addComponent(S_rec_move_ani)
+    }
+    onAwake() {
+        this.itemArray = [this.item0, this.item1, this.item2, this.item3]
+    }
+    async added(firstShow) {
+        game.server.send(20002)
+        effectUtils.stopBreathe(this.btn_raffle)
+        effectUtils.stopBreathe(this.btn_reChallenge)
+        this.firstShow = firstShow
+        this.img_light.visible = false
+        this.updateEndTime()
+        Laya.timer.loop(1000, this, this.updateEndTime)
+
+        this.update_newPlayerRedChallenge_data()
+        game.cb.on('16007__', this, this.update_btn)
+        game.cb.on('update_newPlayerRedChallenge_data', this, this.update_newPlayerRedChallenge_data)
+    }
+    onDisable() {
+        effectUtils.stopBreathe(this.btn_raffle)
+        effectUtils.stopBreathe(this.btn_reChallenge)
+        game.cb.event('hall_play_show_hand')
+        this.clearAwait && this.clearAwait()
+        Laya.timer.clearAll(this)
+        this.img_hand.clipStop()
+        game.cb.off('update_newPlayerRedChallenge_data', this, this.update_newPlayerRedChallenge_data)
+        ResUtils.clearAtlas('res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas')
+        ResUtils.clearTextureRes(['cdn.newPlayerChallenge.newPlayerChallenge'])
+        ResultPanelManager.show();
+    }
+    update_newPlayerRedChallenge_data() {
+        this.update_btn()
+        this.updateItemData()
+        this.updateTask()
+    }
+    updateTask() {
+        this.txt_task_name.text = __data.newPlayerRedChallenge.taskName
+        this.img_fail.visible = false;
+        if (__data.newPlayerRedChallenge.isRemove()) {
+            this.sp_pro.visible = false
+            this.sp_end.visible = false
+            this.img_end.visible = false
+        } else if (__data.newPlayerRedChallenge.isEnd()) {
+            this.sp_pro.visible = false
+            this.sp_end.visible = true;
+            this.img_end.visible = true;
+        } else if (__data.newPlayerRedChallenge.isFail() === 1) {
+            this.sp_end.visible = false
+            this.img_end.visible = false
+            this.sp_pro.visible = true
+            this.img_fail.visible = true;
+            this.txt_pro.text = '挑战失败'
+            this.sbar.progress = 0
+        } else if (__data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need
+            && __data.newPlayerRedChallenge.need != 0) {
+            this.sp_end.visible = false
+            this.img_end.visible = false
+            this.sp_pro.visible = true
+            this.txt_pro.text = '挑战成功'
+            this.sbar.progress = 1
+        } else {
+            this.sp_end.visible = false;
+            this.img_end.visible = false;
+            this.sp_pro.visible = true;
+            this.txt_pro.text = __data.newPlayerRedChallenge.pro + ' / ' + __data.newPlayerRedChallenge.need;
+            this.sbar.progress = __data.newPlayerRedChallenge.pro / __data.newPlayerRedChallenge.need;
+        }
+        let n1 = __data.newPlayerRedChallenge.rewards.filter((e) => {
+            return e.hasGet == 1
+        })
+        // this.txt_tips.text = n1 <= 0 ? '首次抽奖\n必得红包' : '抽4次\n必得所有奖励'
+        this.img_font_tips.skin = n1 <= 0 ?
+            'cdn/newPlayerChallenge/newPlayerChallenge/img_sccj.png' :
+            'cdn/newPlayerChallenge/newPlayerChallenge/img_csc.png'
+    }
+    update_btn() {
+        this.img_hand.visible = false
+        this.img_hand.clipStop()
+        this.btn_reChallenge.visible = false
+        if (this.firstShow === 1) {
+            if (__data.game_count_total <= 0) {
+                this.img_hand.visible = true
+                this.img_hand.clipPlay(0)
+                this.btn_raffle.visible = false;
+                effectUtils.stopBreathe(this.btn_raffle)
+                effectUtils.stopBreathe(this.btn_reChallenge)
+                this.btn_go.visible = true;
+            }
+        } else {
+            if (__data.newPlayerRedChallenge.isEnd()) {
+                this.btn_go.visible = false
+                this.btn_raffle.visible = false
+                effectUtils.stopBreathe(this.btn_raffle)
+                effectUtils.stopBreathe(this.btn_reChallenge)
+                this.btn_reChallenge.visible = false
+            }
+            else if (__data.newPlayerRedChallenge.isFail() === 1) {
+                this.btn_go.visible = false
+                this.btn_raffle.visible = false
+                effectUtils.stopBreathe(this.btn_raffle)
+                this.btn_reChallenge.visible = true
+                effectUtils.breathe(this.btn_reChallenge, 1, 1.1, 300)
+            } else if (__data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need
+                && __data.newPlayerRedChallenge.need != 0
+            ) {
+                this.btn_go.visible = false
+                this.btn_raffle.visible = true
+                this.btn_raffle.gray = false
+                effectUtils.breathe(this.btn_raffle, 1, 1.1, 300)
+                effectUtils.stopBreathe(this.btn_reChallenge)
+                // if (this.firstShow === 2) {
+                this.img_hand.visible = true;
+                this.img_hand.clipPlay(0)
+                __sound.playGameYx('cheer')
+                // }
+            } else {
+                this.btn_go.visible = true
+                this.btn_raffle.visible = false
+                effectUtils.stopBreathe(this.btn_raffle)
+                effectUtils.stopBreathe(this.btn_reChallenge)
+            }
+        }
+    }
+    updateItemData() {
+        for (let index = 0, length = this.itemArray.length; index < length; index++) {
+            const e = this.itemArray[index];
+            e.dataSource = __data.newPlayerRedChallenge.rewards[index]
+        };
+    }
+    async startLightAni() {
+        let tt = 500
+        this.img_light.visible = true
+        this.img_light.alpha = 0
+        await __tool.await(tt, this)
+        this.img_light.alpha = 1
+        await __tool.await(tt, this)
+        // if (!this.clearAwait) return;
+        this.startLightAni()
+    }
+    stopLightAni() {
+        this.clearAwait && this.clearAwait('stopLightAni 2')
+        this.img_light.alpha = 0
+        this.img_light.alpha = false
+    }
+    showReward() {
+        let vo = this.img_light.rewardVO;
+        if (vo && vo.type == 1) {
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: vo.num
+                }]
+            ])
+            __data.addMoney(1, vo.num)
+            game.server.send(18001)
+        } else if (vo && (vo.type === 2 || vo.type === 3)) {
+            // 第一次是随机奖励  第二次是开启红包
+            game.server.send(18002)
+        }
+        this.stopLightAni()
+        game.cb.event('newPlayerRed_raffle_end')
+    }
+    updateEndTime() {
+        if (__data.newPlayerRedChallenge.isRemove()) {
+            this.img_time_tips.visible = false
+            this.img_time.visible = false
+        } else if (__data.newPlayerRedChallenge.isEnd()) {
+            this.img_time_tips.visible = false
+            this.img_time.visible = false
+        } else {
+            this.img_time.visible = true;
+            let ssm = __data.newPlayerRedChallenge.endTime - Date.now()
+            var hour = Math.floor(ssm / 3600 / 1000);
+            var minute = Math.floor(ssm / 60 / 1000) % 60;
+            var miao = Math.floor(ssm / 1000) % 60;
+            let timeStr = (hour >= 10 ? hour : '0' + hour) + ':'
+            timeStr += (minute >= 10 ? minute : '0' + minute) + ':'
+            timeStr += miao >= 10 ? miao : '0' + miao
+            this.txt_time.text = '限时参与：' + timeStr
+            this.img_time_tips.visible = __data.newPlayerRedChallenge.isShowAddTime()
+        }
+    }
+}
+class S_gnprc_go extends Laya.Script {
+    onRightClick() {
+        if (miniApi.clientType === 'web')
+            game.server.send(18011)
+    }
+    onClick(e) {
+        let a = game.scene.get(Mahjong3DBG)
+        if (a && a.parent) {
+            game.scene.remove(this.owner.parent)
+        } else {
+            __data.lastSceneQueue.push(__showScene.show_hall)
+            __showScene.show_hall_play(__data.myCityId)
+        }
+    }
+}
+class S_click_rec_raffle extends Laya.Script {
+    onEnable() {
+        this.ing = false
+        game.cb.on('newPlayerRed_raffle_end', this, this.end111)
+    }
+    onDisable() {
+        game.cb.off('newPlayerRed_raffle_end', this, this.end111)
+    }
+    end111() {
+        this.ing = false
+    }
+    async onClick(e) {
+        if (__data.newPlayerRedChallenge.pro < __data.newPlayerRedChallenge.need) {
+            __tips('请先完成挑战任务')
+            return
+        }
+        let b = game.scene.get(Mahjong3DBG)
+        let sr = game.scene.get(MahjongSmallResult);
+        if (b && b.parent && (!sr || !sr.parent)) {
+            __tips('请返回大厅界面抽奖')
+            return
+        }
+
+        if (this.ing) return
+        this.ing = true
+        await game.server.send(18002)
+        this.owner.parent.img_hand.visible = false
+        this.owner.parent.img_hand.clipStop()
+        // let a = this.owner.parent.getComponent(S_rec_startLightMove)
+        // a.startLightMove()
+    }
+}
+class S_rec_startLightMove extends Laya.Script {
+    onAwake() {
+        this.s1 = [700];
+        for (let index = 0; index < 12; index++) {
+            this.s1.push(500 - index * 50)
+        }
+        // this.s2 = [];
+        // for (let index = 0; index < 18; index++) {
+        //     this.s2.push(50)
+        // }
+        this.s3 = this.s1.slice().reverse()
+        // this.s4 = [...this.s1, ...this.s2, ...this.s3]
+    }
+    onEnable() {
+        game.cb.on('newPlayerRedChallenge_raffle', this, this.startLightMove)
+    }
+    onDisable() {
+        game.cb.off('newPlayerRedChallenge_raffle', this, this.startLightMove)
+        this.allowAni = false
+        this.clearAwait && this.clearAwait()
+    }
+    startLightMove(r1) {
+        if (this.allowAni) return;
+        this.itemArray = []
+        for (let index = 0, length = __data.newPlayerRedChallenge.rewards.length; index < length; index++) {
+            const e = __data.newPlayerRedChallenge.rewards[index];
+            if (e.hasGet === 0) {
+                this.itemArray.push(this.owner.itemArray[index])
+            }
+        };
+        this.s2 = [];
+        for (let index = 0; index < 18; index++) {
+            this.s2.push(50)
+        }
+        this.s4 = [...this.s1, ...this.s2, ...this.s3]
+        // 强制循环开始位置
+        let n1 = this.s4.length % this.itemArray.length;
+        this.s2.splice(0, n1)
+        // 增加到道具位置
+        for (let index = 0; index < r1 - 1; index++) {
+            const e = __data.newPlayerRedChallenge.rewards[index];
+            if (e.hasGet === 0) {
+                this.s2.push(50)
+            }
+        }
+        this.s4 = [...this.s1, ...this.s2, ...this.s3]
+
+        if (this.itemArray.length === 1) {
+            this.s4 = [100]
+        }
+
+        this.owner.stopLightAni()
+        this.allowAni = true
+        this.startTime = 0
+        this.index = 0;
+        this.delay = 0;
+        this.img_index = 0
+        this.owner.img_light.visible = true;
+        this.owner.img_light.alpha = 1;
+        this.owner.img_light.x = this.itemArray[0].x
+        this.owner.img_light.y = this.itemArray[0].y
+        __sound.playGameYx('ding')
+    }
+    async onUpdate() {
+        if (this.allowAni) {
+            if (!this.startTime) {
+                this.startTime = Date.now()
+            }
+            this.delay = Date.now() - this.startTime;
+
+            if (this.index < this.s4.length) {
+                if (this.delay >= this.s4[this.index]) {
+                    this.index++;
+                    this.delay = 0;
+                    this.startTime = Date.now()
+                    this.img_index++;
+                    let b = this.img_index % this.itemArray.length;
+                    this.owner.img_light.x = this.itemArray[b].x
+                    this.owner.img_light.y = this.itemArray[b].y
+                    this.owner.img_light.rewardVO = this.itemArray[b].vo
+                    __sound.playGameYx('ding')
+                }
+            } else {
+                this.allowAni = false;
+                await __tool.await(500, this)
+                this.owner.startLightAni()
+                await __tool.await(1200, this)
+                this.owner.showReward()
+            }
+        }
+    }
+}
+class S_click_rec_reChallenge extends Laya.Script {
+    async onClick(e) {
+        // let img_video = this.owner.getChildByName('img_video')
+        // if (img_video.visible) {
+        let adunitId = 'adunit-21b4a4918cdbf39b'
+        await miniApi.video_ready(adunitId)
+        miniApi.video_show(adunitId, () => {
+            game.server.send(18003)
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0);
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '新人红包复活', 'Mj_Participation': n })
+    }
+}
+class S_rec_open_allPlayerRed extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainNewPlayerRedChallenge)
+        __showScene.show_allPlayerRed('show_btn_ani')
+    }
+}
+// class S_click_rec_subscribe extends Laya.Script {
+//     async onClick(e) {
+//         if (!__data.allPlayerRed.isSub) {
+//             let a = await miniApi.activitySubscribe()
+//             if (a == 1) {
+//                 game.server.send(18005)
+//                 game.scene.remove(GameMainNewPlayerRedChallenge)
+//             }
+//         } else {
+//             __tips('订阅成功')
+//             game.scene.remove(GameMainNewPlayerRedChallenge)
+//         }
+//     }
+// }
+class GameMainNewPlayerRedChallengeItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallengeItem',
+            module: false
+        })
+        this.__vo;
+    }
+    onEnable() {
+    }
+    onDisable() {
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        if (vo.type == 1) {
+            this.img_icon.skin = 'bag_icon/img_icon_1.png'
+            this.img_name.skin = 'cdn/newPlayerChallenge/newPlayerChallenge/img_jb.png'
+            this.txt_content.text = '×' + vo.num
+        } else if (vo.type == 2) {
+            this.img_icon.skin = 'cdn/redIcon/img_hb.png'
+            this.img_name.skin = 'cdn/newPlayerChallenge/newPlayerChallenge/img_pthb.png'
+            this.txt_content.text = vo.num + '元'
+        } else if (vo.type == 3) {
+            this.img_icon.skin = 'cdn/redIcon/img_hb.png'
+            this.img_name.skin = 'cdn/newPlayerChallenge/newPlayerChallenge/img_psqhb.png'
+            this.txt_content.text = '至高' + vo.num + '元'
+        }
+        this.img_get.visible = vo.hasGet === 1
+        if (__data.newPlayerRedChallenge.isEnd()) this.img_get.visible = false;
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_newPlayerChallengeItemUI', GameMainNewPlayerRedChallengeItem);
+
+class GameMainNewPlayerRedChallengeOpen extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallenge_open',
+            layer: 'panel'
+        })
+        this.btn_open.addComponent(S_rmc_open)
+    }
+    added() {
+        __sound.playGameYx('get')
+        this.type = __data.redPacket.redVO.redType;
+        this.vo = __data.redPacket.redVO;
+        if (this.vo.titleType == 2) {
+            this.img_title.skin = 'cdn/newPlayerChallenge/newPlayerChallenge/img_pthb1.png'
+        } else {
+            this.img_title.skin = 'cdn/newPlayerChallenge/newPlayerChallenge/img_psqhb1.png'
+        }
+        if (this.type == 'newPlayerRed') {
+            let n = __data.newPlayerRedChallenge.rewards.filter((e) => {
+                return e.hasGet == 1
+            })
+            if (n.length == 0) {
+                this.img_hand.visible = true;
+                this.img_hand.clipPlay(0)
+            } else {
+                this.img_hand.visible = false;
+                this.img_hand.clipStop()
+            }
+        } else {
+            this.img_hand.visible = false;
+            this.img_hand.clipStop()
+        }
+        this.btn_close.visible = this.type == 'friendRed'
+    }
+    clickMask() { }
+}
+class S_rmc_open extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainNewPlayerRedChallengeOpen)
+        game.scene.add(GameMainNewPlayerRedChallengeReceive)
+    }
+}
+class GameMainNewPlayerRedChallengeReceive extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_newPlayerChallenge_receive',
+            layer: 'panel'
+        })
+        this.btn_receive.addComponent(S_rmc_receive)
+    }
+    added() {
+        this.type = __data.redPacket.redVO.redType;
+        __sound.playGameYx('get')
+        this.vo = __data.redPacket.redVO;
+        this.txt_red.text = Number(__data.redPacket.redVO.num).toFixed(2) + '元'
+
+        if (this.type == 'newPlayerRed') {
+            let n = __data.newPlayerRedChallenge.rewards.filter((e) => {
+                return e.hasGet == 1
+            })
+            if (n.length == 0) {
+                this.img_hand.visible = true;
+                this.img_hand.clipPlay(0)
+            } else {
+                this.img_hand.visible = false;
+                this.img_hand.clipStop()
+            }
+        } else {
+            this.img_hand.visible = false;
+            this.img_hand.clipStop()
+        }
+    }
+}
+class S_rmc_receive extends Laya.Script {
+    async onClick(e) {
+        let type = this.owner.parent.type
+        const redPacketTypes = {
+            newPlayerRed: '领取新人红包',
+            allPlayerRed: '领取全民红包',
+            luckRed: '领取幸运红包',
+            friendRed: '领取好友红包',
+            inviteRed: '领取邀请红包',
+        };
+        let b = redPacketTypes[type] || '未知';
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': b, 'Mj_ClickOther': this.owner.parent.vo.num });
+
+        let fn_recommend = async () => {
+            if (type == 'allPlayerRed' || type == 'luckRed') {
+                let a2 = await __data.recommend.canShow()
+                if (a2) __showScene.show_recommend()
+            }
+        }
+        if (window.wx) {
+            if (wx.requestMerchantTransfer) {
+                wx.requestMerchantTransfer({
+                    mchId: '1294910601',
+                    appId: 'wxcd3feed2af7f80c6',
+                    package: this.owner.parent.vo.package_info,
+                    async success(res) {
+                        fn_recommend()
+                        if (type == 'inviteRed') {
+                            // 重新查询邀请红包信息
+                            __data.activity.inviteRed.addInviteNumbers();
+                            game.server.send(18027)
+                        }
+                        // game.scene.remove(GameMainNewPlayerRedChallengeReceive)
+                        // game.scene.remove(LoadingSmall)
+                        // game.server.send(20002)
+                    },
+                    fail(res) {
+                        trace('wx.requestMerchantTransfer', JSON.stringify(res))
+                        game.scene.remove(GameMainNewPlayerRedChallengeReceive)
+                        game.scene.remove(LoadingSmall)
+                        // game.server.send(20002)
+                    }
+                })
+            } else {
+                wx.showModal({
+                    title: '提示',
+                    content: '当前微信版本过低，无法使用该功能，请升级到最新微信版本后重试。'
+                })
+            }
+        } else {
+            game.server.send(20004, __data.redPacket.redVO.redId)
+            fn_recommend()
+            if (type == 'inviteRed') {
+                // 重新查询邀请红包信息
+                __data.activity.inviteRed.addInviteNumbers();
+                game.server.send(18027)
+            }
+        }
+        game.scene.add(LoadingSmall)
+        // game.scene.remove(GameMainNewPlayerRedChallengeReceive)
+    }
+}

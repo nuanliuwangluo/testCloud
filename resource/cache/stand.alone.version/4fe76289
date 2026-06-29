@@ -1,0 +1,221 @@
+class MahjongXuezhan extends Laya.Script{
+
+    onAwake(){
+        [this.upChoose, this.leftChoose, this.rightChoose] = [new MahjongXuezhanChoose(), new MahjongXuezhanChoose(), new MahjongXuezhanChoose()];
+        [this.upQue, this.leftQue, this.rightQue] = [new MahjongXuezhanQue(), new MahjongXuezhanQue(), new MahjongXuezhanQue()];
+        this.exchangeUI = new MahjongXuezhanExchange();// 交换UI
+        this.chooseBtn = new MahjongXuezhanChooseBtn();// 选牌操作按钮
+        this.chooseQueBtn = new MahjongXuezhanChooseQueBtn();// 定缺操作按钮
+        this.changes = [];
+    }
+    onEnable(){
+        game.cb.on('xuezhan_choose', this, this.xuezhanChoose);
+        game.cb.on('xuezhan_exchange', this, this.xuezhanExchange);
+        game.cb.on('xuezhan_que', this, this.xuezhanQue);
+        game.cb.on('xuezhan_clear', this, this.xuezhanClear);
+    }
+    onDisable(){
+        game.cb.off('xuezhan_choose', this, this.xuezhanChoose);
+        game.cb.off('xuezhan_exchange', this, this.xuezhanExchange);
+        game.cb.off('xuezhan_que', this, this.xuezhanQue);
+        game.cb.off('xuezhan_clear', this, this.xuezhanClear);
+    }
+
+    clear(){
+        game.utils.remove(this.upChoose, this.leftChoose, this.rightChoose);
+        game.utils.remove(this.upQue, this.leftQue, this.rightQue);
+        game.utils.remove(this.exchangeUI);
+        game.utils.remove(this.chooseBtn);
+        game.utils.remove(this.chooseQueBtn);
+        while(this.changes.length > 0){
+            let sprite3D = this.changes.shift();
+            sprite3D.active = false;
+            sprite3D.destroy();
+        } 
+    }
+
+    /**
+     * 选牌环节
+     * @param {Boolean} isDone 是否已经选择完成
+     */
+    xuezhanChoose(isDone){
+        this.clear();
+        if(this.container){
+            this.container.getChildByName('desk').addChild(this.upChoose).pos(this.container.width / 2 - this.upChoose.width / 2, this.container.getChildByName('player_up').y + this.container.getChildByName('player_up').height);
+            this.container.getChildByName('desk').addChild(this.leftChoose).pos(this.container.getChildByName('player_left').x + this.container.getChildByName('player_left').width, this.container.height / 2 - this.leftChoose.height * 2);
+            this.container.getChildByName('desk').addChild(this.rightChoose).pos(this.container.getChildByName('player_right').x - this.rightChoose.width, this.container.height / 2 - this.rightChoose.height * 2);   
+            if(isDone){ this.createCard(__data.deskData.roomVo.getPlayer('down')); }
+            else this.container.getChildByName('desk').addChild(this.chooseBtn).pos(this.container.width - this.chooseBtn.width >> 1, this.container.height * 0.7 - this.chooseBtn.height / 2);
+        }
+    }
+
+    /**
+     * 交换环节
+     */
+    xuezhanExchange(){
+        this.clear();
+        this.createCard(__data.deskData.roomVo.getPlayer('up'));
+        this.createCard(__data.deskData.roomVo.getPlayer('down'));
+        this.createCard(__data.deskData.roomVo.getPlayer('left'));
+        this.createCard(__data.deskData.roomVo.getPlayer('right'));
+        this.container && this.container.getChildByName('desk').addChild(this.exchangeUI).pos(this.container.width - this.exchangeUI.width >> 1, this.container.height / 2 - 60 - this.exchangeUI.height / 2);
+    }
+
+    /**
+     * 定缺环节
+     * @param {Boolean} isDone 是否已经选择完成
+     */
+    xuezhanQue(isDone){
+        this.clear();
+        if(this.container){
+            this.container.getChildByName('desk').addChild(this.upQue).pos(this.container.width / 2 - this.upQue.width / 2, this.container.getChildByName('player_up').y + this.container.getChildByName('player_up').height);
+            this.container.getChildByName('desk').addChild(this.leftQue).pos(this.container.getChildByName('player_left').x + this.container.getChildByName('player_left').width, this.container.height / 2 - this.leftQue.height * 2);
+            this.container.getChildByName('desk').addChild(this.rightQue).pos(this.container.getChildByName('player_right').x - this.rightQue.width, this.container.height / 2 - this.rightQue.height * 2);   
+            if(isDone){  }
+            else this.container.getChildByName('desk').addChild(this.chooseQueBtn).pos(this.container.width - this.chooseQueBtn.width >> 1, this.container.height * 0.7 - this.chooseQueBtn.height / 2);
+        }
+    }
+
+    xuezhanClear(){
+        this.clear();
+    }
+
+    createCard(vo){
+        if(vo){
+            for(let i = 0;i < 3;i++){
+                let __v = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(i)), __data.deskData.roomVo.scene.getChildByName('container'));
+                // let __v = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'));
+                if(vo.seat_tag == 'up'){
+                    let information = { x:7.4, y:0, z:40, width:7.4 };
+                    __v.transform.localPosition = new Laya.Vector3(information.x - i * information.width, information.y, information.z);
+                    // __v.transform.rotationEuler = new Laya.Vector3() // 翻开
+                    __v.transform.rotationEuler = new Laya.Vector3(180, 0, 0) // 扣着
+                    __v.meshRenderer.material = __data.deskData.roomVo.material;
+                    this.changes.push(__v);
+                } else if(vo.seat_tag == 'down'){
+                    let information = { x:7.4, y:0, z:-40, width:7.4 };
+                    __v.transform.localPosition = new Laya.Vector3(information.x - i * information.width, information.y, information.z);
+                    // __v.transform.rotationEuler = new Laya.Vector3() // 翻开
+                    __v.transform.rotationEuler = new Laya.Vector3(180, 0, 0) // 扣着
+                    __v.meshRenderer.material = __data.deskData.roomVo.material;
+                    this.changes.push(__v);
+                } else if(vo.seat_tag == 'left'){
+                    let information = { x:40, y:0, z:7.4, width:7.4 };
+                    __v.transform.localPosition = new Laya.Vector3(information.x, information.y, information.z - i * information.width);
+                    // __v.transform.rotationEuler = new Laya.Vector3(0,-90,0) // 翻开
+                    __v.transform.rotationEuler = new Laya.Vector3(180, -90, 0) // 扣着
+                    __v.meshRenderer.material = __data.deskData.roomVo.material;
+                    this.changes.push(__v);
+                } else if(vo.seat_tag == 'right'){
+                    let information = { x:-40, y:0, z:-7.4, width:7.4 };
+                    __v.transform.localPosition = new Laya.Vector3(information.x, information.y, information.z + i * information.width);
+                    // __v.transform.rotationEuler = new Laya.Vector3(0,90,0) // 翻开
+                    __v.transform.rotationEuler = new Laya.Vector3(180, 90, 0) // 扣着
+                    __v.meshRenderer.material = __data.deskData.roomVo.material;
+                    this.changes.push(__v);
+                }
+            }
+        }
+    }
+
+    get container(){
+        if(!this._container){
+            this._container = this.owner ? this.owner.game : null;
+        }
+        return this._container;
+    }
+}
+// 交换提示
+class MahjongXuezhanExchange extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongXuezhanExchange',
+            module: false
+        });
+    }
+}
+// 选择定缺提示
+class MahjongXuezhanQue extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongXuezhanQue',
+            module: false
+        });
+    }
+}
+// 选择换牌提示
+class MahjongXuezhanChoose extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongXuezhanChoose',
+            module: false
+        });
+    }
+}
+// 选择换牌按钮
+class MahjongXuezhanChooseBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongXuezhanChooseBtn',
+            module: false
+        });
+    }
+}
+// 选择万筒条定缺按钮
+class MahjongXuezhanChooseQueBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongXuezhanChooseQueBtn',
+            module: false
+        });
+    }
+}
+
+
+
+
+
+
+
+/**
+ * 血战麻将下雨刮风特效
+ * @author sweets
+ */
+class MahjongXuezhanEffect extends Laya.Script{
+
+    onAwake(){
+        this.rain = new Laya.Image();
+        this.wind = new Laya.Image();
+        this.rain.anchorX = this.rain.anchorY = 0.5;
+        this.wind.anchorX = this.wind.anchorY = 0.5;
+    }
+    onEnable(){
+        game.cb.on('xuezhan_effect_rain', this, this.effectRain);
+        game.cb.on('xuezhan_effect_wind', this, this.effectWind);
+    }
+    onDisable(){
+        game.cb.off('xuezhan_effect_rain', this, this.effectRain);
+        game.cb.off('xuezhan_effect_wind', this, this.effectWind);
+    }
+
+    effectRain(){
+        __sound.gameSound("xuezhan_rain");
+        this.container && this.container.addChild(this.rain).pos(this.container.width / 2, this.container.height / 2);
+        // 下雨效果
+        this.rain.addComponent(PlayComponent).start({ startIndex:1, endIndex:11, frame:2, prefix:'cdn/mahjong_xuezhan/rain_', tail:'png', complete:()=>{
+            game.utils.remove(this.rain);
+        }});
+    }
+    effectWind(){
+        __sound.gameSound("xuezhan_wind");
+        this.container && this.container.addChild(this.wind).pos(this.container.width / 2, this.container.height / 2);
+        // 吹风效果
+        this.wind.addComponent(PlayComponent).start({ startIndex:1, endIndex:11, frame:2, prefix:'cdn/mahjong_xuezhan/wind_', tail:'png', complete:()=>{
+            game.utils.remove(this.wind);
+        }});
+    }
+
+    get container(){
+        return this.owner ? this.owner.game.getChildByName('desk') : null;
+    }
+}

@@ -1,0 +1,144 @@
+class GameCommonMatch extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game_common/game_common_match',
+            layer: 'middle',
+            down: true,
+        })
+
+        let timeArr = {};
+        for (var i = 0; i < 10; i++) timeArr[i] = "local/mahjong_match/1/" + i + ".png";
+        timeArr['秒'] = 'local/mahjong_match/1/img_ppm.png';
+
+        this.txt_time = new ImageFont(timeArr, 'left', 'bottom');
+        this.c_time.addChild(this.txt_time);
+
+    }
+
+    onEnable() { }
+
+    onDisable() {
+        game.cb.off(TimerUtils.TIMERUTILS_SECOND_EVENT, this, this.update);
+        this.stop();
+    }
+
+    startMath() {
+        this.c_time.visible = true;
+        this.btnUI.visible = false;
+
+        this.time = 30;
+        TimerUtils.pushAttr(this, 'time');
+        this.update();
+        game.cb.on(TimerUtils.TIMERUTILS_SECOND_EVENT, this, this.update)
+        this.callLater(this.localtion);
+        this.play();
+    }
+
+    ready() {
+        this.c_time.visible = false;
+        this.btnUI.visible = true;
+    }
+
+    added(type_str, score_str) {
+        this.txt_type.text = type_str || '';
+        this.txt_score.text = '底分' + GoldFormatUtils.format(score_str || '');
+    }
+
+    update() {
+        // HtmlTextUtils.text(
+        //     this.txt_match, { align: 'left', valign: 'top', fontSize: 30, bold: true, width: this.width, color: '#ffffff' },
+        //     '正在匹配实力相近的牌友●●●', {},
+        //     this.time + '秒', { color: '#fff000' }
+        // )
+        this.txt_time.text = this.time + '秒';
+    }
+
+    localtion() {
+        this.txt_time.x = this.font.x + this.font.width;
+        this.txt_time.y = this.font.y + this.font.height; // - this.txt_time.height / 2;
+        // this.txt_match.x = this.width - this.txt_match.width >> 1;
+    }
+
+    play() {
+        this.jumpAni.play(0, true);
+    }
+
+    stop() {
+        this.jumpAni.stop();
+    }
+}
+
+
+
+class GameMahjongMatch extends GameCommonMatch {
+    constructor() {
+        super()
+    }
+
+    onAwake() {
+        this.c.y = 400;
+        this.c.visible = false;
+    }
+
+    onEnable() {
+        game.scene.remove(GameMahjongPreMatch);
+        super.onEnable();
+        this.startMath();
+    }
+}
+
+
+class GameMahjongPreMatch extends GameCommonMatch {
+    constructor() {
+        super()
+
+        this.btn_match.on(Laya.Event.CLICK, this, this._directStartMatch);
+        this.btn_videoMatch.on(Laya.Event.CLICK, this, this._videoStartMatch);
+    }
+
+    onAwake() {
+        this.c.y = 400;
+        this.c.visible = false;
+    }
+
+    onEnable() {
+        super.onEnable();
+        this.ready();
+    }
+
+    onDisable() {
+        this.callback = null;
+    }
+
+    added(type_str, score_str, callback) {
+        this.txt_type.text = type_str || '';
+        this.txt_score.text = '底分' + GoldFormatUtils.format(score_str || '');
+
+        this.callback = callback;
+    }
+
+    _directStartMatch() {
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '普通开始' });
+        this.callback && this.callback();
+    }
+
+    async _videoStartMatch() {
+        if (__data.callback11005 && __data.callback11005()) { return; }
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '封顶开始' });
+        let adunitId = 'adunit-24510f2ab8dd04a0'; // 后期可能需要更换广告id
+        // let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        // miniApi.trackEvent('Mj_ADClick', {Mj_ADPreference: miniApi.adUserValueLevel,  'Mj_ADScene': '胜利额外奖杯', 'Mj_Participation': n })
+        await miniApi.video_ready(adunitId);
+        miniApi.video_show(adunitId, () => {
+            this.callback && this.callback(true);
+        }, () => {
+            // IOS 没有vip一说
+            // IOS能支付修改
+            // if (miniApi.isIOS) {
+            //     __tips('暂无广告，请稍后再试')
+            // } else {
+            __tips('暂无广告，请稍后再试或开通VIP')
+            // }
+        }, 0)
+    }
+}

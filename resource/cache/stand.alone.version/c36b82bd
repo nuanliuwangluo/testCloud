@@ -1,0 +1,575 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-05-25 10:55:16
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-13 15:00:56
+ */
+// 关闭启动页接口
+window.removeFirstPage = () => {
+    try {
+        if (window.loadingView) { loadingView.hideLoadingView(); }
+        api.removeLaunchView({ animation: { type: 'fade', duration: 500 } });
+    } catch (e) { }
+}
+let _game_init_ = async function () {
+    trace('开始加载游戏资源 _game_init_')
+    LocalUtils.init();
+    TimerUtils.start();
+    __data.analysisWebParams();
+    var xxxxx = miniApi.getItem('music');
+    var wwwww = miniApi.getItem('sound');
+    config.isMusic = xxxxx == 'false' ? false : true;
+    config.isSound = wwwww == 'false' ? false : true;
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '加载显示loading' })
+
+    if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+        AppBridge.listener();
+        OriginAppIap.investIds = allPayPropId; OriginAppIap.init(); OriginAppIap.initMallItems();OriginAppIap.exchangeGoodsInterface = miniApi.paySuccess;
+    } else if (window.IOSPay) {
+        IOSPay.investIds = allPayPropId; IOSPay.init(); IOSPay.initMallItems();
+    }
+    await __showScene.show_loading();
+    window.removeFirstPage && window.removeFirstPage();
+    window.OpenHtml && OpenHtml.takeFront('main');
+    miniApi.preloadAd();
+    if (miniApi.clientType == 'app') {
+        if (window.AppVersionUpdate) {
+            AppVersionUpdate.check(async (result, tips) => {
+                console.log('版本关闭状态：' + result);
+                // 版本已经停用
+                if (result) {
+                    // 加载界面 强制更新弹框
+                    __showScene.show_prompt_frame({
+                        title: '发现新版本',
+                        content: tips ? tips : '发现新版本，请更新游戏后继续!',
+                        success: miniApi.toMarket,
+                        btn_num: 1,
+                        txt_sure: '立即更新',
+                    })
+                } else {
+                    await reqVerCfg()
+                    app_test_show_loginAuth()
+                }
+            })
+        } else {
+            await reqVerCfg()
+            app_test_show_loginAuth()
+        }
+    } else verify_version()
+}
+let checkBranchSwitch = (data, platform) => {
+    let version = data[0];
+    if (platform == Platform.APP) {
+        if (version && version.appLoginState == 0) { return false; }
+    } else if (platform == Platform.WX) {
+        if (version && version.miniLoginState == 0) { return false; }
+    }
+    return true;
+}
+let reqVerCfg = () => {
+    return new Promise(async (resolve, reject) => {
+        if (__data.versionInfo) {
+            return resolve(__data.versionInfo)
+        }
+        let a1 = await miniApi.axios({
+            url: `https://${config.reqIpUrl}:8111/server/reqVerCfg`,
+            method: 'get',
+        }).catch((e) => { })
+
+        let vercfg = __tool.gdp(a1, 'data.vercfg')
+        if (!vercfg) {
+            miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `undefined`, 'Mj_ErrorInfo': `获取http黄哥版本信息服务失败` })
+            __showScene.show_prompt_select("获取版本信息失败，请重新打开游戏", miniApi.restart, miniApi.exit)
+            return null
+        }
+        let disableLoginInfo = __tool.gdp(a1, 'data.disableLoginInfo')
+        let serverOpen = __tool.gdp(a1, 'data.serverOpen')
+        if (!serverOpen || serverOpen === 'false') {
+            __showScene.show_prompt_single(disableLoginInfo, '确定', miniApi.exit)
+            return null
+        }
+        let b1 = JSON.parse(vercfg)
+        let branchOpen = checkBranchSwitch(b1, miniApi.clientType);// 分支开关是否 开启
+        if (!branchOpen) { // 如果关闭状态  不允许进入游戏
+            __showScene.show_prompt_single(disableLoginInfo, '确定', miniApi.exit)
+            return null
+        }
+
+        console.log('versioninfo', config.reqIpUrl, b1)
+        let versionConfig = { wx: [], app: [] }
+        __data.redPacket.updateState(b1);// 留存状态
+
+        for (let index = 0, length = b1.length; index < length; index++) {
+            let e = b1[index]
+            if (e.wx_tag) {
+                versionConfig.wx[e.wx_tag] = {
+                    tag: e.wx_tag,
+                    version: e.wx_version,
+                    isCheck: !e.status,
+                    content: e.content,
+                }
+            }
+            if (e.ios_tag) {
+                versionConfig.app[e.ios_tag] = {
+                    tag: e.ios_tag,
+                    version: e.ios_version,
+                    isCheck: !e.status,
+                    content: e.content,
+                }
+            }
+        };
+        function compareVersion(v1, v2) {
+            v1 = v1.split('.')
+            v2 = v2.split('.')
+            const len = Math.max(v1.length, v2.length)
+
+            while (v1.length < len) {
+                v1.push('0')
+            }
+            while (v2.length < len) {
+                v2.push('0')
+            }
+
+            for (let i = 0; i < len; i++) {
+                const num1 = parseInt(v1[i])
+                const num2 = parseInt(v2[i])
+
+                if (num1 > num2) {
+                    return 1
+                } else if (num1 < num2) {
+                    return -1
+                }
+            }
+            return 0
+        }
+        let useC;
+        if (miniApi.clientType == 'web') {
+            useC = versionConfig.wx
+        }
+        else if (miniApi.clientType == 'wx') {
+            useC = versionConfig.wx
+        }
+        else if (miniApi.clientType == 'app') {
+            useC = versionConfig.app
+        }
+        let a = useC[config.clientVersion]
+        if (!a) {
+            let m = Object.keys(useC);
+            m.sort(compareVersion)
+            m.reverse()
+            a = useC[m[0]]
+        }
+        if (config.useVersionIP) {
+            if (a.isCheck) {
+                config.reqIpUrl = 'testgame.snyngame.com';
+                config.ip = config.reqIpUrl;
+            } else {
+                config.reqIpUrl = 'mjxcc.snyngame.com';
+                config.ip = config.reqIpUrl;
+            }
+        }
+        trace('config.reqIpUrl', config.reqIpUrl)
+        // game.scene.get(Loading).update_version(a.version)
+        __data.versionInfo = { version: a.version, content: a.content };
+        resolve(__data.versionInfo);
+    })
+}
+let verify_version = async () => {
+    let { version, content } = await reqVerCfg()
+    let v = version;
+    v = v.replace('（', '(');
+    v = v.replace('）', ')');
+    let l_k = v.indexOf('(');
+    let r_k = v.indexOf(')');
+    let letterIndex = l_k;
+    if (l_k > -1) v = v.replace('(', '')
+    if (r_k > -1) v = v.replace(')', '')
+    let v_1 = v.charAt(letterIndex).toUpperCase() // V P S F
+    let v2 = v.replace(v_1, '') // 3.1.12.123
+    let v3 = v2.toArray('.') // [3,1,12,123]
+    let v4 = v3.slice(0, 3).join('.') // 3.1.12
+    if (config.clientVersion == v4) {
+        let n1 = config.versionK.slice(1) // 去掉.
+        let n2 = v3[3] // 去掉.
+        if (Number(n1) > Number(n2)) {
+            firstLoadConnect()
+        }
+        else if (n1 != n2) {
+            if (miniApi.clientType == 'wx') {
+                if (v_1 == 'P' || v_1 == 'S') {
+                    firstLoadConnect()
+                } else if (v_1 == 'V' || v_1 == 'F') {
+                    // 加载界面 手动重启弹框
+                    __showScene.show_prompt_frame({
+                        content: "当前游戏版本已停用，请尝试重启游戏以便更新至最新版本",
+                        success: miniApi.exit,
+                        btn_num: 1,
+                    })
+                }
+            } else if (miniApi.clientType == 'app') {
+                if (v_1 == 'P') {
+                    // 加载界面提示更新 玩家可以不更新
+                    __showScene.show_prompt_frame({
+                        title: '发现新版本',
+                        content: content,
+                        success: miniApi.toMarket,
+                        fail: firstLoadConnect,
+                        btn_num: 2,
+                        txt_sure: '立即更新',
+                        txt_cancel: '下次再说',
+                    })
+                } else if (v_1 == 'V') {
+                    // 加载界面 强制更新弹框
+                    __showScene.show_prompt_frame({
+                        title: '发现新版本',
+                        content: content,
+                        success: miniApi.toMarket,
+                        btn_num: 1,
+                        txt_sure: '立即更新',
+                    })
+                } else if (v_1 == 'S') {
+                    // 直接进游戏 静默更新
+                    window.AppHotUpdate && AppHotUpdate.update()
+                    firstLoadConnect()
+                } else if (v_1 == 'F') {
+                    // 加载界面 强制热更新
+                    game.scene.get(Loading).addLoadingBar();
+                    game.cb.on('HotUpdate_tips', this, app_hot_update_loading_update_tips);
+                    game.cb.on('HotUpdate_progress', this, app_hot_update_loading_update_pro);
+                    game.cb.on('HotUpdate_stop', this, app_hot_update_loading_update_stop);
+                    window.AppHotUpdate && AppHotUpdate.update(true)
+                }
+            } else if (miniApi.clientType == 'web') {
+                firstLoadConnect()
+            }
+        } else {
+            firstLoadConnect()
+        }
+    } else {
+        if (miniApi.clientType == 'wx') {
+            // 加载界面 手动重启弹框
+            // __showScene.show_prompt_single("当前游戏版本已停用，请尝试重启游戏以便更新至最新版本", '确定', miniApi.exit)
+            __showScene.show_prompt_frame({
+                title: '发现新版本',
+                content: content,
+                success: miniApi.restart,
+                fail: miniApi.exit,
+                btn_num: 2,
+                txt_sure: '立即更新',
+                txt_cancel: '下次再说',
+            })
+        } else if (miniApi.clientType == 'app') {
+            // 加载界面 强制更新弹框
+            __showScene.show_prompt_frame({
+                title: '发现新版本',
+                content: content,
+                success: miniApi.toMarket,
+                btn_num: 1,
+                txt_sure: '立即更新',
+            })
+        } else if (miniApi.clientType == 'web') {
+            // 加载界面 强制更新弹框
+            __showScene.show_prompt_frame({
+                title: '发现新版本',
+                content: content,
+                success: miniApi.toMarket,
+                btn_num: 1,
+                txt_sure: '立即更新',
+            })
+        }
+    }
+}
+let firstLoadConnect = async () => {
+    game.scene.remove(PromptFrame)
+    let get_ip_port_and_init_socket = async () => {
+        let a = await getIpPort();
+        await initSocket()
+        return true
+    }
+
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '首次加载链接开始' })
+    game.scene.get(Loading).addLoadingBar();
+    let [b1, b2] = await Promise.all([get_ip_port_and_init_socket(), __showScene.load_hall()])
+    if (!b1) return;
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '首次加载链接完成' })
+    // return
+    socket_connect_complete_look_room()
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '查询房间完成' })
+}
+let getIpPort = () => {
+    return new Promise(async (resolve, reject) => {
+        trace('开始 getIpPort')
+        let a = await miniApi.reqIp()
+        if (a == -10) {
+            // 断网 or 超时
+            miniApi.alert('提示', '微信登录失败，请重新打开游戏', miniApi.restart, miniApi.exit)
+            return
+        }
+        // type 1正常 0过时 2超前
+        // {"protocol":"https","port":"18050","url":"mjxcc.snyngame.com","type":"open"}
+        a = a || { data: {} }
+        if (a && a.data && a.data.type == 0) {
+            // 黄哥增加属性 判断 版本不一致 补进入游戏
+            __data.uid = -100
+            __showScene.show_prompt_single("当前游戏版本已停用，请尝试重启游戏以便更新至最新版本", '确定', miniApi.exit)
+            return false;
+        }
+        console.log(config.serverVersion, JSON.stringify(a.data))
+        if (a.data.error) {
+            trace('reqIp error', a.data.error)
+            __data.uid = -100;
+            __showScene.show_prompt_single('未知版本错误' + a.data.error, '确定', miniApi.exit)
+            game.scene.remove(LoadingSmall)
+            game.scene.remove(LoadingAwait)
+            // miniApi.alert('提示', '未知版本错误' + a.data.error, miniApi.exit, miniApi.exit)
+            return
+        }
+        // if (config.useVersionIP) {
+        if (a.data.port) {
+            // https审核里面复制了 这里只用端口
+            // config.ip = a.data.url;
+            config.port = a.data.port;
+        }
+        // 设置openid如果没有保留上次的
+        a.data.uuid && (__data.openid = a.data.uuid);
+        a.data.appleid && (__data.openid = a.data.appleid);
+        a.data.account && (__data.openid = a.data.account);
+        // 统计上报uuid openid
+        a.data.uuid && miniApi.adsdk_setUUID(a.data.uuid)
+        a.data.openid && miniApi.adsdk_setOpenID(a.data.openid)
+        a.data.openid && miniApi.setOpenid(a.data.openid)
+
+        window.wx && wx.adsdk && wx.adsdk.onAppStart()
+        if (!__data.openid) {
+            miniApi.alert('提示', '凭证获取失败', miniApi.exit, miniApi.exit)
+        } else {
+            resolve(a)
+        }
+    })
+}
+let socket_connect_complete_look_room = () => {
+    // 查询是否在房间里
+    console.time('进入游戏查看房间');
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '查询返回房间' })
+    __reBack_info.read(function () {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': 'show_hall' })
+        console.timeEnd('进入游戏查看房间');
+        // 检测如果有好友房间加入 
+        try {
+            wx.onShow_callback()
+        } catch (error) { }
+
+        __showScene.show_hall();
+    });
+}
+let load_hall_complete = false;
+let isLoginKO = false
+let isResKO = false
+let initSocket_resolve;
+let initSocket = function () {
+    return new Promise(async (resolve, reject) => {
+        !initSocket_resolve && (initSocket_resolve = resolve);
+        game.server = game.server || new game.Net();
+        // game.server.registeReadList(HallRead)
+        // game.server.registeSendList(HallSend)
+        game.cb.on('heart_beat_stop', game, socket_io_disconnect)
+        game.cb.on('socketFail', game, socket_io_fail)
+        game.cb.on('socketClose', game, socket_io_disconnect)
+        game.cb.on('socketError', game, socket_io_error)
+        game.cb.on('socketConnect', game, socket_io_connect)
+        game.cb.on('socketTimeOut', game, socket_io_timeout)
+
+        game.server.clear();
+        game.server.registeSendMsg(__socket_msg_hall_send, __socket_match_send)
+        game.server.registeReadMsg(__socket_msg_hall_read, __socket_match_read)
+        game.server.connect(config.protocol, config.ip, config.port)
+    })
+}
+let clearConnect = () => {
+    return new Promise(async (resolve, reject) => {
+        !initSocket_resolve && (initSocket_resolve = resolve);
+        if (load_hall_complete)
+            game.scene.add(LoadingSmall, [__lang.connecting_server])
+
+        game.server.clear();
+        game.server.registeSendMsg(__socket_msg_hall_send, __socket_match_send)
+        game.server.registeReadMsg(__socket_msg_hall_read, __socket_match_read)
+        await getIpPort()
+        game.server.connect(config.protocol, config.ip, config.port)
+    })
+}
+let noClearConnect = () => {
+    return new Promise(async (resolve, reject) => {
+        !initSocket_resolve && (initSocket_resolve = resolve);
+        game.server.close();
+        if (miniApi.isHide) {
+            console.log('后台中 禁止重连')
+            return;
+        }
+        if (load_hall_complete)
+            game.scene.add(LoadingSmall, [__lang.connecting_server])
+        await getIpPort()
+        game.server.connect(config.protocol, config.ip, config.port)
+    })
+}
+window.noClearConnect = noClearConnect;
+var socket_io_connect = async function () {
+    trace('服务器连接成功')
+    // game.scene.remove(TipsSelect)
+    miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': 'socket链接成功 开始登录' })
+    if (load_hall_complete)
+        game.scene.add(LoadingSmall, [__lang.geting_data])
+    await miniApi.login();
+}
+var socket_io_reconnecting = function () {
+
+}
+var socket_io_fail = function () {
+    game.isLoginSuccess = false
+    game.server.close();
+    trace('服务器连接失败fail')
+    game.scene.remove(LoadingSmall)
+    try {
+        __showScene.show_prompt_select(__lang.server_close_please_reConnect, async () => {
+            game.isAllowOnShowReconnect = false;
+            clearConnect()
+        }, miniApi.exit)
+    } catch (error) {
+        __showScene.show_prompt_select(__lang.server_close_please_reConnect, async () => {
+            game.isAllowOnShowReconnect = false;
+            clearConnect()
+        }, miniApi.exit)
+    }
+}
+var socket_io_error = async function () {
+    game.isLoginSuccess = false
+    trace('服务器连接error')
+    noClearConnect()
+}
+var socket_io_disconnect = async function () {
+    game.isLoginSuccess = false
+    trace('服务器连接失败disconnect')
+    noClearConnect()
+    // game.scene.remove(LoadingSmall)
+    // __showScene.show_prompt_select('服务器连接失败\n是否重新连接？', noClearConnect, miniApi.exit)
+}
+var socket_io_timeout = async function () {
+    game.isLoginSuccess = false
+    trace('服务器连接timeout')
+    noClearConnect()
+    // game.scene.remove(LoadingSmall)
+    // __showScene.show_prompt_select('服务器连接失败\n是否重新连接？', noClearConnect, miniApi.exit)
+}
+window.onerror = (mssage, source, lineno, colno, error) => {
+    console.log('错误信息');
+    console.log(mssage, source, lineno, colno, error);
+    let content = `\r\nAppletMJError:\r\nversion:${config.clientVersion}\r\nmssage:${mssage}\r\nsource:${source}\r\nlineno:${lineno}\r\ncolno:${colno}\r\nerror:${error}`
+    miniApi.uploadError(__data.uid + ' - ' + content)
+}
+
+let startup_auto_out_card = () => {
+    // setInterval(() => {
+    //     axs()
+    // }, 5000)
+}
+
+let axs = () => {
+    let a = __data.deskData.roomVo.getPlayer(__data.uid).handValue.toArray(',').map(Number)
+    let a1 = __data.deskData.roomVo.mixedArr.map(Number)
+    let a2 = a.filter((e) => {
+        return !a1.includes(e)
+    })
+    let b = a.map((e) => {
+        return {
+            v: e,
+            w: 0,
+        }
+    })
+    let c = {}
+    b.forEach(e => {
+        c[e.v] = c[e.v] || {
+            num: 0
+        };
+        c[e.v].num++;
+    });
+
+    axs.t111 = (e) => {
+        if (c[e.v].num >= 3) {
+            e.w += 5
+            return 1
+        }
+        else if (c[e.v].num >= 2) {
+            e.w += 4
+            return 1
+        }
+        return 0
+    }
+    axs.t123 = (e) => {
+        // x12
+        if (c[e.v + 1] && c[e.v + 2]) {
+            e.w += 5
+            return 1
+        }
+        // 12x
+        else if (c[e.v - 1] && c[e.v - 2]) {
+            e.w += 5
+            return 1
+        }
+        // 1x3
+        if (c[e.v + 1] && c[e.v - 1]) {
+            e.w += 5
+            return 1
+        }
+        // 12
+        else if (c[e.v + 1]) {
+            e.w += 4
+            return 1
+        }
+        // 21
+        else if (c[e.v - 1]) {
+            e.w += 4
+            return 1
+        }
+        // 13
+        else if (c[e.v + 2]) {
+            e.w += 3
+            return 1
+        }
+        // 31
+        else if (c[e.v - 2]) {
+            e.w += 3
+            return 1
+        }
+        return 0
+    }
+    axs.t1 = (e) => {
+        if (e.v == 0 || e.v == 8) {
+            e.w += 2
+            return 1
+        }
+        else {
+            e.w += 1
+            return 1
+        }
+        return 0
+    }
+    // 111 101 123 321 12 21 11 
+    for (let index = 0, length = b.length; index < length; index++) {
+        const e = b[index];
+        if (axs.t111(e)) {
+
+        } else if (axs.t123(e)) {
+
+        } else if (axs.t1(e)) {
+
+        }
+    };
+    b.sort((a, b) => {
+        return a.w - b.w
+    })
+    game.server.send(6001, 91, parseInt(b[0].v))
+    setTimeout((e) => {
+        clearConnect()
+    }, 2000)
+}
+

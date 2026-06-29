@@ -1,0 +1,700 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-06-01 14:55:58
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-13 15:27:44
+ */
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2017-09-12 10:50:29
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2020-05-30 16:57:05
+ */
+var ___frame = ___frame || {};
+___frame.Net = function () {
+    var that = this;
+    this.reConnectMaxCount = 3
+    this.reConnectCount = this.reConnectMaxCount
+    this.noPrintIDArr = [99, 998, 3010, 3314, 3315, 3319];
+    // this.noPrintIDArr = [];
+    this.sendList = [];
+    this.readList = [];
+    this.resArray = {};
+    this.socket = null;
+    this.sendMsgKey = 1;
+    this.readMsgKey = 1;
+    this.ip = ''; //该socket玩家ip
+    this.head = 10242048;
+    this.reSendList = [];
+    this.hasDealMsg = [];
+    this.ing = false
+    this.connect = function (protocol, ip, port) {
+        if (this.socket) this.socket.close()
+        this.socket = new ___frame.Socket(protocol, ip, port, this)
+    }
+    this.close = function () {
+        this.reSendList = []
+        this.hasDealMsg = []
+        this.ing = false;
+        this.sendMsgKey = 1;
+        this.readMsgKey = 1;
+        if (this.socket) this.socket.close()
+        this.socket = null;
+        this.reSendStop();
+        __heartbeat.stop()
+        game.cb.dispatchEvent('no_socket')
+    }
+    this.clear = function () {
+        this.reConnectCount = this.reConnectMaxCount
+        this.reSendList = []
+        this.hasDealMsg = []
+        this.ing = false;
+        this.sendList = [];
+        this.readList = [];
+        this.sendMsgKey = 1;
+        this.readMsgKey = 1;
+        if (this.socket) this.socket.close()
+        this.socket = null;
+        this.reSendStop();
+        __heartbeat.stop()
+        game.cb.dispatchEvent('no_socket')
+    }
+    this.registeSendMsg = function () {
+        this.sendList.push(...arguments)
+        this.sendList = [...new Set(this.sendList)]
+    }
+    this.registeReadMsg = function () {
+        this.readList.push(...arguments)
+        this.readList = [...new Set(this.readList)]
+    }
+    this.logoutSendMsg = function () {
+        let list = arguments;
+        for (let i = 0; i < list.length; i++) {
+            for (let j = 0; j < this.sendList.length; j++) {
+                if (list[i] == this.sendList[j]) {
+                    this.sendList.splice(j, 1);
+                    break;
+                }
+            }
+        }
+    }
+    this.logoutReadMsg = function () {
+        let list = arguments;
+        for (let i = 0; i < list.length; i++) {
+            for (let j = 0; j < this.readList.length; j++) {
+                if (list[i] == this.readList[j]) {
+                    this.readList.splice(j, 1);
+                    break;
+                }
+            }
+        }
+    }
+    this.send = function (params____________) {
+        return new Promise(async (res, rej) => {
+            try {
+                if (!this.ing) {
+                    console.warn('SOCKET 未实例化... or 未连接...');
+                    return;
+                }
+                if (!arguments.length) throw new Error("参数最少传入一个消息ID")
+                let body = [...arguments];
+                let id = body.shift();
+                let msg_g = this.sendList.find(function (item) {
+                    return (id in item)
+                })
+                if (!msg_g) {
+                    console.warn("send msg " + id + " 不存在")
+                    return
+                }
+                let msg_fn = msg_g[id]
+                ___frame.MsgSend.body.splice(0);
+                msg_fn.apply(___frame.MsgSend, body)
+                ___frame.MsgSend.send(id, this)
+                this.resArray[id] = this.resArray[id] || [];
+                this.resArray[id].push(res)
+                return true
+            } catch (error) {
+                res(null)
+                console.error('net.send', error)
+            }
+        });
+    }
+    this.reSendTime = null
+    this.reSendStart = function () {
+        // clearInterval(this.reSendTime)
+        // this.reSendTime = setInterval(this.reSendServer, 2000)
+    }
+    this.reSendServer = function () {
+        for (var id in that.reSendList) {
+            trace(id, that.reSendList[id])
+            that.socket.reSend(id, that.reSendList[id])
+        }
+    }
+    this.reSendStop = function () {
+        clearInterval(this.reSendTime)
+    }
+}
+___frame.Socket = function (protocol, ip, port, net) {
+    var that = this;
+    this.socket = new WebSocket(protocol + ip + ":" + port + '/ws');
+    this.socket.socketid = this.socketid;
+    this.socket.binaryType = "arraybuffer";
+    this.aDataArray = [];
+    trace("开始连接服务器...")
+    trace("连接地址：" + protocol + ip + ':' + port)
+    this.socket.onopen = function () {
+        net.resArray = {};
+        net.ing = true
+        net.reConnectCount = net.reConnectMaxCount;
+        clearTimeout(that.timeout);
+        __heartbeat.start()
+        ___frame.cb.dispatchEvent("socketConnect")
+        net.reSendStart()
+    };
+    this.socket.onmessage = function (message) {
+        // __heartbeat.reset();
+        // trace('收到消息《《《《《《《《《《《《《《《《《《《《《《《《《《《《《《')
+        var barray = new Int8Array(message.data);
+        for (var i = 0; i < barray.length; i++) {
+            that.aDataArray.push(barray[i]);
+        }
+        that.read()
+    };
+    var serverid = 0;
+    var length = 0;
+    var key = 0;
+    var body = null;
+    this.read = function () {
+        //key length id1 id2 uid 后面都是变动的需求了
+        //key服务判断 length长度 id1 服务标志 id2服务消息号解析用 uid当前socket玩家id
+        if (key == 0 && that.aDataArray.length >= 8) {
+            key = ___frame.byte.readInt(that.aDataArray)
+            length = ___frame.byte.readInt(that.aDataArray);
+        }
+        // trace('key length', key, length)
+        if (length > 0) {
+            if (key == net.head) {
+                if (length <= this.aDataArray.length) {
+                    body = this.aDataArray.splice(0, length)
+                    var nmk = ___frame.byte.readInt(body);
+                    // net.readMsgKey = ___frame.byte.readInt(body);
+                    serverid = ___frame.byte.readInt(body);
+                    net.noPrintIDArr.indexOf(serverid) == -1 && trace("%c接受<<<-ID-" + serverid + "-length-" + length + '-readMsgKey-' + nmk, "color:#0000ff")
+                    if (serverid == 99 || serverid == 88) {
+                        this.manageMessage(serverid, body, net);
+                    } else if (!net.hasDealMsg[nmk] && net.readMsgKey == nmk) { //这个服务是否已经处理
+                        net.hasDealMsg[nmk] = 1;
+                        net.readMsgKey++;
+                        net.send(99, nmk)
+                        this.manageMessage(serverid, body, net);
+                    } else if (net.hasDealMsg[nmk]) {
+                        trace('已处理')
+                        net.send(99, nmk)
+                    }
+                }
+                key = length = 0;
+                this.read();
+            } else {
+                miniApi.alert('提示', '服务数据错乱 请重新登录...')
+                _game_init_();
+            }
+        }
+    }
+    this.manageMessage = function (serverid, info, net) {
+        let msg_group = net.readList.find((item) => {
+            return item && (serverid in item)
+        })
+        if (msg_group) {
+            let msg_fn = msg_group[serverid]
+            ___frame.MsgRead.body = info;
+            try {
+                msg_fn.apply(___frame.MsgRead)
+                if (net.resArray[serverid] && net.resArray[serverid].length) {
+                    net.resArray[serverid].shift()(1)
+                    // serverid > 2000 && trace(serverid, net.resArray[serverid].length)
+                    if (!net.resArray[serverid].length) {
+                        delete net.resArray[serverid]
+                    }
+                }
+            } catch (e) {
+                console.error(e)
+            }
+        } else {
+            net.noPrintIDArr.indexOf(serverid) == -1 && trace("msg read " + serverid + " 不存在")
+        }
+    }
+    this.postToServer = function (sendMsgKey, serverid, value) {
+        var sendByte = new Int8Array(value.length);
+        for (var i = 0; i < value.length; i++) {
+            sendByte[i] = value[i];
+        }
+        this.send(sendByte.buffer)
+        if (serverid != 99 && serverid != 998) {
+            net.reSendList[sendMsgKey] = sendByte.buffer;
+            // net.reSendStart()
+        }
+    }
+    this.reSend = function (id, buffer) {
+        if (!net.ing) {
+            console.warn('SOCKET 未实例化... or 未连接...');
+            return;
+        }
+        trace('重发消息: ' + id)
+        this.send(buffer)
+    }
+    this.send = function (buffer) {
+        if (!this.socket) {
+            console.warn("服务器未连接。。。")
+        } else
+            if (this.socket.readyState != 1) {
+                console.warn('SOCKET 未实例化... or 未连接...')
+            } else {
+                this.socket && this.socket.send(buffer);
+            }
+    }
+    this.socket.onerror = function (e) {
+        trace('<> ' + JSON.stringify(e))
+        that.close()
+        __heartbeat.stop()
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+        if (net.reConnectCount >= 0) {
+            ___frame.cb.dispatchEvent("socketError")
+        } else {
+            ___frame.cb.dispatchEvent("socketFail")
+        }
+    };
+    this.socket.onclose = function () {
+        that.close()
+        __heartbeat.stop()
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+        if (net.reConnectCount >= 0) {
+            ___frame.cb.dispatchEvent("socketClose")
+        } else {
+            ___frame.cb.dispatchEvent("socketFail")
+        }
+    };
+    this.close = function () {
+        this.socket.onopen = null;
+        this.socket.onmessage = null;
+        this.socket.onerror = null;
+        this.socket.onclose = null;
+        this.socket.close()
+        clearTimeout(that.timeout)
+    }
+    this.timeout = setTimeout(function () {
+        //连接socket超时
+        that.close();
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+        if (net.reConnectCount >= 0) {
+            ___frame.cb.dispatchEvent("socketTimeOut")
+        } else {
+            ___frame.cb.dispatchEvent("socketFail")
+        }
+    }, 2000)
+}
+
+___frame.locationModule = {
+    longitude: '0.0',
+    latitude: '0.0'
+}
+
+___frame.MsgSend = {
+    body: [],
+    content: "",
+    send(id_, net) {
+        let sendMsgKey = id_ != 99 ? net.sendMsgKey++ : 0; //99消息 不涨编号
+        let body = [
+            ...___frame.byte.intToBytes(sendMsgKey),
+            ...___frame.byte.intToBytes(id_),
+            ...___frame.byte.stringToBytes(___frame.locationModule.longitude),
+            ...___frame.byte.stringToBytes(___frame.locationModule.latitude),
+            ...this.body,
+        ]
+        let length = body.length;
+        let msg = [
+            ...___frame.byte.intToBytes(net.head),
+            ...___frame.byte.intToBytes(length),
+            ...body,
+        ];
+        net.socket.postToServer(sendMsgKey, id_, msg)
+        net.noPrintIDArr.indexOf(id_) == -1 && trace("%c发送>>>-ID-" + id_ + "-length-" + this.body.length + "-sendMsgKey-" + sendMsgKey, "color:#8a2be2;font-weight:bold")
+        net.noPrintIDArr.indexOf(id_) == -1 && trace("发送内容：" + id_ + " " + this.content)
+        this.clear()
+    },
+    clear() {
+        this.body.splice(0)
+        this.content = ""
+    },
+    set int(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.intToBytes(value))
+    },
+    set long(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.longToBytes(value))
+    },
+    set byte(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.byteToBytes(value))
+    },
+    set string(value) {
+        value = value.toString()
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.stringToBytes(value))
+    },
+    writeInt(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.intToBytes(value))
+    },
+    writeLong(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.longToBytes(value))
+    },
+    writeByte(value) {
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.byteToBytes(value))
+    },
+    writeString(value) {
+        value = value.toString()
+        this.content += value + " "
+        this.body = this.body.concat(___frame.byte.stringToBytes(value))
+    },
+}
+
+___frame.MsgRead = {
+    body: [],
+    get int() {
+        return ___frame.byte.readInt(this.body)
+    },
+    get string() {
+        return ___frame.byte.readString(this.body)
+    },
+    get long() {
+        return ___frame.byte.readLong(this.body)
+    },
+    get byte() {
+        return ___frame.byte.readByte(this.body)
+    },
+    readInt() {
+        return ___frame.byte.readInt(this.body)
+    },
+    readString() {
+        return ___frame.byte.readString(this.body)
+    },
+    readLong() {
+        return ___frame.byte.readLong(this.body)
+    },
+    readByte() {
+        return ___frame.byte.readByte(this.body)
+    },
+}
+
+___frame.byte = (function () {
+    function GameByte() { }
+    /**
+     * 读取int 返回 int值
+     */
+    GameByte.readInt = function (value) {
+        var i = BytesToInt(value)
+        value.splice(0, 4)
+        return i
+    }
+    GameByte.readByte = function (value) {
+        var i = BytesToByte(value)
+        value.splice(0, 1)
+        return i
+    }
+    GameByte.readLong = function (value) {
+        var i = BytesToLong(value)
+        value.splice(0, 8)
+        return i
+    }
+    GameByte.readString = function (value) {
+        var i = BytesToString(value)
+        return i
+    }
+    /**
+     *字符转为byte数组，并在数组前部加入长度 
+     * @param {Object} str
+     */
+    GameByte.stringToBytes = function (str) {
+        var ch, st, re = [];
+        for (var i = 0; i < str.length; i++) {
+            ch = str.charCodeAt(i); // get char   
+            if (ch <= 0x7F) {
+                re.push(ch);
+            } else if (ch <= 0x7FF) {
+                re.push(0xC0 | (ch >> 6));
+                re.push(0x80 | (ch & 63));
+            } else if (ch <= 0xFFFF) {
+                re.push(0xE0 | (ch >> 12));
+                re.push(0x80 | ((ch >> 6) & 63));
+                re.push(0x80 | (ch & 63));
+            } else {
+                re.push(0xF0 | (ch >> 18));
+                re.push(0x80 | ((ch >> 12) & 63));
+                re.push(0x80 | ((ch >> 6) & 63));
+                re.push(0x80 | (ch & 63));
+            }
+        }
+        //添加长度
+        var rre = [];
+        var lre = GameByte.intToBytes(re.length);
+        for (var i = 0; i < lre.length; i++) {
+            rre.push(lre[i]);
+        }
+        for (var i = 0; i < re.length; i++) {
+            rre.push(re[i]);
+        }
+        return rre;
+    }
+    /**
+     *int转为byte数组 
+     * @param {Object} value
+     */
+    GameByte.intToBytes = function (value) {
+        var re = [];
+        re.push((value >> 24) & 0xFF);
+        re.push((value >> 16) & 0xFF);
+        re.push((value >> 8) & 0xFF);
+        re.push(value & 0xFF);
+        return re;
+    }
+    /**
+     *int转为byte数组 
+     * @param {Object} value
+     */
+    GameByte.byteToBytes = function (value) {
+        var re = [];
+        re.push(value & 0xFF);
+        return re;
+    }
+    /**
+     *long转为byte数组 
+     * @param {Object} value
+     */
+    GameByte.longToBytes = function (value) {
+        var re = [];
+        var pvalue = Math.floor(value / Math.pow(256, 7));
+        value -= pvalue * Math.pow(256, 7);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 6));
+        value -= pvalue * Math.pow(256, 6);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 5));
+        value -= pvalue * Math.pow(256, 5);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 4));
+        value -= pvalue * Math.pow(256, 4);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 3));
+        value -= pvalue * Math.pow(256, 3);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 2));
+        value -= pvalue * Math.pow(256, 2);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 1));
+        value -= pvalue * Math.pow(256, 1);
+        re.push(pvalue);
+        pvalue = Math.floor(value / Math.pow(256, 0));
+        value -= pvalue * Math.pow(256, 0);
+        re.push(pvalue);
+        return re;
+    }
+
+    /**
+     *byte数组转为 Long
+     * @param {Object} value
+     */
+    function BytesToLong(value) {
+        let result = BigInt(0);
+        const length = value.length < 8 ? value.length : 8; // Ensure we don't read more than 8 bytes
+
+        for (let i = 0; i < length; i++) {
+            result |= BigInt(value[i] & 0xff) << BigInt((length - 1 - i) * 8);
+        }
+
+        // If the highest byte has its highest bit set (negative in two's complement)
+        if (length === 8 && value[0] & 0x80) {
+            // This subtracts 1 << 64 from the result, flipping the sign
+            result -= BigInt(1) << BigInt(64);
+        }
+
+        return result;
+    }
+    /**
+     *byte数组转为 byte
+     * @param {Object} value
+     */
+    function BytesToByte(value) {
+        var i = 0;
+        i += (value[0] & 0xff);
+        return i;
+    }
+    /**
+     *byte数组转为 int
+     * @param {Object} value
+     */
+    function BytesToInt(value) {
+        var i = 0;
+        i += ((value[0] & 0xff) << 24);
+        i += ((value[1] & 0xff) << 16);
+        i += ((value[2] & 0xff) << 8);
+        i += ((value[3] & 0xff));
+        return i;
+    }
+    /**
+     *byte数组转为 String
+     * @param {Object} value
+     */
+    function BytesToString(value) {
+        var length = 0;
+        length += ((value[0] & 0xff) << 24);
+        length += ((value[1] & 0xff) << 16);
+        length += ((value[2] & 0xff) << 8);
+        length += ((value[3] & 0xff));
+        if (length < 0) {
+            throw new Error("解析错误 字符串长度过长 < 0")
+        }
+        var strs = new ArrayBuffer(length);
+        var view = new DataView(strs);
+        var str = "";
+        if (length > 300000) {
+            throw new Error("解析错误 字符串长度过长 > 30w")
+            length = 300000;
+        }
+        for (var i = 4; i < length + 4; i++) {
+            view.setUint8(i - 4, value[i]);
+        }
+
+        value.splice(0, length + 4)
+
+        var c = 0,
+            c2 = 0,
+            c3 = 0;
+        var position = 0;
+        while (position < length) {
+            c = view.getUint8(position++);
+            if (c < 0x80) {
+                if (c == 0) break;
+                str += String.fromCharCode(c);
+            } else if (c < 0xE0) {
+                str += String.fromCharCode(((c & 0x3F) << 6) | (view.getUint8(position++) & 0x7F));
+            } else if (c < 0xF0) {
+                c2 = view.getUint8(position++);
+                str += String.fromCharCode(((c & 0x1F) << 12) | ((c2 & 0x7F) << 6) | (view.getUint8(position++) & 0x7F));
+            } else {
+                c2 = view.getUint8(position++);
+                c3 = view.getUint8(position++);
+                str += String.fromCharCode(((c & 0x0F) << 18) | ((c2 & 0x7F) << 12) | ((c3 << 6) & 0x7F) | (view.getUint8(position++) & 0x7F));
+            }
+        }
+        return str;
+    }
+    return GameByte
+})()
+
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2017-06-12 17:31:54
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2017-12-19 14:14:46
+ */
+window.__heartbeat = {
+    timeout: 5000,
+    timeoutObj: null,
+    delay50: null,
+    delay500: null,
+    delay1000: null,
+    delay2000: null,
+    tipsDelay: 10000,
+    tipsObj: null,
+    wifi_time: 0,
+    helperArray: [],
+    reset: function () {
+        clearInterval(this.timeoutObj);
+        this.start();
+    },
+    start: function () {
+        this.stop()
+        this.timeoutObj = setInterval(this.send, this.timeout);
+    },
+    stop: function () {
+        this.helperArray.splice(0)
+        clearInterval(this.timeoutObj);
+        game.cache.recoverAll('HeartBeatHelper')
+        // clearTimeout(this.tipsObj);
+    },
+    send: function () {
+        // if(___frame.server.send(998)){
+        ___frame.server.send(998)
+        var helper = game.cache.get('HeartBeatHelper')
+        helper.start()
+        __heartbeat.helperArray.push(helper);
+        // clearTimeout(__heartbeat.tipsObj);
+        // __heartbeat.tipsObj = setTimeout(__heartbeat.tips, __heartbeat.tipsDelay);
+        __heartbeat.wifi_time = (__heartbeat.wifi_time == 0) ? Date.now() : __heartbeat.wifi_time
+        __heartbeat.delay50 = setTimeout(__heartbeat.d50f, 50);
+        __heartbeat.delay500 = setTimeout(__heartbeat.d500f, 500);
+        __heartbeat.delay1000 = setTimeout(__heartbeat.d1000f, 1000);
+        __heartbeat.delay2000 = setTimeout(__heartbeat.d2000f, 2000);
+        // };
+    },
+    d50f: function () {
+        game.cb.dispatchEvent("update_wifi_strength", [4])
+    },
+    d500f: function () {
+        game.cb.dispatchEvent("update_wifi_strength", [3])
+    },
+    d1000f: function () {
+        game.cb.dispatchEvent("update_wifi_strength", [2])
+    },
+    d2000f: function () {
+        game.cb.dispatchEvent("update_wifi_strength", [1])
+    },
+    tips: function () {
+        trace("心跳停止 服务器关闭")
+        // game.server.close()
+        // game.scene.add(AreaWait)
+        ___frame.cb.dispatchEvent("heart_beat_stop")
+        // setTimeout(socketReConnect, 2000)
+    },
+    read: function () {
+        let __shift = this.helperArray.shift()
+        if (__shift) {
+            game.cache.recover(__shift)
+            game.cb.dispatchEvent("update_wifi_strength", [Date.now() - __heartbeat.wifi_time])
+            __heartbeat.wifi_time = 0
+        }
+        clearTimeout(this.delay50);
+        clearTimeout(this.delay500);
+        clearTimeout(this.delay1000);
+        clearTimeout(this.delay2000);
+    }
+}
+
+function HeartBeatHelper() {
+    var that = this
+    var time = null
+    this.start = function () {
+        this.stop()
+        time = setTimeout(endHandler, 10000)
+    }
+    this.stop = function () {
+        clearTimeout(time)
+    }
+
+    function endHandler() {
+        __heartbeat.tips()
+    }
+}
+game.cache.registe(HeartBeatHelper, 'HeartBeatHelper', function (helper) {
+    // trace('回收heartbeathelper')
+    helper.stop()
+});

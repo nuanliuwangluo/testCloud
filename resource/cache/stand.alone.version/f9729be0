@@ -1,0 +1,101 @@
+class Loading extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loading',
+            down: true
+        })
+
+        this.rect = new Laya.Rectangle()
+        this.rect.width = this.img_bar.width;
+        this.rect.height = this.img_bar.height;
+        this.img_bar.scrollRect = this.rect;
+        this.pvo = {
+            v: 0
+        }
+        this.s_ani = this.img_red.addComponent(S_loading_red_ani)
+    }
+    added(tips_content = __lang.loading_tips_load_res) {
+        this.sp_loading.visible = true;
+        this.pvo.v = 0
+        this.updateProgress(this.pvo.v)
+        this.tips(tips_content)
+        let a = miniApi.getItem('show_loading_red_ani')
+        if (a === '1' || miniApi.clientType == 'app' || miniApi.getWxDeviceName() === 'windows') {
+            this.img_red.visible = false;
+            this.s_ani.enabled = false;
+        } else {
+            this.img_red.visible = true;
+            this.s_ani.enabled = true
+            this.s_ani.start()
+            miniApi.setItem('show_loading_red_ani', '1')
+        }
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.pvo);
+        Laya.timer.clearAll(this)
+    }
+    progress(a, isTween = false) {
+        if (isTween) {
+            Laya.Tween.clearAll(this.pvo);
+            let time = a - this.pvo.v;
+            let t = Laya.Tween.to(this.pvo, {
+                v: a
+            }, time * 1000);
+            __tool.tweenUpdate(t, () => {
+                this.updateProgress(this.pvo.v)
+            })
+        } else {
+            this.pvo.v = a;
+            this.updateProgress(this.pvo.v)
+        }
+    }
+    updateProgress(a) {
+        this.rect.width = a * this.img_bar.width;
+        a = 100 * a;
+        a = Math.floor(a);
+        this.txt_progress.text = a + '%';
+    }
+    removeLoadingBar() {
+        this.sp_loading.visible = false;
+    }
+    addLoadingBar() {
+        this.sp_loading.visible = true;
+    }
+    tips(tips_content) {
+        this.tips_content = tips_content;
+        Laya.timer.clearAll(this)
+        Laya.timer.loop(1000, this, this.updateTips)
+        this.pointIndex = 0;
+        this.updateTips()
+    }
+    updateTips() {
+        this.txt_tips.text = this.tips_content + (new Array(this.pointIndex).fill('.')).join('')
+        this.pointIndex++;
+        if (this.pointIndex > 3) {
+            this.pointIndex = 0;
+        }
+    }
+}
+class S_loading_red_ani extends Laya.Script {
+    onEnable() {
+        // this.start()
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.owner)
+        this.clearAwait && this.clearAwait()
+    }
+    async start() {
+        this.owner.scaleX = this.owner.scaleY = 1
+        Laya.Tween.to(this.owner, { scaleX: 1.05, scaleY: 1.05 }, 200)
+        await __tool.await(250, this)
+        Laya.Tween.to(this.owner, { scaleX: 1, scaleY: 1 }, 200)
+        await __tool.await(250, this)
+        Laya.Tween.to(this.owner, { scaleX: 1.05, scaleY: 1.05 }, 200)
+        await __tool.await(250, this)
+        Laya.Tween.to(this.owner, { scaleX: 1, scaleY: 1 }, 200)
+        await __tool.await(500, this)
+        // if (!this.clearAwait) return;
+        this.start()
+    }
+}
+window.Loading = Loading;

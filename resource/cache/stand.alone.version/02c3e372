@@ -1,0 +1,53 @@
+__data.chuanqi = {
+    // player: {
+    // - uid
+    // - name
+    // - headUrl
+    // - headBorderId
+    // - cityId
+    // - score
+    // },
+    set player(value) {
+        this.lastPlayer = !this.isEmpty(this.player) ? this.copyObject(this.player) : !this.isEmpty(value) ? this.copyObject(value) : {};
+        this._player = value;
+    },
+    get player() { return this._player || {}; },
+    lastPlayer: {},// 前一个
+    refresh() { this.lastPlayer = this.player; },
+
+    reward: {
+        receiveStatus: 0, // 0 当前无传奇雀神 1 需要分享 2 可以领取 3 已经领取
+        gold: [],
+        silver: [],
+        isHaveData: false,
+        async send(haveDataSendTest) {
+            await gtool.query([16009], haveDataSendTest, 1)
+            return 1
+        }
+    },
+    get isRedPoint() {
+        if (this.reward.receiveStatus == 0 || this.reward.receiveStatus == 1 || this.reward.receiveStatus == 2) return true
+        return false;
+    },
+    /**
+     * 是否为空的object
+     * @param {Object} obj 
+     * @returns 
+     */
+    isEmpty(obj) {
+        if (!obj) return true;
+        else return Object.keys(obj).length === 0 && obj.constructor === Object;
+    },
+    /**
+     * 复制数据
+     * @param {Object} source 
+     * @returns 
+     */
+    copyObject(source) {
+        var sourceCopy = source instanceof Array ? [] : {};
+        for (var item in source) {
+            sourceCopy[item] = typeof source[item] === 'object' ? this.copyObject(source[item]) : source[item];
+        }
+        return sourceCopy;
+    }
+}

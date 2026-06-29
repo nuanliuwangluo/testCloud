@@ -1,0 +1,510 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-14 11:28:36
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-08-12 11:11:10
+ */
+
+'use strict';
+
+class MahjongEffectChangeBao extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongEffectChangeBao',
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+    }
+
+    added(code) {
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('own', code);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('own', code);
+
+        this.addComponent(Mahjong_Disappear_Script).start();
+    }
+}
+
+class GdmjGhost extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/GdmjGhost',
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+    }
+
+    added(code) {
+        // code已经是定好的鬼
+        let preCode = GdGhost.getOrigin(code);
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('ownH', preCode);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('ownH', preCode);
+
+        if ('texture' in this.ghost) this.ghost.texture = Mahjong2DRes.getRes('ownH', code);
+        else if ('skin' in this.ghost) this.ghost.skin = Mahjong2DRes.getRes('ownH', code);
+
+        this.addComponent(Mahjong_Disappear_Script).start();
+    }
+}
+
+
+//开混效果
+class MahjongMixedEffect extends Laya.Image {
+    constructor() {
+        super()
+
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+
+        this.skin = 'local/mahjong_effect/1/kh.png';
+    }
+
+    onEnable() {
+        this.alpha = this.scaleX = this.scaleY = 1;
+        this.pivot(this.width / 2, this.height / 2);
+        this.scale(game.scale, game.scale);
+        this.x = game.width / 2;
+        this.y = game.height / 2;
+        Laya.Tween.to(this, { scaleX: 0, scaleY: 0, alpha: 0 }, 300, Laya.Ease.backInOut, new Laya.Handler(this, this.onComplete), 500)
+    }
+    onDisable() {
+        trace(1);
+    }
+
+    onComplete() {
+        game.utils.remove(this);
+    }
+}
+
+
+
+
+class MahjongEffectCommon extends game.ModuleBase {
+    constructor() {
+        super()
+
+        this.createView(game.uiMap['scene_game/mahjong/MahjongEffectCommon']);
+
+        // this.scale(game.scale, game.scale)
+
+        this.codeArr = []
+        this.codeArr[0] = 'local/mahjong_effect/1/chi.png'
+        this.codeArr[1] = 'local/mahjong_effect/1/peng.png'
+        this.codeArr[2] = 'local/mahjong_effect/1/gang.png'
+        this.codeArr[3] = 'local/mahjong_effect/1/liangxi.png'
+        this.codeArr[4] = 'local/mahjong_effect/1/liangzhang.png'
+        this.codeArr[8] = 'local/mahjong_effect/1/zhidui.png'
+        this.codeArr[9] = 'local/mahjong_effect/1/t1.png'
+
+        this.codeArr[5] = 'local/mahjong_effect/1/ph.png' //飘胡
+        this.codeArr[6] = 'local/mahjong_effect/1/teh.png' //特胡
+        this.codeArr[7] = 'local/mahjong_effect/1/lj1.png' //流局
+
+        this.__doTime = 250
+        this.__waitTime = 500
+
+        this.__offx = 150;
+        this.__offy = 50;
+    }
+
+    onEnable() { }
+
+    onDisable() {
+        ELD.remove(this);
+    }
+
+    /**
+     * [start description] 
+     * @param  {[type]} code [description]  codeArr 下标
+     * @param  {[type]} seat [description]  位置
+     * @param  {[type]} keep [description]  是否保持不消失
+     * @return {[type]}      [description]
+     */
+    start(code, seat, keep) {
+        trace('特效code：', code)
+        this.seat = seat;
+        if (seat == 'down') {
+            this.x = config.gameW - this.width >> 1
+            this.y = __compUtils.getDeskDy() - this.height - this.__offy; // config.gameH - this.height - this.__offy
+        } else if (seat == 'up') {
+            this.x = config.gameW - this.width >> 1
+            this.y = __compUtils.getDeskUy() + this.__offy; // this.__offy
+        } else if (seat == 'left') {
+            this.x = __compUtils.getDeskLx();
+            this.y = (config.gameH - this.height) / 2 - this.height / 1.5
+        } else if (seat == 'right') {
+            this.x = __compUtils.getDeskRx() - this.width; // config.gameW - this.width - this.__offx
+            this.y = (config.gameH - this.height) / 2 - this.height / 1.5
+        } else {
+            this.x = config.gameW - this.width >> 1
+            this.y = config.gameH - this.height >> 1
+        }
+
+        this.view.skin = this.codeArr[code]
+        this.__keep = (keep == true) ? true : false
+
+        this.view.scaleX = this.view.scaleY = 1.5;
+        Laya.Tween.to(this.view, { scaleX: 1, scaleY: 1 }, this.__doTime, null, new Laya.Handler(this, this.waitDisappearHandler))
+
+        ELD.push(this);
+    }
+
+    waitDisappearHandler() {
+        if (!this.__keep) { Laya.timer.once(this.__waitTime, this, this.disappearHandler) }
+    }
+
+    disappearHandler() {
+        Laya.Tween.to(this.view, { alpha: 0 }, this.__doTime, Laya.Ease.backInOut, new Laya.Handler(this, this.removeHandler))
+    }
+
+    removeHandler() {
+        game.utils.remove(this);
+    }
+}
+
+class MahjongEffectHu extends game.ModuleBase {
+    constructor() {
+        super()
+
+        this.createView(game.uiMap['scene_game/mahjong/MahjongEffectHu']);
+
+        // this.scale(game.scale, game.scale)
+
+
+        this.codeArr = []
+        this.codeArr[0] = 'local/mahjong_effect/1/bf.png'; //宝风
+        this.codeArr[1] = 'local/mahjong_effect/1/bzb.png'; //宝中宝
+        this.codeArr[2] = 'local/mahjong_effect/1/ddh.png'; //对对胡
+        this.codeArr[3] = 'local/mahjong_effect/1/dh.png'; //地胡
+        this.codeArr[4] = 'local/mahjong_effect/1/fzh.png'; //副子胡
+        this.codeArr[5] = 'local/mahjong_effect/1/gbh.png'; //滚宝胡
+        this.codeArr[6] = 'local/mahjong_effect/1/gbz.png'; //滚宝中
+        this.codeArr[7] = 'local/mahjong_effect/1/gdf.png'; //刮大风
+        this.codeArr[8] = 'local/mahjong_effect/1/glg.png'; //干里干
+        this.codeArr[9] = 'local/mahjong_effect/1/glgg.png'; //干里干干
+        this.codeArr[10] = 'local/mahjong_effect/1/glggg.png'; //干里干干干
+        this.codeArr[11] = 'local/mahjong_effect/1/glgggg.png'; //干里干干干干
+        this.codeArr[12] = 'local/mahjong_effect/1/hzb.png'; //红中宝
+        this.codeArr[13] = 'local/mahjong_effect/1/hzh.png'; //皇中皇
+        this.codeArr[14] = 'local/mahjong_effect/1/hzmtf.png'; //红中满天飞
+        this.codeArr[15] = 'local/mahjong_effect/1/kpz.png'; //开牌炸
+        this.codeArr[16] = 'local/mahjong_effect/1/lb.png'; //漏宝
+        this.codeArr[17] = 'local/mahjong_effect/1/lhz.png'; //漏红中
+        this.codeArr[18] = 'local/mahjong_effect/1/mb.png'; //摸宝
+        this.codeArr[19] = 'local/mahjong_effect/1/pph.png'; //碰碰胡
+        this.codeArr[20] = 'local/mahjong_effect/1/qxd.png'; //七小对
+        this.codeArr[21] = 'local/mahjong_effect/1/qys.png'; //清一色
+        this.codeArr[22] = 'local/mahjong_effect/1/sb.png'; //射宝
+        this.codeArr[23] = 'local/mahjong_effect/1/th.png'; //天胡
+        this.codeArr[24] = 'local/mahjong_effect/1/xy.png'; //下雨
+        this.codeArr[25] = 'local/mahjong_effect/1/zmh.png'; //自摸胡
+        this.codeArr[26] = 'local/mahjong_effect/1/cb.png'; //呲宝
+        this.codeArr[27] = 'local/mahjong_effect/1/chz.png'; //呲红中
+        this.codeArr[28] = 'local/mahjong_effect/1/cdf.png'; //呲大风
+        this.codeArr[29] = 'local/mahjong_effect/1/gskh.png'; //杠上开花
+        this.codeArr[30] = 'local/mahjong_effect/1/db.png'; //对宝
+        this.codeArr[31] = 'local/mahjong_effect/1/jp.png'; //接炮
+        this.codeArr[32] = 'local/mahjong_effect/1/bz.png'; //爆炸
+        this.codeArr[33] = 'local/mahjong_effect/1/ph.png'; //飘胡
+        this.codeArr[34] = 'local/mahjong_effect/1/teh.png'; //特胡
+        this.codeArr[35] = 'local/mahjong_effect/1/ssy.png'; //十三幺
+        this.codeArr[36] = 'local/mahjong_effect/1/yj.png'; //幺九
+        this.codeArr[37] = 'local/mahjong_effect/1/zys.png'; //字一色
+        this.codeArr[38] = 'local/mahjong_effect/1/bzbczc.png'; //宝中宝纯中纯
+        this.codeArr[39] = 'local/mahjong_effect/1/wuduihu.png'; //无对胡
+        this.codeArr[40] = 'local/mahjong_effect/1/heika.png'; //黑卡
+
+        this.__offy = 50
+        this.__offx = 150 * game.scale
+    }
+
+    onEnable() { }
+
+    onDisable() {
+        ELD.remove(this);
+    }
+
+    start(code, seat) {
+        this.seat = seat;
+        if (seat == 'down') {
+            this.y = __compUtils.getDeskDy() - this.height - this.__offy; // config.gameH - this.height * game.scale - this.__offy
+            this.x = config.gameW - this.width * game.scale >> 1
+        } else if (seat == 'up') {
+            this.y = __compUtils.getDeskUy() + this.__offy; // this.__offy
+            this.x = config.gameW - this.width * game.scale >> 1
+        } else if (seat == 'left') {
+            this.x = __compUtils.getDeskLx();
+            this.y = (config.gameH - this.height) / 2 - this.height / 2 // config.gameH - this.height * game.scale >> 1
+        } else if (seat == 'right') {
+            this.x = __compUtils.getDeskRx() - this.width; // config.gameW - this.width * game.scale - this.__offx
+            this.y = (config.gameH - this.height) / 2 - this.height / 2 // config.gameH - this.height * game.scale >> 1
+        }
+
+        this.__index = 1
+        this.__allIndex = 12
+        this.img_tw.texture = 'local/mahjong_effect/1/bgg' + this.__index + '.png'
+        
+
+        this.view.skin = this.codeArr[code] ? this.codeArr[code] : '';
+        this.view.x = (this.width - this.view.width) / 2;
+
+        Laya.timer.frameLoop(4, this, this.twTweenHandler)
+
+        ELD.push(this);
+    }
+
+    //拖尾效果
+    twTweenHandler() {
+        this.__index++
+        if (this.__index > 12) {
+            this.__index = 12;
+            this.img_tw.texture = '';
+            Laya.timer.clear(this, this.twTweenHandler)
+        } else this.img_tw.texture = 'local/mahjong_effect/1/bgg' + this.__index + '.png'
+    }
+}
+
+
+
+//方正通河射宝
+class MahjongEffectShotBao extends Laya.Image {
+    constructor() {
+        super()
+
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+
+        this.size(263, 496)
+        this.scale(game.scale, game.scale)
+
+        let __fontImg = new Laya.Image("bigEffect/sbFont.png")
+        __fontImg.x = (this.width - __fontImg.width) / 2;
+        __fontImg.y = (this.height - __fontImg.height) / 2 + 30
+        this.addChild(__fontImg)
+
+        this.len = 8;
+    }
+
+    onEnable() {
+        this.startAni();
+        this.updateSkin();
+    }
+
+    onDisable() { }
+
+    startAni() {
+        this.curIndex = 1;
+        Laya.timer.loop(120, this, this.changeSkin)
+    }
+
+    changeSkin() {
+        this.curIndex++;
+        if (this.curIndex >= this.len) {
+            Laya.timer.clear(this, this.changeSkin)
+            this.updateSkin();
+            Laya.timer.once(150, this, this.startAni)
+        } else this.updateSkin();
+    }
+
+    updateSkin() { this.skin = 'bigEffect/sb' + this.curIndex + '.png' }
+}
+
+
+
+class MahjongEffectXue extends Laya.Image {
+    constructor() {
+        super()
+
+        this.size(191, 118)
+
+        this.xue = new Laya.Image('local/mahjong_effect/1/xuele.png');
+        this.xue.anchorX = this.xue.anchorY = 0.5;
+        this.addChild(this.xue)
+
+        this.xue.x = this.width / 2;
+        this.xue.y = this.height / 2;
+
+        this.ceTime = 250;
+        this.waitTime = 500;
+    }
+
+    onEnable() {
+        this.xue.scaleX = this.xue.scaleY = 1.5;
+        this.xue.alpha = 1
+        Laya.timer.clearAll(this)
+        Laya.Tween.clearAll(this)
+
+        this.commonEffect()
+    }
+
+    onDisable() {
+        Laya.Tween.clearAll(this)
+        this.xue.scaleX = this.xue.scaleY = 1.5;
+        this.xue.alpha = 1
+        Laya.timer.clearAll(this)
+        Laya.Tween.clearAll(this)
+    }
+
+    /**
+     * 吃碰杠特效  没有火焰的特效
+     */
+    commonEffect() {
+        this.xue.scaleX = this.xue.scaleY = 1.5;
+        Laya.Tween.to(this.xue, { scaleX: 1, scaleY: 1 }, this.ceTime, null, Laya.Handler.create(this, this.waitDisappearHandler))
+    }
+
+    /**
+     * 中间文字等待时间
+     */
+    waitDisappearHandler() {
+        Laya.timer.once(this.waitTime, this, this.disappearHandler)
+    }
+
+    /**
+     * 特效消失
+     */
+    disappearHandler() {
+        Laya.Tween.to(this.xue, { alpha: 0 }, this.ceTime, Laya.Ease.backInOut, Laya.Handler.create(this, this.removeHandler))
+    }
+
+    /**
+     * 特效播放完成移除自己
+     */
+    removeHandler() {
+        game.utils.remove(this);
+    }
+}
+
+
+
+
+
+class ELD {
+    static push(view) {
+        if (view && view.seat) {
+            this.list.push(view);
+            this.overlay(view.seat);
+        }
+    }
+
+    static remove(view) {
+        let index = this.list.indexOf(view);
+        if (index != -1) {
+            this.list.splice(index, 1);
+            // this.overlay(view.seat)
+        }
+    }
+
+    static get list() {
+        if (!this._list) {
+            this._list = [];
+        }
+        return this._list;
+    }
+    static clearList() { this._list = []; }
+
+    static get time() { return 0; }
+
+
+    static overlay(seat) {
+        if (seat == 'up') this.uspecial(seat);
+        if (seat == 'down') this.vertical(seat);
+        else this.horizontal(seat);
+    }
+
+    static uspecial(seat) {
+        let temp_list = [];
+        for (let i = 0; i < this.list.length; i++) {
+            if (this.list[i].seat == seat) {
+                temp_list.push(this.list[i]);
+            }
+        }
+        while (temp_list.length > 1) {
+            let effect = temp_list.shift();
+            this.remove(effect);
+            game.utils.remove(effect);
+            game.scene.remove(effect);
+        }
+    }
+
+    static horizontal(seat) {
+        let temp_list = [];
+        let space = 7;
+        for (let i = 0; i < this.list.length; i++) {
+            if (this.list[i].seat == seat) {
+                temp_list.push(this.list[i]);
+            }
+        }
+        // 没有多个不处理
+        if (temp_list.length <= 1) return;
+        if (seat == 'left') {
+            let sx = temp_list[0].x + temp_list[0].width + space;
+            for (let i = 1; i < temp_list.length; i++) {
+                Laya.Tween.to(temp_list[i], { x: sx }, this.time);
+                sx = sx + temp_list[i].width + space;
+            }
+        } else {
+            let sx = temp_list[0].x;
+            for (let i = 1; i < temp_list.length; i++) {
+                Laya.Tween.to(temp_list[i], { x: sx - temp_list[i].width - space }, this.time);
+                sx = sx - temp_list[i].width - space;
+            }
+        }
+    }
+
+    static vertical(seat) {
+        let temp_list = [];
+        let space = 0;
+        for (let i = 0; i < this.list.length; i++) {
+            if (this.list[i].seat == seat) {
+                temp_list.push(this.list[i]);
+            }
+        }
+        // 没有多个不处理
+        if (temp_list.length <= 1) return;
+        if (seat == 'up') {
+            let sy = temp_list[0].y + temp_list[0].height + space;
+            for (let i = 1; i < temp_list.length; i++) {
+                Laya.Tween.to(temp_list[i], { y: sy }, this.time);
+                sy = sy + temp_list[i].height + space;
+            }
+        } else {
+            let sy = temp_list[0].y;
+            for (let i = 1; i < temp_list.length; i++) {
+                Laya.Tween.to(temp_list[i], { y: sy - temp_list[i].height - space }, this.time);
+                sy = sy - temp_list[i].height - space;
+            }
+        }
+    }
+}

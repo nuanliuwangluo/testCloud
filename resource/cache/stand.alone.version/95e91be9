@@ -1,0 +1,198 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2024-01-29 18:31:51
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-29 18:32:06
+ */
+
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2019-12-23 10:29:01
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-05-14 14:21:07
+ */
+
+'use strict';
+
+
+var __eventName = {};
+/**
+ * 提示信息
+ * [__tipsName description]
+ * @type {Array}
+ */
+var __tipsName = [];
+
+var __cName = {};
+//
+var __server = {};
+
+
+
+__eventName.Progress = 'progress'; //进度
+
+__eventName.mainProgress = 'main_progress'; //主进度
+
+__eventName.LoginType = 'loginType'; //登录方式
+
+__eventName.getServerInfo = 'server_info'; //登录方式
+
+__eventName.accountSelected = 'account_selected'; //绑定账号勾选
+
+__eventName.accountDelete = 'account_delete'; //绑定账号勾选
+
+__eventName.changeBtnNumber = 'change_button_number'; //数字键盘选中后派发事件
+
+
+__tipsName[7000] = '请同意勾选：阅读并同意用户协议和隐私政策'
+__tipsName[7001] = '维护中'
+__tipsName[7002] = '授权已过期'
+__tipsName[7003] = 'gameConfig尚未获取'
+__tipsName[7004] = '房间不存在'
+__tipsName[7005] = '创建房间数据错误'
+__tipsName[7006] = '尚未开放'
+__tipsName[7007] = '创建房间失败'
+__tipsName[7008] = '未知提示'
+__tipsName[7009] = '恭喜您已完成实名认证！'
+__tipsName[7010] = '正在获取认证信息，请稍后'
+__tipsName[7011] = '姓名验证不通过'
+__tipsName[7012] = '身份证号码验证不通过'
+__tipsName[7013] = '超出文本长度'
+__tipsName[7014] = '确认进行此操作？'
+__tipsName[7015] = '该账号已封停'
+__tipsName[7016] = '邀请码不一致'
+__tipsName[7017] = '邀请码不能为空'
+__tipsName[7018] = '绑定邀请码失败'
+__tipsName[7019] = '操作成功'
+__tipsName[7020] = '房卡不足'
+__tipsName[7021] = '邀请码不存在'
+__tipsName[7022] = '该用户已在其它设备登录，点击确定重新登录！'
+
+
+
+__tipsName[7023] = '正在连接服务器'
+__tipsName[7024] = '正在获取用户数据'
+__tipsName[7025] = '网络已断开，请重新连接...'
+__tipsName[7026] = '正在获取数据请稍后'
+__tipsName[7027] = '正在加入房间'
+__tipsName[7028] = '正在重新回到房间'
+__tipsName[7029] = '存在距离过近或IP相同'
+__tipsName[7030] = '尚未开启定位，无法创建该类型房间'
+
+__tipsName[7031] = '复制成功'
+__tipsName[7032] = '复制失败'
+
+__tipsName[7033] = '操作失败'
+__tipsName[7034] = '正在读取录像数据'
+__tipsName[7035] = '保存成功，画面设置将在重新加载房间后生效'
+
+__tipsName[7036] = '请使用微信登录'
+__tipsName[7037] = '请使用默往登录'
+__tipsName[7038] = '请使用闲聊登录'
+
+__tipsName[7039] = '体验馆已关闭'
+__tipsName[7040] = '此体验馆未对外开放，是否申请加入'
+__tipsName[7041] = '请输入体验馆ID'
+
+__tipsName[7042] = '发送成功'
+__tipsName[7043] = '发送失败'
+__tipsName[7044] = '绑定成功'
+__tipsName[7045] = '已绑定手机号'
+__tipsName[7046] = '验证码不存在'
+__tipsName[7047] = '验证码超时'
+__tipsName[7048] = '验证码不正确'
+__tipsName[7049] = '请填写正确的手机号'
+__tipsName[7050] = '验证码不能为空'
+__tipsName[7051] = '保存的主账号不能为空'
+__tipsName[7052] = '绑定信息已变更，请重新登录！'
+__tipsName[7053] = '解除账号绑定后将无法自动匹配主账号登录，确认解除吗？'
+
+__tipsName[7054] = '请分享到微信平台'
+__tipsName[7055] = '请分享到默往平台'
+
+__tipsName[7056] = '保存成功'
+__tipsName[7057] = '请先更换主账号'
+
+__tipsName[7058] = '房卡数量低于100张不能创建体验馆'
+__tipsName[7059] = '体验馆已闭馆'
+
+__tipsName[7100] = '未知错误'
+__tipsName[7101] = '好友圈名称重复'
+__tipsName[7102] = '创建好友圈已达上限'
+__tipsName[7103] = '创建好友圈所需房卡不足'
+__tipsName[7104] = '创建中，请稍后'
+__tipsName[7105] = '请输入好友圈ID'
+__tipsName[7106] = '好友圈不存在'
+__tipsName[7107] = '已加入该好友圈'
+__tipsName[7108] = '已申请该好友圈'
+__tipsName[7109] = '好友圈用户已满'
+__tipsName[7110] = '好友圈已关闭'
+__tipsName[7111] = '好友圈已被冻结'
+__tipsName[7112] = '已发送申请'
+__tipsName[7113] = '该用户已是管理员'
+__tipsName[7114] = '该用户已是普通成员'
+__tipsName[7115] = '充值中，请稍后'
+__tipsName[7116] = '请输入充值数量'
+__tipsName[7117] = '充值成功'
+__tipsName[7118] = '操作中，请稍后'
+__tipsName[7119] = '好友圈已解散'
+__tipsName[7120] = '创建成功'
+__tipsName[7121] = '请输入联盟ID'
+__tipsName[7122] = '联盟不存在'
+__tipsName[7123] = '联盟名称重复'
+__tipsName[7124] = '已加入联盟'
+__tipsName[7125] = '已申请该联盟'
+__tipsName[7126] = '服务器维护中'
+__tipsName[7127] = '好友圈库存不足，请联系管理员'
+__tipsName[7128] = '房间已满'
+__tipsName[7129] = '不满足进房规则'
+__tipsName[7130] = '还不是该好友圈成员'
+__tipsName[7131] = '还不是该联盟成员'
+__tipsName[7132] = '自动玩法已失效'
+__tipsName[7133] = '自动玩法已关闭'
+__tipsName[7134] = '尚未开启定位'
+__tipsName[7135] = '好友圈禁用自建房'
+__tipsName[7136] = '不可创建联盟房'
+__tipsName[7137] = '联盟禁用自建房'
+__tipsName[7138] = '此房间禁止解散'
+__tipsName[7139] = '您还不是联盟管理员'
+__tipsName[7140] = '局数已达上限'
+__tipsName[7141] = '对局已被冻结'
+__tipsName[7142] = '空闲普通房间数量超出限制'
+__tipsName[7143] = '已加入其他联盟'
+__tipsName[7144] = '房间已开始'
+__tipsName[7145] = '您还不是好友圈管理员'
+__tipsName[7146] = '请通过好友圈进入该房间'
+
+
+
+__tipsName[8000] = '不符合亮喜规则'
+
+__tipsName[9000] = '帐号正处于注销期'
+
+
+
+
+__cName.d = 'down_hand_card'
+__cName.u = 'up_hand_card'
+__cName.rhand = 'result_hand_card'
+__cName.ddoor = 'down_door_card'
+__cName.udoor = 'up_door_card'
+__cName.ldoor = 'left_door_card'
+__cName.rdoor = 'right_door_card'
+__cName.do = 'down_out_card'
+__cName.uo = 'up_out_card'
+__cName.lo = 'left_out_card'
+__cName.lo = 'right_out_card'
+
+
+__cName.ope = 'operation'
+__cName.opc = 'operation_container'
+__cName.opt = 'operation_choice_frame'
+__cName.opv = 'operation_video'
+
+__cName.hc = 'hu_card'
+__cName.he = 'hu_effect'
+__cName.ce = 'common_effect'
+
+__cName.ste = 'score_text_effect'

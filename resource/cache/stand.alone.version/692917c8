@@ -1,0 +1,86 @@
+class GameMainPersonage extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_personage',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = '';
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+    }
+    added() {
+        this.update()
+        game.cb.on('update_personage_data', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_personage_data', this, this.update)
+        ResUtils.clearTextureRes(['cdn.personage'])
+    }
+    updateItem(cell, index) {
+        let array = [];
+        for (const key in __data.personage.data) {
+            if (parseInt(key) >= 1) {
+                array.push(...__data.personage.data[key])
+            }
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !__data.personage.data[nextPage]) {
+            game.server.send(16008, nextPage)
+        }
+    }
+    update() {
+        let b = [];
+        for (const key in __data.personage.data) {
+            if (parseInt(key) >= 1) {
+                b.push(...__data.personage.data[key])
+            }
+        }
+        for (let index = 0; index < b.length; index++) {
+            const e = b[index];
+            e.index = index;
+
+        }
+        this.img_nodata.visible = b.length == 0;
+        this.__list.array = b;
+    }
+}
+class GameMainPersonageItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_personageItem',
+            module: false
+        })
+        this.__vo;
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.bg.skin = vo.index % 2 == 0 ? '' : 'cdn/personage/img_mrtbox.png'
+        if (vo.name) {
+            LabelHiddenUtils.getAdapterContent(this.txt_rank_name, vo.name)
+            let name;
+            try {
+                name = excelUtils.getCityName_mj(vo.cityId)
+            } catch (error) {
+
+            }
+            this.txt_mjName.text = name || '未知';
+            this.img_head_frame.skin = PropIcon.icon[vo.headBorderId || 301].skin
+            this.img_head.skin = __data.getHeadTestDefault(vo.headUrl);
+            this.txt_count.text = vo.count;
+            let n = '';
+            for (let index = 0, length = vo.seasonNames.length / 2; index < length; index++) {
+                n += '\n' + vo.seasonNames[index * 2];
+                if (vo.seasonNames[index * 2 + 1]) {
+                    n += ',' + vo.seasonNames[index * 2 + 1]
+                }
+            };
+            // 去掉n第一个字符串的换行符
+            n = n.replace('\n', '');
+            this.txt_season.text = n;
+        }
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_personageItemUI', GameMainPersonageItem);

@@ -1,0 +1,2224 @@
+let __showScene = {
+    sceneType: 0,
+    wait() {
+        game.scene.add(LoadingSmall)
+    },
+    removeWait() {
+        game.scene.remove(LoadingSmall)
+    },
+    // 处理onShow 附带参数
+    handleShowParams() {
+        // 处理邀请信息
+        console.log('share handleShowParams', __data.invite_your_uid);
+        if (__data.invite_your_uid) {
+            console.log('share 2206');
+            game.server.send(2206, __data.invite_your_uid);
+            __data.invite_your_uid = null;
+        }
+        if (__data.scene_poster && __data.scene_poster.channel == 'poster') { // 通过海报分享进入游戏
+            console.log('poster share.', __data.scene_poster.uuid);
+            game.server.send(2206, __data.scene_poster.uuid);
+            __data.scene_poster = null;
+        }
+    },
+    // 处理onShow 附带参数
+    async handleResultParams() {
+        // let hall = game.scene.get(Hall);
+        // 处理邀请信息
+        // if (__data.resultData && hall && hall.parent) {
+        if (__data.resultData) {
+            if (__reBack_info.mahjong.isRead && !__reBack_info.mahjong.code && !__data.deskData.roomVo.roomID) {
+                trace('显示分享结算.')
+                __data.deskData.roomVo.allRoundResult = JSON.parse(__data.resultData);
+                await __showScene.load_game_result();
+                game.scene.add(FriendMahjongAllResult, [true]);
+                __data.resultData = null;
+            } else {
+                __data.resultData = null;
+            }
+        }
+    },
+    // 处理onShow 附带参数
+    handleRoomParams() {
+        trace('处理快速进入房间流程.', __reBack_info.mahjong, __data.deskData.roomVo.roomID, __data.roCityId, __data.room_pwd);
+        if (__reBack_info.mahjong.isRead && !__reBack_info.mahjong.code && !__data.deskData.roomVo.roomID) {
+            // 没有选区  却需要自动进入房间，  默认设置玩法
+            if (!__data.myCityId) {
+                if (__data.roCityId) {
+                    game.server.send(2216, __data.roCityId) // 我的玩法
+                    __data.roCityId = null;
+                }
+            }
+            // 处理邀请信息
+            if (__data.room_pwd) {
+                let loading = game.scene.get(Loading);
+                if (loading && loading.parent) this.removeWait();
+                else this.wait();
+                __data.autoInRoom = true;
+                game.server.send(14006, __data.room_pwd);
+                __data.room_pwd = null;
+                return true;
+            }
+        } else {
+            __data.roCityId = null;
+            __data.room_pwd = null;
+        }
+        return false;
+    },
+    show_loading() {
+        return new Promise(async function (res, rej) {
+            let fileNameArr = [
+                'hall.a', 'hall.b', 'bigImage', 'common', 'comp', 'sound', 'loading'];
+            await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(['common', 'bigImage']).concat([{
+                "url": config.urlHead + "ui.json" + __version.res,
+            }, {
+                "url": config.urlHead + "common/loading.sk" + __version.res,
+            }, {
+                "url": config.urlHead + "common/loading.png" + __version.res,
+            },
+                // {
+                //     "url": config.urlHead + "res/浪漫雅圆.ttf" + __version.res,
+                // }
+            ]);
+            urls.push({ url: 'res/atlas/local/loading/1.atlas' })
+
+            __tool.load(urls, function () {
+                if (!window.wx) Laya.Text.defaultFont = "浪漫雅圆";
+                try {
+                    window.removeFirstScene && removeFirstScene()
+                } catch (error) { }
+                game.uiMap = Laya.loader.getRes(config.urlHead + 'ui.json' + __version.res);
+                config.teStat && window.TestBtn && TestBtn.create()
+                game.scene.removeAll()
+                // game.scene.add(LoadBgAni)
+                game.scene.add(LoadBg)
+                game.scene.add(Loading)
+                res(1)
+            }, function (v) {
+                // trace('加载进度', v)
+            })
+        });
+    },
+    // show_loading_start() {
+    //     return new Promise(async function (res, rej) {
+    //         game.scene.remove(Loading)
+    //         game.scene.add(LoadingStart)
+    //         res(1)
+    //     });
+    // },
+    load_hall() {
+        return new Promise(async function (res, rej) {
+            let fileNameArr = ['hall.a', 'hall.b', 'bag_icon',
+                'ab.a_panel_prop_get', 'a_selectPlay.a', 'a_selectPlay.b',
+                'lvNameBg', 'ab.bag',
+                'ab.hall_area_btn_big',
+                'gameMain_sign',
+                'resource_ui',
+                'rank_ui',
+                // 加载麻将资源 分包
+                // 'matchCount',
+                // 'button',
+                // 'chat',
+                // 'cupNum',
+                // 'mahjong_effect.a',
+                // 'friendRoom_play',
+            ];
+            await miniApi.loadSubpackage(fileNameArr)
+            let ff = [
+                'local.hall.1',
+                'local.a_selectPlay.1',
+                'bag_icon',
+                'ab.a_panel_prop_get',
+                'ab.bag',
+                'ab.hall_area_btn_big',
+                'local.head.1',
+            ]
+            let urls = ResUtils.getFileName(ff)
+            urls.push({ url: "res/atlas/local/rank/1.atlas" })
+            urls.push({ url: "res/atlas/local/lvNameBg/1.atlas" })
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: "res/atlas/local/hall/1.atlas" })
+            urls.push({ url: "res/atlas/local/a_selectPlay/1.atlas" })
+            // urls.push({ url: "res/atlas/local/rank_ui/1.png" })
+            urls.push({ url: "res/atlas/local/rank_ui/1.atlas" })
+            urls.push({ url: "res/atlas/local/resource_ui/1.atlas" })
+            __tool.load(urls, function () {
+                Laya.MiniAdpter && Laya.MiniAdpter.sendAtlasToOpenDataContext("res/atlas/local/rank/1.atlas");
+
+                load_hall_complete = 1;
+                if (__data.uid >= 0)
+                    game.scene.add(LoadingSmall)
+                // __data.cdn_config = Laya.Loader.getRes(getkey)
+                res(1)
+            }, function (v) {
+                game.scene.get(Loading).progress(v * 0.5 + 0.5)
+                // trace('加载进度', v)
+            })
+        });
+    },
+    async show_hall() {
+        Laya.stage.frameRate = "slow"
+        window.OpenHtml && OpenHtml.takeFront('main');
+        __sound.playGameMusic('bgm_hall')
+
+        ResUtils.clearTextureRes(['ab.a_panel_prop_get'])
+        ResUtils.clearTextureRes(['bag_icon'])
+        ResUtils.clearTextureRes(['ab.bag'])
+        ResUtils.clearTextureRes(['ab.hall_area_btn_big'])
+        ResUtils.clearTextureRes(['local.a_selectPlay.1'])
+        ResUtils.clearAtlas('res/atlas/local/a_selectPlay/1.atlas')
+        // 清理loading缓存
+        let clearLoadingRes = [
+            'local/loading/1/bar_loading.png',
+            'local/loading/1/bt_login_we.png',
+            'local/loading/1/img_bh.png',
+            'local/loading/1/img_slts.png',
+            'local/loading/1/loading.png',
+            'local/loading/1/logo.png',
+            'bigImage/loadingbg.png',
+            'bigImage/loadingbg2.png',
+            'bigImage/img_qhb.png',
+        ]
+        for (const iterator of clearLoadingRes) {
+            Laya.loader.clearTextureRes(iterator)
+        }
+        // 清理花园
+        clearGradenRes()
+        __data.lastSceneQueue = [];
+        // 检测是直接显示大厅，还是显示玩法
+        if (!__data.myCityId) {
+            __data.tryAnalysis();
+            let r = this.handleRoomParams();
+            if (!r) {// 不需要直接进入好友房  弹出选择界面
+                miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '强制选择玩法' })
+                __data.lastSceneQueue.push(__showScene.show_hall)
+                await __showScene.show_gameMain_selectPlay(1, 0, __data.province)
+            }
+        } else {
+            // 如果掉线登录 会直接返回大厅 所以兼容一下 直接清理小游戏场景
+            let ana = game.scene.get(MjMatch_ui_left)
+            ana && ana.removeTimer()
+            // S_3D_mjMatch.scene && S_3D_mjMatch.scene.destroy();
+            game.utils.remove(S_3D_mjMatch.scene)
+
+            __showScene.sceneType = 'hall'
+            game.scene.removeAll()
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '显示大厅' })
+            game.scene.add(HallBg)
+            game.scene.add(Hall)
+            game.scene.add(HallLeftUp)
+            game.scene.add(HallLeftDown)
+            game.scene.add(HallRightDown)
+            game.scene.add(Icon_marketActivity)
+            // game.scene.registe(Horn)
+            // game.cb.event('game_horn');
+            __showScene.handleResultParams();
+        }
+    },
+    show_hall_play(index, roomType = 'normal', showFriendRecord = false, isOther = false) {
+        Laya.stage.frameRate = "slow"
+        __sound.playGameMusic('bgm_hall')
+        __showScene.sceneType = 'hallPlay'
+        // normal or friend
+        HallPlay.lastCityId = index; // 记录上次索引
+        HallPlay.roomType = roomType
+        return new Promise(async function (res, rej) {
+            game.server.send(3311, 1, 1)
+            game.server.send(2250)
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['hall_play.a', 'hall_play.b', 'cupNum', 'matchCount', 'friendRoom_play', 'gameMain_sign'];
+            await miniApi.loadSubpackage([...fileNameArr,
+                // 提前加载麻将分包
+                // 'desk_common_num',
+                // 'desk_common_ui',
+                // 'game_common.a',
+                // 'game_common.b',
+                // 'gameMain_lookVideo',
+                // 'gift',
+                // 'mahjong_match',
+                // 'mahjong_common.a',
+                // 'mahjong_common.b',
+                // 'mahjong_operation',
+            ])
+            fileNameArr.push('cdn.hall_play_season_title');
+            fileNameArr.push('cdn.seasonStartEndReward');
+            // fileNameArr.push('cdn.mahjong_result.mahjong_result');
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({
+                url: 'cdn/friendRoom_play/img_xx.png',
+                type: 'image'
+            })
+            urls.push({ url: 'res/atlas/local/cupNum/cupNum.atlas' })
+            urls.push({ url: 'res/atlas/local/gameMain_sign/1.atlas' })
+            urls.push({ url: 'res/atlas/local/matchCount/1.atlas' })
+            urls.push({ url: 'res/atlas/local/hall_play/1.atlas' })
+            urls.push({ url: 'res/atlas/local/friendRoom_play/1.atlas' })
+            urls.push({ url: 'res/atlas/cdn/seasonStartEndReward.atlas' })
+            urls.push({ url: 'res/atlas/cdn/effect_fire.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.removeAll()
+                clearGradenRes()
+                game.scene.add(HallBg)
+                game.scene.add(HallPlayLeft, [index, roomType])
+                if (roomType == 'normal') {
+                    game.scene.add(HallPlay, [index])
+                    game.scene.add(HallPlayCenterUp)
+                    game.scene.add(HallPlayCenterDown)
+                    game.scene.add(HallPlayLeftDown)
+                } else {
+                    game.scene.add(FriendRoom_hallPlay_center, [index])
+                    game.scene.add(FriendRoom_hallPlay_centerDown)
+                    game.scene.add(FriendRoom_hallPlay_leftUp, [index])
+                    game.scene.add(FriendRoom_hallPlay_leftDown)
+
+                    if (showFriendRecord) {
+                        FriendRoom_record_main_gameRecord.save = 1;
+                        __showScene.show_friendRoom_record(3, FriendRoom_record_main_gameRecord.combobox_select_index)
+                        if (!isOther && FriendRoom_record_main_gameRecord.friend_room_info_vo)
+                            __showScene.show_friendRoom_info(FriendRoom_record_main_gameRecord.friend_room_info_vo)
+                    }
+                }
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_horn(o) {
+        let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':show_horn')
+        if (a == 'no') return;
+        return new Promise(async function (res, rej) {
+            let fileNameArr = []
+            fileNameArr.push('cdn.horn')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                Horn.content = Horn.content || [];
+                Horn.content.push(o)
+                Horn.play()
+                res(1)
+            }, function (v) {
+                // game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_vip(type) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = GameMainVip.loadResFolder;
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                if (__data.vip.isVip) {
+                    if (['3.1.12_vip', '3.1.17_vip'].includes(__data.vip.vipType)) {
+                        if (type == 'des') {
+                            game.scene.add(GameMainVipNew1, [__data.vip.vipType])
+                        } else {
+                            game.scene.add(GameMainVipNew2, [__data.vip.vipType])
+                        }
+                    }
+                    else {
+                        game.scene.add(GameMainVip)
+                    }
+                } else {
+                    if (type == 'des') {
+                        game.scene.add(GameMainVipNew1, ['no'])
+                    } else {
+                        game.scene.add(GameMainVipNew2, ['no'])
+                    }
+                }
+                res(1)
+            }, function (v) {
+                game.scene.get(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_vipSales(type = 1) {
+        // IOS能支付修改
+        // if (miniApi.isIOS) return 1;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.vip_sales')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainVipSales, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_vipBombbox(type = 1) {// 1财产保护 2奖杯特权
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.vip_bomb_box', 'cdn.vip_buy_btn')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainVipBombbox, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_pochan() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(GameMainPochan)
+        });
+    },
+    show_allwin(gold) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(MahjongResultAllWin, [gold]);
+        });
+    },
+    show_email() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr);
+            fileNameArr.push(...GameMainEmailList.loadResFolder);
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainEmailList)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_collect(type, shareCardId) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = GameMainCollect.loadResFolder;
+            // game.server.send(10005)
+            game.server.send(2005, __data.uid); // 查询自己头像框信息
+            gtool.query([15003], 0) // 如果是主界面打开 那么这里15003 就不能缓存send了 因为可能开vip
+            game.server.send(15006)
+            // await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: "res/atlas/cdn/collect.atlas" })
+            // LayaZip.LazyFliter = ["png", "jpg"];
+            // __tool.load([{ url: "https://cdn.snyngame.com/mahjong/cdn/card.zip", type: LayaZip.ZIP }], function () {
+            __tool.load(urls, function () {
+                // Laya.Loader.loadedMap
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainCollect, [type, shareCardId])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_queShenRoad() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [
+                'gameMain_sign',
+                'bag_icon', 'lvNameBg'
+            ];
+            await miniApi.loadSubpackage(fileNameArr)
+            // fileNameArr.push('cdn.queShenRoad', 'cdn.email')
+            fileNameArr.push('cdn.queShenRoad', 'cdn.email', 'cdn.ui1')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: "res/atlas/local/lvNameBg/1.atlas" })
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: "res/atlas/cdn/queShenRoad.atlas" })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainQueShenRoad)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_dailyLogin() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.dailyLogin')
+            miniApi.video_ready('adunit-b83df2d22e66e36b')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: "res/atlas/cdn/dailyLogin.atlas" })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainDailyLogin)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    // show_regionCooperation() {
+    //     return new Promise(async function (res, rej) {
+    //         game.scene.add(LoadingSmall)
+    //         let fileNameArr = [];
+    //         fileNameArr.push('cdn.regionCooperation')
+    //         let urls = ResUtils.getFileName(fileNameArr);
+    //         __tool.load(urls, function () {
+    //             game.scene.remove(LoadingSmall)
+    //             game.scene.add(GameMainRegionCooperation)
+    //             res(1)
+    //         }, function (v) {
+    //             game.scene.add(LoadingSmall).progress(v)
+    //         })
+    //     });
+    // },
+    show_gameMain_rankRule() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.a_rankRule')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(PromptRankRule)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    // isCur 是不是修改我的玩法
+    show_gameMain_selectPlay(isCur, isClose = 1, province) {
+        __showScene.sceneType = 'selectCity'
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['a_selectPlay.a', 'a_selectPlay.b'];
+            await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(['local.a_selectPlay.1']);
+            urls.push({ url: "res/atlas/local/a_selectPlay/1.png" });
+            urls.push({ url: "res/atlas/local/a_selectPlay/1.atlas" });
+            __tool.load(urls, function () {
+                game.scene.removeAll();
+                game.scene.remove(LoadingSmall)
+                GameMainSelectPlayBG.isCur = isCur;
+                GameMainSelectPlayBG.isClose = isClose;
+                game.scene.add(GameMainSelectPlayBG)
+                if (province) {
+                    let p1 = province.slice(0, 2)
+                    let isfind
+                    for (const key in __data.excelConfig.hashCityIdVO) {
+                        let a = __data.excelConfig.hashCityIdVO[key];
+                        if (province.includes(a.province)) {
+                            if (a.province == '黑龙江') {
+                                game.scene.add(GameMainSelectPlay1)
+                                game.scene.add(GameMainSelectPlay1_return)
+                                game.scene.add(GameMainSelectPlay1_otherArea)
+                            } else {
+                                game.scene.add(GameMainSelectPlay0)
+                                game.scene.add(GameMainSelectPlay0_return)
+                                game.scene.add(GameMainSelectPlay0_otherArea)
+                                let pp = a.provinceId;
+                                if (pp == 25 || pp == 26 || pp == 27 || pp == 28) {
+                                    // 北京重庆什么的
+                                } else {
+                                    game.scene.add(GameMainSelectPlay2, [pp, 1])
+                                }
+                            }
+                            isfind = true;
+                            break;
+                        }
+                    }
+                    if (!isfind) {
+                        game.scene.add(GameMainSelectPlay0)
+                        game.scene.add(GameMainSelectPlay0_return)
+                        game.scene.add(GameMainSelectPlay0_otherArea)
+                    }
+                } else {
+                    game.scene.add(GameMainSelectPlay0)
+                    game.scene.add(GameMainSelectPlay0_return)
+                    game.scene.add(GameMainSelectPlay0_otherArea)
+                }
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_seven() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.a_seven')
+            miniApi.video_ready('adunit-f1c8c5f315e4054e')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainSeven);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_notice() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.notice')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainNotice)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_iosSpecailBombbox() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.iosSpecailBombbox')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainIosSpecailBombbox)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_exchangeCode() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.exchangeCode')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainExchangeCode)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_chuanqiReward() {
+        return new Promise(async function (res, rej) {
+            __data.chuanqi.reward.send(1)
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.chuanqiReward', 'cdn.ui1', 'cdn.shareReceiveTips')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainChuanqiReward)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_newPlayerRedChallenge(type = 0) {
+        if (!__data.redPacket.canShowNewPlayerRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.server.send(16007)
+            game.server.send(18001)
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.newPlayerChallenge.newPlayerChallenge')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainNewPlayerRedChallenge, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_redPacket_openPanel() {
+        // if (!__data.redPacket.rookieState) return false;
+        // if (miniApi.clientType == 'app') return false;
+        // if (miniApi.getWxDeviceName() === 'windows') return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.newPlayerChallenge.newPlayerChallenge')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainNewPlayerRedChallengeOpen)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_allPlayerRed(type) {
+        if (!__data.redPacket.canShowAllPlayerRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.server.send(18007)
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.allPlayerRed.allPlayerRed')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/allPlayerRed/allPlayerRed.png' })
+            urls.push({ url: 'res/atlas/cdn/allPlayerRed/allPlayerRed.atlas' })
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.png' })
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas' })
+            urls.push({ url: config.soundHead + 'sound/ding.mp3' })
+            urls.push({ url: config.soundHead + 'sound/get.mp3' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainAllPlayerRed, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_allPlayerRed_luckRed(type) {
+        if (!__data.redPacket.canShowAllPlayerRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let urls = []
+            urls.push({ url: 'res/atlas/cdn/allPlayerRed_luck_red.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainAllPlayerRed_luckRed)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_red_task_fail_lookVideo(type = 'newPlayer') {
+        // if (!__data.redPacket.everyState) return false;
+        // if (miniApi.clientType == 'app') return false;
+        // if (miniApi.getWxDeviceName() === 'windows') return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.red_fail')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainRedChallengeFail, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_redPanel() {
+        if (!__data.redPacket.canShowFriendRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.friendRed')
+            fileNameArr.push('cdn.newPlayerChallenge.newPlayerChallenge')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas' })
+            urls.push({ url: 'res/atlas/cdn/friendRed.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(FriendRoomRedPanel)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_redSuccess(uid) {
+        if (!__data.redPacket.canShowFriendRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.friendRed_success')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(FriendRoomRedSuccess, [uid])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_redOtherOpen(uid) {
+        if (!__data.redPacket.canShowFriendRedIcon()) return false;
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.friendRed_otherOpen')
+            fileNameArr.push('cdn.newPlayerChallenge.newPlayerChallenge')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/newPlayerChallenge/newPlayerChallenge.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(FriendRoomRedOtherOpen, [uid])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_explain() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let h = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+            __tool.load([{
+                url: h + 'cdn/friendRoom_play/img_hyqsm.png', type: 'image'
+            }], function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_explain)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_inputId() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            // let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            // fileNameArr.push('cdn.friendRoom_input')
+            // let urls = ResUtils.getFileName(fileNameArr);
+            let urls = [{ url: 'res/atlas/cdn/friendRoom_input.atlas' }]
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_input_roomId)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_guide_rule(isClick) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.ruleImage')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainGuideDazhong, [isClick])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_replayId() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            // let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            // fileNameArr.push('cdn.friendRoom_input')
+            // let urls = ResUtils.getFileName(fileNameArr);
+            let urls = [{ url: 'res/atlas/cdn/friendRoom_input.atlas' }]
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_input_replayId)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_vipSale(type) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.friendRoom_vipSale', 'cdn.vip_buy_btn')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_vipSale, [type])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_record(page = 1, combboxIndex = 0) {
+        return new Promise(async function (res, rej) {
+            __data.friendRoom.clear()
+            game.server.send(14020);
+            for (let index = 1, length = page; index <= length; index++) {
+                // combboxIndex 第几天的记录
+                game.server.send(14013, __data.uid, combboxIndex, index);
+            };
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.friendRoom_record')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/friendRoom_record.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_record_main)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_friendRoom_info(vo) {
+        return new Promise(async function (res, rej) {
+            game.server.send(14014, vo.roomId, 1, 50);
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.friendRoom_record')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/friendRoom_record.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(FriendRoom_info_main, [vo])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_shop(defaultIndex) {
+        // if (miniApi.isIOS) return 1;
+        // 富贵庄园红点检测
+        __data.garden.fuguiManor.query(1)
+        game.server.send(2405) // 商城信息 里面有支付显示 必须发送
+        __data.shop.discount.query(9009)// 商城信息
+        __data.shop.discount.query(9010)// 商城信息
+        // game.server.send(12002, 9008) // 商城信息
+        // game.server.send(12002, 9009) // 商城信息
+        // game.server.send(12002, 9010) // 商城信息
+
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.a_shop')
+            // miniApi.video_ready('adunit-0d2990e2b4b2f487')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/a_shop.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainShop, [defaultIndex])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_shop_601() {
+        // if (miniApi.isIOS) return 1
+
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['bag_icon'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.a_shop')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/a_shop.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainShop601)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_lookVideo_win() {
+        return new Promise(async function (res, rej) {
+            // let a = await miniApi.video_ready('adunit-32db74247314cde6')
+            // if (!a.pullVideo) return res(1);
+            game.scene.add(LoadingSmall)
+            game.scene.remove(LoadingSmall)
+            LookVideoProxy.canBeShow && game.scene.add(GameMainLookVideoWin)
+            res(1)
+        });
+    },
+    show_gameMain_lookVideo_lose() {
+        return new Promise(async function (res, rej) {
+            // let a = await miniApi.video_ready('adunit-cb884ce5e16b6f59')
+            // if (!a.pullVideo) return res(1);
+            game.scene.add(LoadingSmall)
+            game.scene.remove(LoadingSmall)
+            LookVideoProxy.canBeShow && game.scene.add(GameMainLookVideoLose)
+            res(1)
+        });
+    },
+    async show_gameMain_relief() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['cdn.helpGold'];
+            let urls = ResUtils.getFileName(fileNameArr);
+            miniApi.video_ready('adunit-1f51e678c42934e3')
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainRelief)
+                miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '救济金界面' })
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_prompt_select(content, sureFN = null, cancelFN = null, txt_sure = '确认', txt_cancel = '取消', title = '提示') {
+        return new Promise(async function (res, rej) {
+            game.scene.add(PromptSelect, [content, sureFN, cancelFN, txt_sure, txt_cancel, title])
+        });
+    },
+    show_prompt_single(content, sureBtnText = '确定', sureFn = null, title = '提示') {
+        return new Promise(async function (res, rej) {
+            game.scene.add(PromptSingle, [content, sureBtnText, sureFn, title])
+        });
+    },
+    // show_prompt_frame({
+    //     content:'',
+    //     success: null,
+    //     fail:  null,
+    //     txt_sure:  '确定',
+    //     txt_cancel:  '取消',
+    //     title:  '提示',
+    //     btn_num:  2,
+    // })
+    show_prompt_frame(v) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(PromptFrame, [v])
+        });
+    },
+    // 队伍榜单名次提升提示
+    show_prompt_team_advance() {
+        game.scene.add(PromptTeamHelper);
+    },
+    show_gameMain_bag() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = ['ab.bag'];
+            await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(fileNameArr);
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainBag);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_bless() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = ['cdn.bless_panel', 'cdn.ui1', 'cdn.redPacket_light'];
+            // await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(fileNameArr);
+            let h = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+            urls.push(...[{
+                "url": h + "cdn/bless_panel/Caishen.sk" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Caishen.png" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Facaishu.sk" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Facaishu.png" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Jinchan.sk" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Jinchan.png" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Long.sk" + __version.res,
+            }, {
+                "url": h + "cdn/bless_panel/Long.png" + __version.res,
+            }]);
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(MahjongBless);
+                game.scene.add(MahjongBless_leftUp);
+                game.scene.add(MahjongBless_rightDown);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_seasonRecord() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            // if (!__data.seasonRecord.length) {
+            await game.server.send(2250)
+            let p = []
+            let d__1 = Object.values(__data.seasonRecord)
+            for (let index = 0, length = d__1.length; index < length; index++) {
+                const e = d__1[index];
+                if (e.isIng) continue;
+                // p.push(game.server.send(2251, e.id, HallPlay.lastCityId))
+            };
+            // 我的城市id 排行
+            p.push(game.server.send(11004, __data.myCityId))
+            // 个人榜
+            p.push(game.server.send(3311, 1, 1))
+            // 本地帮
+            p.push(game.server.send(2407, HallPlay.lastCityId, 1))
+            await Promise.all(p)
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.seasonRecord']
+            let urls = ResUtils.getFileName(fileNameArr);
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainSeasonRecord);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_seasonEnd() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = [
+                'gameMain_sign',
+                'lvNameBg'
+            ];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.seasonStartEndReward')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: "res/atlas/local/lvNameBg/1.atlas" })
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: 'res/atlas/cdn/seasonStartEndReward.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainSeasonEnd);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_seasonStart() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = [
+                'gameMain_sign',
+                'lvNameBg'
+            ];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.seasonStartEndReward')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: "res/atlas/local/lvNameBg/1.atlas" })
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: 'res/atlas/cdn/seasonStartEndReward.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainSeasonStart);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_seasonReward() {
+        let props = [
+            { propId: 101, propNum: __data.seasonEndData.goldCup },
+            { propId: 102, propNum: __data.seasonEndData.silverCup },
+            { propId: 103, propNum: __data.seasonEndData.copperCup },
+            { propId: 201, propNum: __data.seasonEndData.goldMedal },
+            { propId: 202, propNum: __data.seasonEndData.silverMedal },
+            { propId: 203, propNum: __data.seasonEndData.copperMedal },
+        ]
+        // avatarBorder
+        try {
+            let n = {}
+            for (let index = 0, length = __data.seasonEndData.avatarBorder.length; index < length; index++) {
+                const id = __data.seasonEndData.avatarBorder[index];
+                n[id] = n[id] || 0;
+                n[id]++
+            };
+            for (const id in n) {
+                props.push({
+                    propId: id,
+                    propNum: n[id],
+                })
+            }
+        } catch (error) {
+            console.error('添加头像奖励错误', error)
+        }
+        props = props.filter((e) => {
+            return e.propNum > 0
+        })
+        if (props.length == 0) {
+            __showScene.show_seasonStart()
+            return
+        }
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = []; // cdn.cupAndMedal 'cdn.headFrame',
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.seasonStartEndReward')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/seasonStartEndReward.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainSeasonReward, [props]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_playerInfo(player_data) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.gift')
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/playerInfo.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainPlayerInfo, [player_data]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    // show_gameMain_lvInfo() {
+    //     return new Promise(async function (res, rej) {
+    //         game.scene.add(LoadingSmall)
+
+    //         let fileNameArr = ['cdn.a_lvInfo'];
+    //         // await miniApi.loadSubpackage(fileNameArr);
+    //         let urls = ResUtils.getFileName(fileNameArr);
+
+    //         __tool.load(urls, function () {
+    //             game.scene.remove(LoadingSmall)
+    //             game.scene.add(GameMainLvInfo);
+    //             res(1)
+    //         }, function (v) {
+    //             game.scene.add(LoadingSmall).progress(v)
+    //         })
+    //     });
+    // },
+    show_personage() {
+        return new Promise(async function (res, rej) {
+            game.server.send(16008, 1)
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            fileNameArr.push('cdn.personage')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainPersonage);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_newPlayerGift(type) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            fileNameArr.push('cdn.newPlayerGift')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainNewPlayerGift, [type]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_firstPay(type = 1, modelType = 0) {
+        // IOS能支付修改
+        // if (miniApi.isIOS) return 1
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+
+            let fileNameArr = [];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push(...GameMainFirstPay.clearRes)
+            let urls = ResUtils.getFileName(fileNameArr);
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainFirstPay, [type, modelType]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_goldNoEnough(matchModelType, minGold) {
+        // IOS能支付修改
+        // if (miniApi.isIOS) return 1
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['cdn.goldNoEnough'];
+            // await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(fileNameArr);
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainGoldNoEnough, [matchModelType, minGold]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_rule() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            // let fileNameArr = ['cdn.ruleImage'];
+            await miniApi.loadSubpackage(['ruleTxt'])
+            let h = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+            let urls = [{
+                "url": `${config.urlHead}rule/rule_${HallPlay.curRuleId}.txt` + __version.res,
+                "type": Laya.Loader.TEXT
+            }, {
+                url: h + 'cdn/ruleImage/bt_wfbd.png'
+            }];
+
+            __tool.load(urls, function () {
+                let allImages = [];
+                for (let i = 0; i < urls.length; i++) {
+                    let content = Laya.loader.getRes(urls[i].url);
+                    if (typeof content === 'string' && content.startsWith('images')) {
+                        let images = content.replace('images,', '');
+                        images = images.split(',');
+                        for (let j = 0; j < images.length; j++) {
+                            if (!images[j]) continue;
+                            let url11 = h + images[j] + __version.res
+                            trace("加载规则图片", url11)
+                            allImages.push({ "url": url11, "type": Laya.Loader.IMAGE });
+                        }
+                    }
+                }
+                __tool.load(allImages, function () {
+                    game.scene.remove(LoadingSmall)
+                    game.scene.add(GameMainRule);
+                    res(1)
+                }, function (v) {
+                    game.scene.add(LoadingSmall).progress(v)
+                })
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_game_set() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = ['game_common.a', 'game_common.b', 'ruleTxt'];
+            await miniApi.loadSubpackage(fileNameArr)
+            let urls = [{
+                "url": config.urlHead + "res/atlas/local/game_common/1.atlas" + __version.res,
+                "type": Laya.Loader.ATLAS
+            }]
+            let urls123 = ResUtils.getFileName(['cdn.app_set', 'local.game_common.1']);
+            urls.push(...urls123)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(MahjongSet);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_invite() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let urls = ResUtils.getFileName(['cdn.invite']);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainInvite);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_winLoseGuide() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let urls = ResUtils.getFileName(['cdn.winLoseGuide']);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainWinLoseGuide);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_complaint() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.a_complaint')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainComplaint);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_club() {// 游戏圈
+        return new Promise(async function (res, rej) {
+            let fileNameArr = ['cdn.gameClub'];
+            let urls = ResUtils.getFileName(fileNameArr);
+            urls.push({ url: 'res/atlas/cdn/gameClub.atlas' })
+
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameClub);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_ad() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            game.server.send(2209);
+            let fileNameArr = ['bigImage'];
+            await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.ad', 'cdn.effect_light_turn')
+            let urls = ResUtils.getFileName(fileNameArr)
+            // .concat([{
+            //     "url": config.urlHead + "bigImage/bg_gg.png" + __version.res,
+            // }]);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainAd);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_gameMain_uplv(lvdata, cityId, qs_in) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = ['gameMain_sign'];
+            await miniApi.loadSubpackage(fileNameArr)
+            let urls = ResUtils.getFileName(['cdn.effect_light_turn', 'cdn.uplv'])
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: "res/atlas/cdn/a_seven_hand.png" })
+            urls.push({ url: "res/atlas/cdn/a_seven_hand.atlas" })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainUplv, [lvdata, cityId, qs_in]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_playNoRight() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            // fileNameArr = ['cdn.playNoRight']
+            fileNameArr = ['cdn.playNoRightAndCollect']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainPlayNoRight);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_playCollect() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.playNoRightAndCollect']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(GameMainPlayCollect);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_payPrompt(needPrice, callback) {
+        let sul = needPrice - __data.stone;
+        let vo1;
+        for (const key in shopConfig.stone) {
+            let a = shopConfig.stone[key];
+            if (sul <= a.num) {
+                vo1 = a;
+                break;
+            }
+        }
+        let price11;
+        if (window.IOSPay) {
+            price11 = IOSPay.getPriceById(vo1.goodsId);
+        } else if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+            price11 = OriginAppIap.getPriceById(vo1.goodsId);
+        } else {
+            price11 = vo1.price + '元';
+        }
+        // vo是祝福data数据对象 vo1是商品config数据对象
+        game.scene.add(MahjongBlessPayPrompt, [
+            sul + '钻',
+            price11,
+            vo1.num + '钻',
+            vo1,
+            callback,
+            // () => {
+            //     game.server.send(16023, vo.type, vo.baseMul, isSelect)
+            // }
+        ])
+    },
+    show_panel_surpriseCrit() {
+        // 3.1.20版本暂时关闭惊喜暴击功能
+        // return new Promise(async function (res, rej) {
+        //     game.scene.add(LoadingSmall);
+        //     let fileNameArr = [];
+        //     // await miniApi.loadSubpackage(fileNameArr)
+        //     fileNameArr = ['cdn.marketActivity_surpriseCrit']
+        //     let urls = ResUtils.getFileName(fileNameArr)
+        //     __tool.load(urls, function () {
+        //         game.scene.remove(LoadingSmall);
+        //         game.scene.add(Panel_marketActivity_surpriseCrit);
+        //         res(1)
+        //     }, function (v) {
+        //         game.scene.add(LoadingSmall).progress(v)
+        //     })
+        // });
+    },
+    show_panel_todayDiscount() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.marketActivity_todayDiscount']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Panel_marketActivity_todayDiscount);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_panel_inviteRed() {
+        return new Promise(async function (res, rej) {
+            await game.server.send(18027);
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.marketActivity_inviteRed', 'cdn.ui1']
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: 'res/atlas/cdn/allPlayerRed_luck_red.atlas' })
+            urls.push({ url: 'res/atlas/cdn/marketActivity_inviteRed.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Panel_marketActivity_inviteRed);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+
+    show_imageSharePre(closeToDo) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            fileNameArr = ['cdn.poster']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                PosterCloseTodo.todo = closeToDo;
+                game.scene.add(Panel_imageShare_pre);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_panel_goldBox() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.marketActivity_goldBox']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Panel_marketActivity_goldBox);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_panel_goldBox_explain() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.marketActivity_goldBox']
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Panel_marketActivity_goldBox_explain);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_panel_stepstepGift() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr = ['cdn.marketActivity_stepstepGift']
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: 'res/atlas/cdn/marketActivity_stepstepGift.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Panel_marketActivity_stepstepGift);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_game_chat() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let urls = [
+                // {
+                //     "url": config.urlHead + "local/chat/1/checkbox_bqx.png" + __version.res,
+                //     "type": Laya.Loader.IMAGE
+                // },
+                // {
+                //     "url": config.urlHead + "local/chat/1/checkbox_dy.png" + __version.res,
+                //     "type": Laya.Loader.IMAGE
+                // },
+                // {
+                //     "url": config.urlHead + "local/chat/1/img_chat_line.png" + __version.res,
+                //     "type": Laya.Loader.IMAGE
+                // },
+                {
+                    "url": config.urlHead + "res/atlas/local/chat/1.atlas" + __version.res,
+                    "type": Laya.Loader.ATLAS
+                }
+            ]
+            Laya.loader.create(urls, Laya.Handler.create(this, function () {
+                game.scene.remove(LoadingSmall);
+                game.scene.add(Chat);
+                res(1)
+            }), Laya.Handler.create(null, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            }, null, false));
+        });
+    },
+    load_game_result() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let urls = MahjongConfig.getRes();
+            let fileNameArr = ['mahjong_result', 'friendRoom_play'];
+            await miniApi.loadSubpackage(fileNameArr);
+            Laya.loader.create(urls, Laya.Handler.create(this, async function () {
+                game.scene.remove(LoadingSmall);
+                res(1)
+            }), Laya.Handler.create(null, function (v) {
+                game.scene.get(LoadingSmall) && game.scene.get(LoadingSmall).progress(v)
+            }, null, false));
+
+        });
+    },
+    load_game_resource_by_gameId(gameId) {
+        let t = this;
+        return new Promise(async function (res, rej) {
+            let loading = game.scene.get(Loading);
+            if (loading && loading.parent) game.scene.remove(LoadingSmall);
+            else game.scene.add(LoadingSmall);
+            await Promise.all([t.load_game_mahjong()]);
+            game.scene.remove(LoadingSmall);
+            res(1)
+        });
+    },
+    load_game_mahjong() {
+        __tool.getHttpParams('ruleId') && (HallPlay.curRuleId = __tool.getHttpParams('ruleId'));
+
+        // HallPlay.lastCityId = 17;
+        return new Promise(async function (res, rej) {
+            let urls = MahjongConfig.getRes();
+            let fileNameArr = ['unityScenes', 'ab.bag', 'cupNum', 'matchCount',
+                'gameMain_sign',
+                'mahjong_effect.a',
+                'friendRoom_play',
+                'button',
+                'chat',
+                'desk_common_num',
+                'desk_common_ui',
+                'game_common.a',
+                'game_common.b',
+                'gameMain_lookVideo',
+                'gift',
+                'mahjong_match',
+                'mahjong_operation',
+                'mahjong_common.a',
+                'mahjong_common.b',
+                'mahjong_2D_2_card',
+                'mahjong_2D_3_card',
+            ];
+            let urls__ = [];
+            if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+                urls__ = ResUtils.getFileName(['local.mahjong_effect.1', 'local.game_common.1', 'cdn.mahjong_pochan', 'cdn.mahjong_details', 'cdn.mahjong_ready', 'cdn.mahjong_result.mahjong_result', 'cdn.map', 'cdn.together', 'cdn.bless_mj'])
+            } else {
+                urls__ = ResUtils.getFileName(['local.mahjong_effect.1', 'local.game_common.1', 'cdn.mahjong_pochan', 'cdn.mahjong_details', 'cdn.mahjong_ready', 'cdn.mahjong_result.mahjong_result'])
+            }
+            if (HallPlay.curRuleId == FriendRoomPlays.AREA.GUANGDONG) { urls__.push(...ResUtils.getFileName(['cdn.mahjong_ma'])); }// 广东额外加载中马资源
+            if (HallPlay.curRuleId == FriendRoomPlays.AREA.HONGZHONGLAIZI) { urls__.push(...ResUtils.getFileName(['cdn.mahjong_ting'])); }// 广东额外加载中马资源
+            urls__.push(...ResUtils.getFileName(['cdn.mahjong_xuezhan']));// 血战资源
+            for (let index = 0, length = urls__.length; index < length; index++) {
+                const e = urls__[index];
+                urls__[index] = {
+                    url: e,
+                    type: 'image'
+                }
+            };
+            urls.push(...urls__)
+            urls.push({ url: 'res/atlas/local/cupNum/cupNum.atlas' })
+            urls.push({ url: "res/atlas/local/gameMain_sign/1.atlas" })
+            urls.push({ url: "res/atlas/local/matchCount/1.atlas" })
+            urls.push({ url: "res/atlas/local/friendRoom_play/1.atlas" })
+            urls.push({ url: "res/atlas/cdn/queShenRoad_light.atlas" })
+            await miniApi.loadSubpackage(fileNameArr);
+            // let scripts = [].concat(MahjongConfig.res_common_3D).concat(MahjongConfig['res_' + __data.gameId.curId + '_' + '3D']);
+            let scripts = MahjongConfig.getSrc(__data.gameId.curId, HallPlay.curRuleId);
+            let urls11_3d_onlyImage = MahjongConfig.res_3D_Arr.filter((e) => {
+                return e.type == 'image'
+            })
+            Laya.loader.create(urls11_3d_onlyImage, Laya.Handler.create(this, async function () {
+
+                if (window.wx) {
+                    Laya.loader.create(urls, Laya.Handler.create(this, async function () {
+                        res(1)
+                    }), Laya.Handler.create(null, function (v) {
+                        game.scene.get(LoadingSmall) && game.scene.get(LoadingSmall).progress(v * 0.25 + 0.75)
+                        game.scene.get(Loading).tips(__lang.loading_tips_join_room)
+                        game.scene.get(Loading) && game.scene.get(Loading).progress(v * 0.25 + 0.75, false)
+                    }, null, false));
+                } else {
+                    __tool.loadScript(window.APP_PACKAGE ? [] : scripts, function () {
+                        Laya.loader.create(urls, Laya.Handler.create(this, async function () {
+                            res(1)
+                        }), Laya.Handler.create(null, function (v) {
+                            game.scene.get(LoadingSmall) && game.scene.get(LoadingSmall).progress(v * 0.25 + 0.75)
+                            game.scene.get(Loading).tips(__lang.loading_tips_join_room)
+                            game.scene.get(Loading) && game.scene.get(Loading).progress(v * 0.25 + 0.75, false)
+                        }, null, false));
+                    })
+                }
+
+            }), Laya.Handler.create(null, function (v) {
+                game.scene.get(LoadingSmall) && game.scene.get(LoadingSmall).progress(v * 0.25 + 0.5)
+                game.scene.get(Loading).tips(__lang.loading_tips_join_room)
+                game.scene.get(Loading) && game.scene.get(Loading).progress(v * 0.25 + 0.5, false)
+            }, null, false));
+
+        });
+    },
+    /**
+     * 限时麻将游戏界面
+     * @param {Boolean} chat true 显示聊天  false 不显示聊天
+     * @param {Boolean} isPre true 准备匹配阶段
+     * @param {Boolean} clear true 强制清理
+     * @returns 
+     */
+    async show_game_mahjong(chat = false, isPre = false, clear = false) {
+        __showScene.sceneType = 'mj'
+        window.OpenHtml && OpenHtml.takeFront('main');
+        if (__data.deskData.roomVo.isOut) { __data.deskData.roomVo.isOut = false; return; }
+        // __tool.getHttpParams('ruleId') && (HallPlay.curRuleId = __tool.getHttpParams('ruleId'));
+        // return new Promise(async function (res, rej) {
+        //     game.scene.add(LoadingSmall)
+
+        // let urls = MahjongConfig.getRes();
+        // let scripts = [].concat(MahjongConfig['res_' + __data.gameId.curId + '_' + '3D']);
+
+        // // __tool.loadScript(scripts, function() {
+        // Laya.loader.create(urls, Laya.Handler.create(this, function () {
+        // game.scene.remove(LoadingSmall);
+        // if (game.server) {
+        trace('上次游戏Id：', __data.gameId.lastId);
+        trace('当前游戏Id：', __data.gameId.curId);
+
+        let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+        let scene = window['MahjongDesk' + uniqueId + '3D'];
+        if (window['MahjongSend' + uniqueId]) game.server.logoutSendMsg(window['MahjongSend' + uniqueId])
+        if (window['MahjongRead' + uniqueId]) game.server.logoutReadMsg(window['MahjongRead' + uniqueId])
+        __data.domain = __data.gameId.curId;
+        __data.gameId.lastId = __data.gameId.curId;
+        __data.gameId.lastRuleId = HallPlay.curRuleId;
+        uniqueId = MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId);
+        game.server.registeSendMsg(window['MahjongSend' + uniqueId]);
+        game.server.registeReadMsg(window['MahjongRead' + uniqueId]);
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND && game.scene.get(scene) && game.scene.get(scene).parent) { return; }
+        DeskCommonUI.scene = 1
+        DeskCommonUI.isPre = isPre;
+
+        if (isPre) game.server.send(16022);
+        scene = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+        if (!scene || !scene.parent) {
+            game.scene.removeAll()
+            game.scene.add(Mahjong3DBG);
+            game.scene.add(window['MahjongDesk' + uniqueId + '3D'])
+        } else if (clear) {
+            game.scene.removeAll()
+            game.scene.add(Mahjong3DBG);
+            game.scene.add(window['MahjongDesk' + uniqueId + '3D'])
+        }
+
+        DeskCommonUI_Chat.status = chat;
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) DeskCommonUI_Talk.status = chat;
+        else DeskCommonUI_Talk.status = false;
+
+        game.scene.remove(DeskCommonUI_Chat);
+        game.scene.remove(DeskCommonUI_Talk);
+
+        game.scene.add(DeskCommonUI_Time);
+        game.scene.add(DeskCommonUI);
+
+        // 好友房 
+        if (__data.deskData.roomVo.phase == 'ready' && __data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            if (!__data.deskData.roomVo.isRecordPlaying) {
+                if (TogetherData.getCompoundList().length) {
+                    game.scene.add(PlayTogether);
+                }
+            }
+        }
+
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND && !__data.deskData.roomVo.isRecordPlaying) {
+            __data.friendRoom.red.friendRoomDailyFirstShowRedPanel();
+        }
+
+        // game.scene.add(GameCommonMatch);
+        // game.scene.add(FjmjMahjongSmallResult);
+        // game.scene.add(GameMahjongWait);
+        // game.scene.add(GameCommonWait);
+
+        // callback && callback();
+        //     res(1)
+        // }), Laya.Handler.create(null, function (v) {
+        //     game.scene.add(LoadingSmall).progress(v)
+        // }, null, false));
+        // })
+        // });
+    },
+
+    clear_matchUI() {
+        DeskCommonUI_Talk.status && game.scene.add(DeskCommonUI_Talk);
+        DeskCommonUI_Chat.status && game.scene.add(DeskCommonUI_Chat);
+
+        game.scene.remove(GameMahjongMatch);
+        game.scene.remove(GameMahjongPreMatch);
+    },
+
+    show_garden(first_show_talk = true) {
+        Laya.stage.frameRate = "slow"
+        return new Promise(async function (res, rej) {
+            __showScene.sceneType = 'garden'
+            game.scene.add(LoadingSmall)
+            await Promise.all([
+                gtool.query([15003], 0), // 装饰解锁列表
+                game.server.send(15006),
+                game.server.send(70005),
+                gtool.query([15008], 0),
+                gtool.query([15009], 1), // 任务id
+                gtool.query([15012], 1),
+                game.server.send(15015), // 查询弹框
+            ]);
+            let fileNameArr = [];
+            // await miniApi.loadSubpackage(fileNameArr)
+            fileNameArr.push('cdn.garden_ui');
+            let h = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+            let urls = ResUtils.getFileName(fileNameArr).concat([{
+                "url": h + "cdn/huayuan/Jianzao.sk" + __version.res,
+            }, {
+                "url": h + "cdn/huayuan/Jianzao.png" + __version.res,
+            }]);
+            let mapJson = [
+                { url: h + 'cdn/a_tiledMap/500x500-1.json' + __version.res }
+            ]
+            urls.push({ url: 'res/atlas/cdn/garden_ui.atlas' })
+            urls.push(...mapJson)
+            __tool.load(urls, function () {
+                let mapData = Laya.loader.getRes(mapJson[0].url);
+                if (!mapData) {
+                    game.scene.remove(LoadingSmall)
+                    return res(1)
+                }
+                game.TiledMap.hash_map[mapData.mapName] = mapData
+                game.scene.removeAll();
+                miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '雀神花园' })
+                console.time('初始化花园')
+                // S_3D_mjMatch.scene && S_3D_mjMatch.scene.destroy();
+                game.utils.remove(S_3D_mjMatch.scene)
+                game.scene.add(Garden_groud, [mapData.mapName, first_show_talk]);
+                game.scene.add(GardenMainUI_leftUp_return)
+                game.scene.add(GardenMainUI_leftUp_res)
+                game.scene.add(GardenMainUI_leftDown)
+                game.scene.add(GardenMainUI_rightDown)
+                console.timeEnd('初始化花园')
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_dailySelect() {
+        return new Promise(async function (res, rej) {
+            game.server.send(16016)
+            game.scene.add(LoadingSmall)
+            miniApi.video_ready('adunit-1ebaf6a96e85f01e')
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_ui', 'cdn.garden_dailySelect', 'cdn.collect')
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: "res/atlas/cdn/collect.atlas" })
+            urls.push({ url: 'res/atlas/cdn/garden_ui.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(Garden_dailySelect)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_rank() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            game.server.send(15011, 1)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_ui', 'cdn.garden_rank', 'bag_icon')
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: 'res/atlas/cdn/garden_ui.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GardenRank)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_task() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_ui', 'cdn.garden_task', 'bag_icon')
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: 'res/atlas/cdn/garden_ui.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GardenTask)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_starNoEnough() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_ui', 'cdn.garden_tips')
+            let urls = ResUtils.getFileName(fileNameArr)
+            urls.push({ url: 'res/atlas/cdn/garden_ui.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GardenStarNoEnough)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_mainScene_bombbox(queshenRoadRewardOpen) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_mainScene_bombbox')
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GardenMainScene_bombbox, [queshenRoadRewardOpen])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_update_bombbox(first_show_talk) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_update_bombbox')
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GardenUpdate_bombbox, [first_show_talk])
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_garden_fugui_manor_bombbox() {
+        return new Promise(async function (res, rej) {
+            __data.garden.fuguiManor.query(1)
+            gtool.query([15009], 1);
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.garden_bombbox_fugui_manor')
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(Garden_bombbox_fugui_manor)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_redPacket() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            // fileNameArr.push('cdn.redPacket', 'cdn.redPacket_light')
+            fileNameArr.push('cdn.redPacket')
+            fileNameArr.push('cdn.shareReceiveTips')
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                if (__data.redPacket.isRedPoint) {
+                    game.scene.add(GameMainRedPacket_1)
+                } else {
+                    game.scene.add(GameMainRedPacket_4)
+                }
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_freeVip() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.freeVip')
+            let urls = ResUtils.getFileName(fileNameArr)
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainFreeVip)
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+    show_recommend(callback) {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.recommend')
+            let urls = ResUtils.getFileName(fileNameArr);
+            // urls.push({ url: 'res/atlas/cdn/playerInfo.atlas' })
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(GameMainRecommend, [callback]);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+
+    show_mjSmallGame() {
+        __showScene.sceneType = 'mjSmallGame'
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            await game.server.send(70005)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.mjSmallGame_loading')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.removeAll()
+                game.scene.add(MM_loading_bg)
+                game.scene.add(MM_loading)
+                game.scene.add(MM_main_scene_return)
+
+                let fileNameArr = [];
+                fileNameArr.push('cdn.mjSmallGame')
+                let urls = ResUtils.getFileName(fileNameArr);
+                let u1 = [
+                    { url: 'res/atlas/cdn/mjSmallGame.atlas' }
+                ]
+                u1.push(...urls)
+                __tool.load(u1, function () {
+                    Laya.loader.create(
+                        'cdn/mJMatch/LayaScene_SampleScene/Conventional/SampleScene.ls',
+                        // [
+                        //     { 'url': 'cdn/mJMatch/LayaScene_SampleScene/Conventional/Assets/MahjongTiles/Textures/MahjongTile.jpg', type: Laya.Loader.IMAGE },
+                        //     { 'url': 'cdn/mJMatch/LayaScene_SampleScene/Conventional/SampleScene.ls' }
+                        // ],
+                        new Laya.Handler(null, async (scene) => {
+                            // scene = Laya.loader.getRes('cdn/mJMatch/LayaScene_SampleScene/Conventional/SampleScene.ls');
+                            let a = game.scene.get(MM_loading);
+                            console.log("✅ 加载完成", a.pvo.v);
+                            let time = (1 - a.pvo.v) * 500;
+                            if (time <= 0) time = 1;
+                            await __tool.await(time)
+                            // 加载完成&有loading界面再显示小游戏界面 
+                            // 否则就是玩家点击返回按钮了
+                            if (game.scene.get(MM_loading).parent) {
+                                __sound.playGameMusic('bgm_xxl')
+                                Laya.stage.frameRate = "fast"
+                                game.scene.removeAll()
+                                Laya.stage.addChildAt(scene, 0)
+                                game.scene.add(MM_main_scene)
+                                game.scene.add(MM_main_scene_return)
+                                game.scene.add(MM_main_scene_rank)
+                                game.scene.add(MM_main_scene_garden)
+                                game.scene.add(MM_ui_res)
+                                S_3D_mjMatch.camera = scene.getChildByName('Main Camera')
+                                S_3D_mjMatch.scene = scene;
+                                let a = scene.getComponent(S_3D_mjMatch)
+                                if (!a)
+                                    S_3D_mjMatch.$this = scene.addComponent(S_3D_mjMatch)
+                                S_3D_mjMatch.$this.mainScene()
+                            }
+                        }),
+                        new Laya.Handler(null, (progress) => {
+                            progress = 0.2 * progress + 0.8
+                            console.log("🔄 进度:", Math.round(progress * 100) + "%");
+                            game.scene.get(MM_loading).progress(progress, true)
+                        })
+                    );
+                }, function (progress) {
+                    progress = 0.8 * progress
+                    console.log("🔄 进度:", Math.round(progress * 100) + "%");
+                    game.scene.get(MM_loading).progress(progress, true)
+                })
+
+
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+
+
+        });
+    },
+    show_mjSmallGame_guide_bombbox() {
+        return new Promise(async function (res, rej) {
+            game.scene.add(LoadingSmall)
+            let fileNameArr = [];
+            fileNameArr.push('cdn.mjSmallGame_guide_bombbox')
+            let urls = ResUtils.getFileName(fileNameArr);
+            __tool.load(urls, function () {
+                game.scene.remove(LoadingSmall)
+                game.scene.add(MM_guide_bombbox);
+                res(1)
+            }, function (v) {
+                game.scene.add(LoadingSmall).progress(v)
+            })
+        });
+    },
+}
+let clearGradenRes = () => {
+    ResUtils.clearTextureRes([
+        'cdn.garden_ui',
+        'cdn.garden_dailySelect',
+        'cdn.garden_rank',
+        'cdn.garden_task',
+        'cdn.garden_update_bombbox',
+    ])
+    ResUtils.clearAtlas('res/atlas/cdn/garden_ui.atlas')
+    Laya.loader.clearTextureRes('cdn/huayuan/Jianzao.png')
+}
+let clear_hall_hallPlay_garden_scene_res = () => {
+    return;
+    clearGradenRes()
+    ResUtils.clearTextureRes([
+        'ab.hall_area_btn_big',
+        'bag_icon',
+        // 'bigImage',
+        'cdn.app_loading',
+        'cdn.friendRoom_play',
+        'cdn.hall',
+        'cdn.hall_area_btn_big_font',
+        'cdn.hall_play_season_title',
+        'cdn.headFrame',
+        'cdn.rank_sign',
+        'cdn.seasonStartEndReward',
+        'common',
+        'local.hall.1',
+        'local.hall_play.1',
+    ])
+    ResUtils.clearAtlas('res/atlas/cdn/a_seven_hand.atlas')
+    ResUtils.clearAtlas('res/atlas/cdn/queShenRoad_light.atlas')
+    ResUtils.clearAtlas('res/atlas/cdn/redIcon.atlas')
+    ResUtils.clearAtlas('res/atlas/cdn/seasonStartEndReward.atlas')
+    ResUtils.clearAtlas('res/atlas/local/a_selectPlay/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/cupNum/cupNum.atlas')
+    ResUtils.clearAtlas('res/atlas/local/friendRoom_play/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/gameMain_sign/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/hall/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/hall_play/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/loading/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/lvNameBg/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/matchCount/1.atlas')
+    ResUtils.clearAtlas('res/atlas/local/rank/1.atlas')
+}
+window.__showScene = __showScene;

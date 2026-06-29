@@ -1,0 +1,65 @@
+
+class S_mm_prop_unlock extends Laya.Script {
+    init(offGameobjectName) {
+        this.offGameobjectName = offGameobjectName
+        return this;
+    }
+    onEnable() {
+        this.owner.visible = false
+        game.cb.on('resize', this, this.resizeOff)
+    }
+    onDisable() {
+        game.cb.off('resize', this, this.resizeOff)
+    }
+    async onClick(e) {
+        e && e.stopPropagation();
+        let a;
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+        // } else {
+        a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+            && __data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone
+        // }
+        if (a) {
+            return __tips('本局道具使用次数已达上限')
+        }
+        game.scene.add(MM_useProp, ['解锁', 'adunit-smallGame_unlock', '解锁1个新的放置栏',
+            () => {
+                __data.mjSmallGame.maxPlaceCardCount++;
+                if (__data.mjSmallGame.maxPlaceCardCount == 7) {
+                    this.owner.parent.btn_unlock1.visible = false
+                } else if (__data.mjSmallGame.maxPlaceCardCount == 8) {
+                    this.owner.parent.btn_unlock1.visible = false
+                    this.owner.parent.btn_unlock2.visible = false
+                }
+            }
+        ])
+    }
+    resizeOff() {
+        this.owner.visible = true;
+        let p1 = S_3D_mjMatch.scene.getChildByName(this.offGameobjectName).transform.position;
+        let cubePos = new Laya.Vector3(p1.x, p1.y, p1.z)
+        let ui1 = this.owner.parent
+        let unlock1 = this.owner;
+        //转换坐标
+        this.outPos = new Laya.Vector3()
+        S_3D_mjMatch.camera.viewport.project(cubePos, S_3D_mjMatch.camera.projectionViewMatrix, this.outPos);
+        //赋值给2D
+        // console.log(ui1.scaleX, ui1.scaleY);
+        unlock1.pos((this.outPos.x / Laya.stage.clientScaleX - ui1.x) / ui1.scaleX, (this.outPos.y / Laya.stage.clientScaleY - ui1.y) / ui1.scaleX);
+
+        let cubePos1 = new Laya.Vector3(p1.x + 7.34 / 2, p1.y, p1.z)
+        let cubePos2 = new Laya.Vector3(p1.x - 7.34 / 2, p1.y, p1.z)
+        // Laya.stage.addChild(unlock1)
+        //转换坐标
+        this.outPos1 = new Laya.Vector3()
+        this.outPos2 = new Laya.Vector3()
+        S_3D_mjMatch.camera.viewport.project(cubePos1, S_3D_mjMatch.camera.projectionViewMatrix, this.outPos1);
+        S_3D_mjMatch.camera.viewport.project(cubePos2, S_3D_mjMatch.camera.projectionViewMatrix, this.outPos2);
+        //赋值给2D
+        let ax1 = this.outPos1.x / Laya.stage.clientScaleX - ui1.x
+        let ax2 = this.outPos2.x / Laya.stage.clientScaleX - ui1.x
+        unlock1.scaleX = unlock1.scaleY = (ax2 - ax1) / 140 / ui1.scaleX
+    }
+}

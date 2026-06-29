@@ -1,0 +1,10 @@
+__data.mjThrowProp = {
+    isReceiveThrowProp: 1,
+    hashProp: {
+        '501': { id: 501, num: 10 },
+        '502': { id: 502, num: 10 },
+        '503': { id: 503, num: 10 },
+        '504': { id: 504, num: 10 },
+        '505': { id: 505, num: 10 },
+    }
+}

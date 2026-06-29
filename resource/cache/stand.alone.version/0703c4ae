@@ -1,0 +1,239 @@
+class S_garden_groud_move extends Laya.Script {
+    onEnable() {
+        this.touch1 = -1;
+        this.touch2 = -1;
+        this.data = {
+            nowTouch1: { x: 0, y: 0 },
+            nowTouch2: { x: 0, y: 0 },
+            lastTouch1: { x: 0, y: 0 },
+            lastTouch2: { x: 0, y: 0 }
+        };
+        this.owner.on(Laya.Event.MOUSE_DOWN, this, this.mouseDown);
+        this.owner.on(Laya.Event.MOUSE_UP, this, this.mouseUp);
+        this.owner.on(Laya.Event.MOUSE_OUT, this, this.mouseUp);
+        this.owner.on(Laya.Event.MOUSE_WHEEL, this, this.mouseWheel);
+        Laya.stage.on(Laya.Event.MOUSE_MOVE, this, this.mouseMove);
+    }
+    onDisable() {
+        this.owner.off(Laya.Event.MOUSE_DOWN, this, this.mouseDown);
+        this.owner.off(Laya.Event.MOUSE_UP, this, this.mouseUp);
+        this.owner.off(Laya.Event.MOUSE_OUT, this, this.mouseUp);
+        this.owner.off(Laya.Event.MOUSE_WHEEL, this, this.mouseWheel);
+        Laya.stage.off(Laya.Event.MOUSE_MOVE, this, this.mouseMove);
+    }
+    mouseDown(e) {
+        S_garden_groud_move.stage_x = game.stage.mouseX;
+        S_garden_groud_move.stage_y = game.stage.mouseY;
+        // if (!e.touches || e.touches.length == 1) {
+        this.isMoveMap = true;
+        this.isClickTile = true
+        this.mLastMouseX = this.owner.mouseX;
+        this.mLastMouseY = this.owner.mouseY;
+
+        // } else if (e.touches.length >= 2) {
+        //     this.isMoveMap = false;
+        //     this.isClickTile = false
+
+        //     this.touch1 = -1;
+        //     this.touch2 = -1;
+        //     this.data = {
+        //         nowTouch1: { x: 0, y: 0 },
+        //         nowTouch2: { x: 0, y: 0 },
+        //         lastTouch1: { x: 0, y: 0 },
+        //         lastTouch2: { x: 0, y: 0 }
+        //     };
+        // }
+        // if (this.touch1 === -1) {
+        //     this.touch1 = e.touchId;
+        //     this.data.nowTouch1.x = e.stageX;
+        //     this.data.nowTouch1.y = e.stageY;
+        // } else if (this.touch2 === -1) {
+        //     this.touch2 = e.touchId;
+        //     this.data.nowTouch2.x = e.stageX;
+        //     this.data.nowTouch2.y = e.stageY;
+        // }
+    }
+    mouseMove(e) {
+        if (this.isMoveMap) {
+            this.isClickTile = false;
+            let moveX = this.owner.mouseX - this.mLastMouseX
+            let moveY = this.owner.mouseY - this.mLastMouseY;
+            this.mLastMouseX = this.owner.mouseX;
+            this.mLastMouseY = this.owner.mouseY;
+
+            let nx = this.mX + moveX / this.owner.tileMap.scale
+            let ny = this.mY + moveY / this.owner.tileMap.scale
+            // 将地图坐标转换为 屏幕中心坐标 地图resize里面有 计算中心坐标范围
+            let screenx = -(nx + this.owner.mapData.tilewidth / 2 - this.owner.width / 2)
+            let screeny = -(ny + this.owner.mapData.tileheight / 2 - this.owner.height / 2)
+            // console.log('屏幕中心点xy', screenx, screeny);
+
+            this.mX = nx;
+            this.mY = ny;
+            this.owner.tileMap.moveViewPort(-this.mX, -this.mY)
+        }
+
+        // if (e.touches && e.touches.length == 2) {
+        //     if (e.touchId === this.touch1) {
+        //         this.data.nowTouch1.x = e.stageX;
+        //         this.data.nowTouch1.y = e.stageY;
+        //     } else if (e.touchId === this.touch2) {
+        //         this.data.nowTouch2.x = e.stageX;
+        //         this.data.nowTouch2.y = e.stageY;
+        //     }
+
+        //     if (this.touch1 != -1 && this.touch2 != -1) {
+        //         let lastDis = Math.sqrt(
+        //             (this.data.lastTouch2.x - this.data.lastTouch1.x) * (this.data.lastTouch2.x - this.data.lastTouch1.x) +
+        //             (this.data.lastTouch2.y - this.data.lastTouch1.y) * (this.data.lastTouch2.y - this.data.lastTouch1.y)
+        //         );
+        //         let nowDis = Math.sqrt(
+        //             (this.data.nowTouch2.x - this.data.nowTouch1.x) * (this.data.nowTouch2.x - this.data.nowTouch1.x) +
+        //             (this.data.nowTouch2.y - this.data.nowTouch1.y) * (this.data.nowTouch2.y - this.data.nowTouch1.y)
+        //         );
+
+        //         let dd1 = Math.abs(lastDis - nowDis)
+        //         if (dd1 < 3) {
+        //             return;
+        //         }
+
+        //         if (nowDis > lastDis) {
+        //             // 放大操作
+        //             this.zoomIn();
+        //         } else if (nowDis < lastDis) {
+        //             // 缩小操作
+        //             this.zoomOut();
+        //         }
+        //     }
+
+        //     this.data.lastTouch1.x = this.data.nowTouch1.x;
+        //     this.data.lastTouch1.y = this.data.nowTouch1.y;
+        //     this.data.lastTouch2.x = this.data.nowTouch2.x;
+        //     this.data.lastTouch2.y = this.data.nowTouch2.y;
+        // }
+    }
+    async mouseUp(e) {
+        this.isMoveMap = false;
+        // if (e.touches) {
+        //     if (e.touchId === this.touch1) {
+        //         this.touch1 = -1;
+        //     } else if (e.touchId === this.touch2) {
+        //         this.touch2 = -1;
+        //     }
+        // }
+
+        // let a = game.scene.get(GardenBuildMask)
+        // if (a && a.parent) return;
+        if (!this.owner) return
+        if (!this.owner.movePolygon) return
+        let screenx = -(this.mX + this.owner.mapData.tilewidth / 2 - this.owner.width / 2)
+        let screeny = -(this.mY + this.owner.mapData.tileheight / 2 - this.owner.height / 2)
+        let pp = cal__p.nearestPointToPolygon({ x: screenx, y: screeny }, this.owner.movePolygon.map((e) => {
+            return { x: e[0], y: e[1] }
+        }))
+        if (pp) {
+            this.moveVO = {
+                x: this.mX, y: this.mY
+            }
+
+            let nx = -(pp.x + this.owner.mapData.tilewidth / 2 - this.owner.width / 2)
+            let ny = -(pp.y + this.owner.mapData.tileheight / 2 - this.owner.height / 2)
+
+            let time11 = 200
+            let t = __tool.tween(this.moveVO, { x: nx, y: ny }, time11)
+            __tool.tweenUpdate(t, () => {
+                this.mX = this.moveVO.x;
+                this.mY = this.moveVO.y;
+                this.owner.tileMap.moveViewPort(-this.moveVO.x, -this.moveVO.y)
+            })
+        }
+    }
+    mouseWheel(e) {
+        // if (e.delta > 0) this.zoomIn()
+        // if (e.delta < 0) this.zoomOut()
+    }
+
+    zoomIn() {
+        let s = this.owner.tileMap.scale + 0.02
+        if (s < 0.5) s = 0.5
+        if (s >= 0.7) s = 0.7
+        this.owner.tileMap.scale = s
+    }
+    zoomOut() {
+        let s = this.owner.tileMap.scale - 0.02
+        if (s < 0.5) s = 0.5
+        if (s >= 0.7) s = 0.7
+        this.owner.tileMap.scale = s
+    }
+}
+
+// 示例
+// let polygon = [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }, { x: 0, y: 2 }];
+// let p = { x: 3, y: 1 };
+// let nearest = nearestPointToPolygon(p, polygon);
+// if (nearest) {
+//     console.log("最近点坐标：", nearest);
+// }
+// js 4个点 组成一个 四边形 我想知道 又一个点 在四边形范围之外   那么这个点 距离这个四边形 4个边上面 那个 点 最近 求算法
+
+let cal__p = {
+    distance(p1, p2) {
+        return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+    },
+
+    vector(p1, p2) {
+        return { x: p2.x - p1.x, y: p2.y - p1.y };
+    },
+
+    dotProduct(v1, v2) {
+        return v1.x * v2.x + v1.y * v2.y;
+    },
+
+    crossProduct(v1, v2) {
+        return v1.x * v2.y - v1.y * v2.x;
+    },
+
+    pointToSegmentDistance(p, a, b) {
+        let ap = this.vector(a, p);
+        let ab = this.vector(a, b);
+        let t = this.dotProduct(ap, ab) / this.dotProduct(ab, ab);
+        if (t < 0) {
+            return { distance: this.distance(p, a), nearestPoint: a };
+        } else if (t > 1) {
+            return { distance: this.distance(p, b), nearestPoint: b };
+        } else {
+            let h = { x: a.x + t * ab.x, y: a.y + t * ab.y };
+            return { distance: Math.abs(this.crossProduct(ap, ab)) / this.distance(a, b), nearestPoint: h };
+        }
+    },
+
+    isPointInPolygon(p, polygon) {
+        let x = p.x, y = p.y;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            let xi = polygon[i].x, yi = polygon[i].y;
+            let xj = polygon[j].x, yj = polygon[j].y;
+            let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    },
+
+    nearestPointToPolygon(p, polygon) {
+        if (this.isPointInPolygon(p, polygon)) {
+            // console.log("点在四边形内");
+            return null;
+        }
+        let minDistance = Infinity;
+        let nearestPoint = null;
+        for (let i = 0; i < polygon.length; i++) {
+            let nextIndex = (i + 1) % polygon.length;
+            let result = this.pointToSegmentDistance(p, polygon[i], polygon[nextIndex]);
+            if (result.distance < minDistance) {
+                minDistance = result.distance;
+                nearestPoint = result.nearestPoint;
+            }
+        }
+        return nearestPoint;
+    },
+}

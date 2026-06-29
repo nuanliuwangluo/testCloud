@@ -1,0 +1,13 @@
+__data.returnPlayerGift = {
+    isHaveData: null,
+    isHaveGift: 0, // 0没有回归礼包 1有回归礼包
+    reward: [
+        // { propId: '1', num: 5000 },
+        // { propId: '8005', num: 10 },
+        // { propId: '3', num: 10 },
+    ],
+    async send(haveDataSendTest) {
+        await gtool.query([16003], haveDataSendTest)
+        return 1
+    }
+}

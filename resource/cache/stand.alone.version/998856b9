@@ -1,0 +1,87 @@
+class HallPlayRuleItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_play_ruleItem',
+            module: false
+        })
+        this.__vo = null;
+        this.addComponent(S_CLICK_HallPlayRuleItem)
+        this._onRuleId;
+        this._offRuleId;
+        this._ruleIndex;
+    }
+    onEnable() {
+        game.cb.on('update_hallPlay_ruleItemView', this, this.update_hallPlay_ruleItemView)
+    }
+    onDisable() {
+        game.cb.off('update_hallPlay_ruleItemView', this, this.update_hallPlay_ruleItemView)
+    }
+    set dataSource(vo) {
+        if (!vo) return
+        this.__vo = vo;
+    }
+    update_hallPlay_ruleItemView() {
+        if (this._offRuleId != null) {
+            this.txt_1.color = '#e9e8e6'
+            this.txt_2.color = '#f2dc36'
+            this.img_bg.skin = 'local/hall_play/1/img_wf3.png'
+        }
+        else if (this._onRuleId == HallPlay.curRuleId) {
+            this.txt_1.color = '#8e351a'
+            this.txt_2.color = '#e65b24'
+            this.img_bg.skin = 'local/hall_play/1/img_wf2.png'
+        }
+        else if (this._onRuleId != HallPlay.curRuleId) {
+            this.txt_1.color = '#3c609e'
+            this.txt_2.color = '#2e70cc'
+            this.img_bg.skin = 'local/hall_play/1/img_wf1.png'
+        }
+    }
+    clearRuleId() {
+        this._onRuleId = null;
+        this._offRuleId = null;
+    }
+    set onRuleId(id) {
+        this._onRuleId = id;
+        this.update_hallPlay_ruleItemView()
+    }
+    set offRuleId(id) {
+        this._offRuleId = id;
+        this.update_hallPlay_ruleItemView()
+    }
+    updateLabel(l1, ruleId) {
+        this.txt_1.text = l1;
+        ruleId = parseInt(ruleId)
+        if (this._offRuleId != null) this.txt_2.text = '（敬请期待）'
+        else if (ruleId == -1) this.txt_2.text = '（全省匹配）'
+        else if (ruleId == -2) this.txt_2.text = '（全国匹配）'
+        else if (ruleId == -3) this.txt_2.text = '（全国匹配）'
+        else if (ruleId == -4) this.txt_2.text = '（全省匹配）'
+        else this.txt_2.text = '（本地匹配）'
+    }
+    updateImgHot(defaultPlayId) {
+        this.img_hot.visible = Number(defaultPlayId) > 0 && this._onRuleId == defaultPlayId
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall_play.hall_play_ruleItemUI', HallPlayRuleItem);
+
+class S_CLICK_HallPlayRuleItem extends Laya.Script {
+    onClick(E) {
+        if (this.owner._offRuleId != null) {
+            __showScene.show_prompt_single(this.owner.txt_1.text + '正在努力开发中，您可以点击下方按钮催促加急，我们将优先实现加急较多的玩法。', '催促加急', () => {
+                __tips('反馈成功')
+                let umEventName = excelUtils.getUmEventName(HallPlay.lastCityId)
+                miniApi.trackEvent('Mj_UIClick', { Mj_County: umEventName, 'Mj_ClickScene': `催促加急按钮` })
+            })
+            return
+        };
+        HallPlay.curRuleId = this.owner._onRuleId;
+
+        // 更换地方存
+        let setkey = __data.uid + `:cityId:${HallPlay.lastCityId}-ruleId`
+        trace('缓存选择玩法setkey', setkey, this.owner._onRuleId)
+        miniApi.setItem(setkey, this.owner._onRuleId)
+
+        game.cb.event('update_hallPlay_ruleItemView', [true])
+    }
+}

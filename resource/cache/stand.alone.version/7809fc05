@@ -1,0 +1,170 @@
+class GdHorseInfo{
+    static set horses(value){ this._horses = value; }
+    static get horses(){ 
+        if(!this._horses){
+            return { all:[],get:[] }
+        }
+        return this._horses; 
+    }
+    static clear(){ GdHorseInfo.horses = null; }
+}
+class GdResultzhongma extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/GdResultzhongma',
+            layer: 'panel'
+        })
+    }
+
+    onDisable() { }
+
+    added(ma) {
+        __sound.gameSound("kanbao");
+        this.ma = ma;
+        this.reset();
+        this.setPlayer();
+        this.setList();
+        Laya.timer.once(1000, this, this._lightAni);
+        Laya.timer.once(300, this, this._cardAni);
+    }
+
+    _cardAni(){
+        __sound.gameSound("end");
+        for(let i = 0;i < this.list.array.length;i++){
+            let cell = this.list.getCell(i);
+            cell.result(this.ma.get);
+            cell.viewAni();
+            cell.windAni();
+        }
+    }
+
+    _lightAni(){
+        this.light.visible = true;
+        this.light.addComponent(PlayComponent).start({ startIndex:1, endIndex:11, frame:2, prefix:'cdn/mahjong_result/mahjong_result/tx_dw', tail:'png', complete:()=>{
+            
+        }, update:(index)=>{
+            if(index == 6){ 
+                this.light.visible = false;
+                this.rm.visible = true;
+                this.title.visible = false;
+                __sound.gameSound("get"); 
+                SkinUtils.setSkin(this.number, `cdn/mahjong_ma/${this.ma.get.length}.png`);
+            }
+        }});
+    }
+
+    setList(){
+        this.list.array = this.ma.all;
+        let row = Math.ceil(this.ma.all.length / 4);
+        this.list.repeatX = this.ma.all.length / row;
+        this.list.repeatY = row;
+        this.list.x = this.box.width - this.list.width >> 1;
+        this.list.y = this.box.height - this.list.height >> 1;
+    }
+
+    reset(){
+        this.light.visible = false;
+        this.rm.visible = false;
+        this.title.visible = true;
+        // this.rule // 是否需要根据选择的玩法进行变动
+        if(__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND){// 好友房
+            if(__data.deskData.roomVo.getIncludeRule(Play_guangdong.SHENGYUKAIMA))
+                SkinUtils.setSkin(this.rule, 'cdn/mahjong_ma/img_sypkm.png');
+            if(__data.deskData.roomVo.getIncludeRule(Play_guangdong.ANOTHERKAIMA))
+                SkinUtils.setSkin(this.rule, 'cdn/mahjong_ma/img_lyfpkm.png');
+        }else{// 匹配房
+            SkinUtils.setSkin(this.rule, 'cdn/mahjong_ma/img_lyfpkm.png');
+        }
+    }
+
+    setPlayer(){
+        let position = __data.deskData.roomVo.smallResultData ? __data.deskData.roomVo.smallResultData.huPositionArr[0] : 0;
+        let _vo = __data.deskData.roomVo.getPlayer(position);
+        if(_vo){
+            let _rank = RankUtils.getPlayerAreaRank(_vo.id);
+            SkinUtils.load(this.head, _vo.url);
+            SkinUtils.load(this.frame, _vo.frameUrl);
+            LabelHiddenUtils.getAdapterContent(this.txt_name, RankUtils.getAreaEasyName(__data.othersVO[_vo.id].area) + _vo.name);
+            this.txt_rank.text = _rank && _rank.name ? _rank.name : '';
+            this.txt_level.text = _rank && _rank.toNextLevelNeedCup != 0 && _rank.level ? _rank.level : '';
+        }
+    }
+
+    clickMask() { }
+}
+
+class MahjongResultMa extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultMa',
+            module: false
+        })
+    }
+
+    set dataSource(value) {
+        if(value >= 0){
+            this._cardNumber = value;
+            this.reset();
+        }
+    }
+
+    viewAni(){
+        let params = { startIndex:1, endIndex:5, frame:2, loop:true, complete:()=>{
+                this.wind.visible = false;
+                this.view.visible = false;
+                this.card.visible = true;
+            },
+            ...this.getFace()
+        };
+        this.viewScript = this.view.addComponent(PlayComponent).start(params);
+    }
+
+    windAni(){
+        this.wind.visible = true;
+        this.wind.addComponent(PlayComponent).start({ startIndex:1, endIndex:15, frame:1, prefix:'cdn/mahjong_ma/img_ljf', tail:'png', complete:()=>{
+            this.wind.visible = false;
+            this.view.visible = false;
+            this.card.visible = true;
+            this.viewScript && this.viewScript.destroy();
+            Laya.timer.callLater(this, this.bingo);
+        }});
+    }
+
+    bingo(){
+        if(this.gets){
+            let isBingo = this.gets.some((value)=>value == this._cardNumber);
+            if(isBingo){ 
+                this.light.visible = true; 
+            }
+            else{
+                this.dark.visible = true;
+            }
+        }
+    }
+
+    result(gets){
+        this.gets = gets;
+    }
+
+    reset(){
+        this.view.visible = true;
+        this.light.visible = false;
+        this.card.visible = false;
+        this.wind.visible = false;
+        this.dark.visible = false;
+        let face = this.getFace();
+        SkinUtils.setSkin(this.view, `${face.prefix}1.${face.tail}`);
+        SkinUtils.setSkin(this.wind, `cdn/mahjong_ma/img_ljf1.png`);
+        SkinUtils.setSkin(this.card, Mahjong2DRes.getRes('ownH', String(this._cardNumber)));
+    }
+
+    getFace(){
+        if(LocalUtils.card.value == 0){
+            return { prefix:`cdn/mahjong_ma/img_p`, tail:'png' }
+        }else{
+            return { prefix:`cdn/mahjong_ma/img_pa`, tail:'png' }
+        }
+    }
+    
+}
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongResultMaUI', MahjongResultMa);

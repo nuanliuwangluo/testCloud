@@ -1,0 +1,139 @@
+class GameMainRedPacket_1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_redPacket_1',
+            layer: 'panel'
+        })
+        this.btn_share.addComponent(S_GameMainRedPacket_1_share)
+        this.sp_gold.addComponent(S_clickBtnShow_clickOtherRemove).init(this.img_tips)
+        this.btn_close.addComponent(S_redpack_close11)
+    }
+    added() {
+        S_redpack_close11.a = 0
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_redPacket', 1)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '红包界面' })
+
+        let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':redPacket_goldNum')
+        a = parseInt(a)
+        a = Number.isFinite(a) ? a : 0;
+        if (a == 0) {
+            if (__data.shareVideoRule.isLowShareValueUser) {
+                a = __tool.randomRange(1000, 1500)
+            } else {
+                a = __tool.randomRange(4000, 5000)
+            }
+        }
+        GameMainRedPacket_1.goldNum = a;
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':redPacket_goldNum', a)
+        this.txt_gold.text = a
+        __tool.labelParentCenterAndSetXY(this.sp_gold, this.width / 2, 5)
+    }
+    clickMask() {
+        hallTestShowPanel()
+    }
+    onDisable() {
+        if (S_redpack_close11.a === 1)
+            ResUtils.clearTextureRes(['cdn.redPacket', 'cdn.shareReceiveTips'])
+    }
+}
+class S_redpack_close11 extends Laya.Script {
+    async onClick(e) {
+        S_redpack_close11.a = 1
+        hallTestShowPanel()
+    }
+}
+class GameMainRedPacket_2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_redPacket_2',
+            layer: 'panel'
+        })
+    }
+    added() {
+        this.index = 0
+        this.nextPlay()
+    }
+    onDisable() {
+        this.img_hand.clipStop()
+        this.img_light.clipStop()
+        this.clearAwait && this.clearAwait();
+        ResUtils.clearTextureRes(['cdn.shareReceiveTips'])
+    }
+    async nextPlay() {
+        this.img_hand.visible = false;
+        this.img_light.visible = false
+        this.img_hand.clipStop()
+        this.img_light.clipStop()
+        if (this.index % 3 == 0) {
+            this.img_tips.skin = 'cdn/shareReceiveTips/v1.png'
+            this.img_hand.visible = true;
+            this.img_hand.clipPlay(0)
+            this.img_hand.x = 1220
+            this.img_hand.y = 289
+        } else if (this.index % 3 == 1) {
+            this.img_tips.skin = 'cdn/shareReceiveTips/v2.png'
+            this.img_hand.visible = true;
+            this.img_hand.clipPlay(0)
+            this.img_hand.x = 1045
+            this.img_hand.y = 545
+        } else if (this.index % 3 == 2) {
+            this.img_tips.skin = 'cdn/shareReceiveTips/v3.png'
+            this.img_light.visible = true;
+            this.img_light.clipPlay(0)
+        }
+        await __tool.await(2000, this)
+        this.index++
+        this.nextPlay()
+    }
+}
+class GameMainRedPacket_3 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_redPacket_3',
+            layer: 'panel'
+        })
+        this.btn_open.addComponent(S_GameMainRedPacket_3_open)
+    }
+    onDisable() {
+        hallTestShowPanel()
+        ResUtils.clearTextureRes(['cdn.redPacket', 'cdn.shareReceiveTips'])
+    }
+}
+class GameMainRedPacket_4 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_redPacket_4',
+            layer: 'panel'
+        })
+    }
+    onDisable() {
+        hallTestShowPanel()
+        ResUtils.clearTextureRes(['cdn.redPacket', 'cdn.shareReceiveTips'])
+    }
+}
+class S_GameMainRedPacket_3_open extends Laya.Script {
+    onClick(e) {
+        game.server.send(16002, GameMainRedPacket_1.goldNum)
+        game.scene.remove(GameMainRedPacket_3)
+    }
+}
+class S_GameMainRedPacket_1_share extends Laya.Script {
+    onClick(e) {
+        // __data.shareVideoRule.total_clickShareCount()
+        miniApi.share({
+            titleId: __tool.randomRange(1, 9),
+            shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+            params: `uid=${__data.uid}&shareRewardType=redPacketShare&myCityId=${__data.myCityId}`,
+            shareGroupClickCallback: () => {
+                game.scene.remove(GameMainRedPacket_1)
+                game.scene.remove(GameMainRedPacket_2)
+                game.scene.add(GameMainRedPacket_3)
+            },
+            shareOnShowCallback: () => {
+                game.scene.remove(GameMainRedPacket_1)
+                game.scene.add(GameMainRedPacket_2)
+            }
+        })
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '红包', 'Mj_Participation': '参与分享' })
+    }
+}

@@ -1,0 +1,302 @@
+class MahjongBless_leftUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongBless_leftUp',
+            layer: 'middle',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.addComponent(S_hall_money_logic)
+        this.btn_back.addComponent(S_click_bless_back)
+    }
+    added() {
+        this.update_bless_data()
+        game.cb.on('update_bless_data', this, this.update_bless_data)
+    }
+    onDisable() {
+        game.cb.off('update_bless_data', this, this.update_bless_data)
+    }
+    update_bless_data() {
+        this.txt_today_luck.text = MahjongBless.data.luckValue + '%'
+    }
+}
+class S_click_bless_back extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(MahjongBless_leftUp)
+        game.scene.remove(MahjongBless)
+        game.scene.remove(MahjongBless_rightDown)
+    }
+}
+class MahjongBless_rightDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongBless_rightDown',
+            layer: 'middle',
+            right: true,
+            down: true,
+            offx: () => {
+                return -miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_q.addComponent(S_clickBtnShow_clickOtherRemove).init(this.img_tips)
+    }
+}
+class MahjongBless extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongBless',
+            layer: 'middle'
+        })
+    }
+    added() {
+        this.scene1.dataSource = MahjongBless.data.d1
+        this.scene2.dataSource = MahjongBless.data.d2
+        this.scene3.dataSource = MahjongBless.data.d3
+        this.scene4.dataSource = MahjongBless.data.d4
+    }
+    clickMask() { }
+}
+MahjongBless.data = {
+    d1: {
+        name: '金蝉',
+        nameImg: 'img_jcnf',
+        quickImg: 'img_jcicon',
+        dragonId: 'Jinchan', baseMul: 1, type: 1,
+        baseLuckMul: 100,
+        baseStoneCost: 10,
+        // giveGold: 10000,
+        firstFree: 1,
+    },
+    d2: {
+        name: '发财树',
+        nameImg: 'img_zcxs',
+        quickImg: 'img_fcsicon',
+        dragonId: 'Facaishu', baseMul: 1, type: 2,
+        baseLuckMul: 300,
+        baseStoneCost: 30,
+        // giveGold: 30000,
+        firstFree: 0,
+    },
+    d3: {
+        name: '金龙',
+        nameImg: 'img_xlxr',
+        quickImg: 'img_jlicon',
+        dragonId: 'Long', baseMul: 1, type: 3,
+        baseLuckMul: 500,
+        baseStoneCost: 50,
+        // giveGold: 50000,
+        firstFree: 0,
+    },
+    d4: {
+        name: '财神',
+        nameImg: 'img_cscf',
+        dragonId: 'Caishen', baseMul: 1, type: 4,
+        baseLuckMul: 800,
+        baseStoneCost: 80,
+        // giveGold: 80000,
+        firstFree: 0,
+    },
+    firstFree_isBuy: 1, // 1免费 2不免费
+    luckValue: 0,
+    isQuick: 0, // 自己祈福的时候是否为快速祈福
+    quickInfo: {}// 快速祈福的数据
+};
+class MahjongBlessItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongBlessItem',
+            module: false
+        })
+        this.btn_add.addComponent(S_bless_mul_add)
+        this.btn_reduce.addComponent(S_bless_mul_reduce)
+        this.btn_buy.addComponent(S_bless_buy)
+        this.init_img_luck_y = this.img_luck.y
+        this.init_txt_luck_y = this.txt_luck.y
+    }
+    onEnable() {
+        game.cb.on('update_bless_data', this, this.update_bless_data)
+    }
+    onDisable() {
+        game.cb.off('update_bless_data', this, this.update_bless_data)
+        this.ani2 && this.ani2.stop()
+        // ResUtils.clearTextureRes(['cdn.bless_panel', 'cdn.redPacket_light'])
+    }
+    update_bless_data() {
+        if (this.__vo && this.__vo.firstFree === 1) {
+            this.udpate_mul()
+            if (vo.firstFree === 1 && MahjongBless.data.firstFree_isBuy === 1) {
+                this.sp_price.visible = false;
+                this.sp_price1.visible = true;
+                this.btn_add.disabled = this.btn_reduce.disabled = true;
+            } else {
+                this.sp_price.visible = true;
+                this.sp_price1.visible = false;
+                this.btn_add.disabled = this.btn_reduce.disabled = false;
+                this.udpate_btn()
+            }
+        }
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        vo.baseMul = 1;
+        this.sp_price1.visible = false;
+        this.sp_price.visible = false;
+        this.img_name.skin = `cdn/bless_panel/${vo.nameImg}.png`
+        this.udpate_mul()
+        if (vo.firstFree === 1 && MahjongBless.data.firstFree_isBuy === 1) {
+            this.sp_price.visible = false;
+            this.sp_price1.visible = true;
+            this.btn_add.disabled = this.btn_reduce.disabled = true;
+        } else {
+            this.sp_price.visible = true;
+            this.sp_price1.visible = false;
+            this.btn_add.disabled = this.btn_reduce.disabled = false;
+            this.udpate_btn()
+        }
+
+        this.ani2 = this.ani2 || new game.Dragon(`cdn/bless_panel/${vo.dragonId}.sk`, 0, 'Idle', true)
+        this.addChildAt(this.ani2, 0)
+        this.ani2.play('Idle', true)
+        this.ani2.x = this.width / 2;
+        this.ani2.y = 680;
+        this.ani2.scaleX = this.ani2.scaleY = 0.73
+    }
+    udpate_btn() {
+        this.btn_add.disabled = this.__vo.baseMul >= 10;
+        this.btn_reduce.disabled = this.__vo.baseMul <= 1;
+    }
+    async udpate_mul(isAni) {
+        if (this.__vo.baseMul < 1) this.__vo.baseMul = 1;
+        this.txt_price2.text = this.__vo.baseStoneCost * this.__vo.baseMul;
+        __tool.labelParentCenterAndSetXY(this.sp_price, this.btn_buy.width / 2, 5);
+        let finalLuckMul = this.__vo.baseLuckMul * this.__vo.baseMul
+        this.txt_luck.text = '×' + finalLuckMul + '%'
+        this.txt_mul.text = this.__vo.baseMul + '倍'
+        // this.txt_gold.text = bigNumberToCH(this.__vo.giveGold * this.__vo.baseMul, 0) + '金币'
+        if (finalLuckMul < 500) {
+            this.img_luck.skin = 'cdn/bless_panel/img_ys1.png'
+            this.txt_luck.color = '#feeb92'
+        } else if (finalLuckMul >= 1500) {
+            this.img_luck.skin = 'cdn/bless_panel/img_ys3.png'
+            this.txt_luck.color = '#bd5a3d'
+        } else {
+            this.img_luck.skin = 'cdn/bless_panel/img_ys2.png'
+            this.txt_luck.color = '#c977c3'
+        }
+
+        this.img_luck.alpha = this.txt_luck.alpha = 0;
+        this.img_luck.y = this.init_img_luck_y + 100
+        this.txt_luck.y = this.init_txt_luck_y + 100
+        Laya.Tween.clearAll(this.img_luck)
+        Laya.Tween.clearAll(this.txt_luck)
+        Laya.Tween.to(this.img_luck, {
+            alpha: 1,
+            y: this.init_img_luck_y
+        }, 400, Laya.Ease.backOut)
+        Laya.Tween.to(this.txt_luck, {
+            alpha: 1,
+            y: this.init_txt_luck_y
+        }, 350)
+        this.img_light.clipPlay(0)
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongBlessItemUI', MahjongBlessItem);
+class S_bless_mul_add extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.__vo.baseMul++;
+        this.owner.parent.__vo.baseMul > 10 && (this.owner.parent.__vo.baseMul = 10);
+        this.owner.parent.udpate_mul(true);
+        this.owner.parent.udpate_btn()
+    }
+}
+class S_bless_mul_reduce extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.__vo.baseMul--;
+        this.owner.parent.udpate_mul(true)
+        this.owner.parent.udpate_btn()
+    }
+}
+class S_bless_buy extends Laya.Script {
+    async onClick(e) {
+        MahjongBless.data.isQuick = 0;
+        let vo = this.owner.parent.__vo;
+        let a = game.scene.get(MahjongBless_rightDown)
+        let isSelect = a.btn_check.selected ? 2 : 1;
+        bless_buy_logic(vo, isSelect)
+    }
+}
+
+let bless_buy_logic = async (vo, isSelect) => {
+    let needPrice = vo.baseStoneCost * vo.baseMul;
+    if (vo.firstFree === 1 && MahjongBless.data.firstFree_isBuy === 1) {
+        // 看视频逻辑：预加载 → 播放 → 成功后发送16023
+        let adUnitId = 'adunit-bless_first_free';  // 替换为实际的广告位ID
+        await miniApi.video_ready(adUnitId);
+        miniApi.video_show(adUnitId, () => {
+            // 视频看完，发送16023
+            game.server.send(16023, vo.type, 1, isSelect)
+        }, () => {
+            // 视频播放失败（用户中途关闭等）
+            __tips('暂无广告，请稍后再试或开通VIP')
+        });
+
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', {
+            Mj_ADPreference: miniApi.adUserValueLevel,
+            'Mj_ADScene': '首次免费祝福',
+            'Mj_Participation': n,
+            'Mj_ADNotes': __data.mjSmallGame.level,
+        })
+    }
+    else if (__data.stone >= needPrice) {
+        game.server.send(16023, vo.type, vo.baseMul, isSelect)
+    } else {
+        __showScene.show_payPrompt(needPrice, () => {
+            game.server.send(16023, vo.type, vo.baseMul, isSelect)
+        })
+    }
+}
+class MahjongBlessPayPrompt extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongBlessPayPrompt',
+            layer: 'panel',
+        })
+        this.btn_sure.addComponent(S_bless_pay_sure)
+        this.btn_cancel.addComponent(S_bless_pay_cancel)
+    }
+    added(need, rmb, money, shopVO, callback) {
+        this.txt_need.text = need
+        this.txt_rmb.text = rmb
+        this.txt_stone.text = money
+        this.shopVO = shopVO;
+        this.callback = callback;
+        __tool.labelParentCenterAndSetXY(this.sp_txt, this.width / 2, 0)
+    }
+}
+class S_bless_pay_sure extends Laya.Script {
+    onClick(e) {
+        // 购买钻石
+        let isSelect = this.owner.parent.isSelect;
+        if (__data.pay_curValue + this.owner.parent.shopVO.price > __data.pay_maxValue) {
+            __tips(__lang.pay_over_max)
+            return;
+        }
+        pay_stone_logic(this.owner.parent.shopVO.goodsId)
+        GameMainShop.callbackAfterPay = {
+            goodsId: this.owner.parent.shopVO.goodsId,
+            callback: () => {
+                this.owner.parent.callback()
+            }
+        }
+    }
+}
+class S_bless_pay_cancel extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(MahjongBlessPayPrompt)
+    }
+}

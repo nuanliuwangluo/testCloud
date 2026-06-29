@@ -1,0 +1,308 @@
+class PromptFrame extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/promptFrame',
+            layer: 'panel'
+        })
+        this.btn_no.addComponent(S_prompt_frame_select_cancel)
+        this.btn_yes.addComponent(S_prompt_frame_select_sure)
+    }
+    added(v) {
+        let {
+            content, success = null, fail = null, txt_sure = '确定',
+            txt_cancel = '取消', title = '提示', btn_num = 2,
+        } = v
+        this.title.text = title
+        this.txt.text = content;
+
+        this.txt_sure.text = txt_sure
+        this.txt_cancel.text = txt_cancel
+
+        this.sureFN = success
+        this.cancelFN = fail;
+
+        this.btn_yes.visible = true;
+        this.btn_yes.x = this.width / 2;
+        this.btn_no.visible = false;
+        if (btn_num == 2) {
+            this.btn_no.visible = true;
+            this.btn_no.x = 300 + this.btn_no.width / 2;
+            this.btn_yes.x = 750 + this.btn_yes.width / 2;
+        }
+    }
+    clickMask() { }
+}
+class S_prompt_frame_select_sure extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.sureFN && this.owner.parent.sureFN()
+    }
+}
+class S_prompt_frame_select_cancel extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.cancelFN && this.owner.parent.cancelFN()
+    }
+}
+class PromptSelect extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/prompt_select',
+            layer: 'panel'
+        })
+        this.btn_cancel.addComponent(S_prompt_select_cancel)
+        this.btn_close.addComponent(S_prompt_select_cancel)
+        this.btn_sure.addComponent(S_prompt_select_sure)
+    }
+    added(content, sureFN, cancelFN, txt_sure, txt_cancel, title) {
+        this.txt.text = content;
+        this.txt_sure.text = txt_sure
+        this.txt_cancel.text = txt_cancel
+        this.sureFN = sureFN
+        this.cancelFN = cancelFN
+        this.title.text = title
+    }
+    clickMask() { }
+}
+class PromptSingle extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/prompt_single',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_prompt_select_cancel)
+        this.btn_sure.addComponent(S_prompt_select_sure)
+    }
+    added(content, txtbtn = '确定', sureFN, title) {
+        this.txt.text = content
+        this.txt_sure.text = txtbtn;
+        this.sureFN = sureFN
+        this.title.text = title
+    }
+    onDisable() {
+        // if (miniApi.isIOS) return;
+    }
+}
+class S_prompt_select_cancel extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.cancelFN && this.owner.parent.cancelFN()
+        game.scene.remove(this.owner.parent)
+    }
+}
+class S_prompt_select_sure extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.sureFN && this.owner.parent.sureFN()
+        if (this.owner.parent.txt_sure && this.owner.parent.txt_sure.text != '立即充值') {
+            game.scene.remove(this.owner.parent)
+        }
+    }
+}
+
+class PromptTween extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/prompt_tween',
+            module: false
+        })
+    }
+    added(content) {
+        this.txt_content.text = content
+        this.alpha = 1
+        var t = this;
+        Laya.Tween.to(this, {
+            alpha: 0,
+            // x: 1000
+        }, 300, null, new Laya.Handler(null, function () {
+            game.utils.remove(t)
+            __allTips.pop()
+        }), this.delayTime || 1000)
+    }
+}
+let cache_id_tips = game.cache.registe(PromptTween)
+let __allTips = [];
+let __tips = function (content, delayTime) {
+    let t = game.cache.get(cache_id_tips)
+    game.scene.layer['tips'].c.addChild(t)
+    t.delayTime = delayTime;
+    t.added(content)
+    t.x = (Laya.stage.width - t.width) / 2
+    t.y = (Laya.stage.height - t.height) / 2
+
+    for (let index = 0; index < __allTips.length; index++) {
+        const e = __allTips[index];
+        let yy = (game.height - e.height) / 2 - (index + 1) * (e.height + 5)
+
+        Laya.Tween.to(e, {
+            y: yy
+        }, 200)
+    }
+    __allTips.unshift(t);
+}
+window.__tips = __tips;
+
+
+
+class PromptTeamHelper extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/prompt_team_helper',
+            layer: 'tips',
+            module: false
+        });
+
+        this.scale(game.scale, game.scale)
+        this.outsidex = -2000;
+    }
+
+    onAwake() {
+        this.addComponent(TeamHelperMoveScript);
+    }
+
+    /**
+     * XX帮助YY升至团队榜第1名，快为TA喝彩吧！
+     */
+    added(vo) {
+        this.vo = vo;
+        if (this.vo) {
+            this.setTxt();
+            this.setHead();
+        } else {
+            this.close();
+        }
+    }
+
+    setTxt() {
+        HtmlTextUtils.text(
+            this.txt, {
+            align: 'center',
+            valign: 'middle',
+            fontSize: 24,
+            bold: true,
+            width: this.txt_container.width,
+            height: this.txt_container.height,
+            color: '#ffffff'
+        },
+            this.vo.name, {
+            color: '#fff000'
+        },
+            '&nbsp;帮助&nbsp;', {},
+            this.vo.team, {
+            color: '#fff000'
+        },
+            '&nbsp;升至团队榜第&nbsp;', {},
+            this.vo.rank, {
+            color: '#fff000'
+        },
+            '&nbsp;名，快为TA喝彩吧！', {},
+        )
+        this.callLater(this.relocaltion);
+    }
+
+
+    setHead() {
+        SkinUtils.setSkin(this.head, this.vo.head);
+    }
+
+    relocaltion() {
+        this.txt.pos(this.txt_container.width - this.txt.width >> 1, this.txt_container.height - this.txt.height >> 1);
+    }
+
+    /**
+     * 动画结束
+     */
+    complete() {
+        this.close();
+    }
+
+    /**
+     * 关闭自己
+     */
+    close() {
+        game.scene.remove(this);
+        TeamHelperFactory.remove(this);
+    }
+}
+
+
+class TeamHelperMoveScript extends Laya.Script {
+    onUpdate() {
+        this.owner.x -= 2;
+        if (this.owner.x <= this.owner.outsidex) {
+            this.owner.complete();
+        }
+    }
+}
+
+
+class TeamHelperFactory {
+
+
+    static get list() {
+        TeamHelperFactory._list = TeamHelperFactory._list || [];
+        return TeamHelperFactory._list;
+    }
+
+    /**
+     * 添加到列表内
+     * @param {*} name 
+     * @param {*} head 
+     * @param {*} team
+     * @param {*} rank 
+     */
+    static create(name, head, team, rank) {
+        let vo = new TeamHelperVo().setTo(name, head, team, rank);
+        let helper = Laya.Pool.getItemByClass('teamHelperPrompt', PromptTeamHelper);
+        let point = this.getRandomPos(helper);
+        helper.pos(point.x, point.y);
+        helper.added(vo);
+        game.scene.layer['tips'].c.addChild(helper);
+        TeamHelperFactory.list.push(helper);
+        point.recover();
+    }
+
+    /**
+     * 删除一条弹幕
+     * @param {PromptTeamHelper} vo 
+     */
+    static remove(helper) {
+        if (helper) {
+            Laya.Pool.recover('teamHelperPrompt', helper);
+        }
+    }
+
+    /**
+     * 弹幕位置随机
+     * @param {PromptTeamHelper} vo 
+     */
+    static getRandomPos(vo) {
+        let area = config.gameH / 5;
+        let y = Math.random() * area;
+        let x = Laya.stage.width;
+        let pzx = 0;
+        for (let i = 0; i < this.list.length; i++) {
+            // 在这个元素里面
+            if (y > this.list[i].y && y < this.list[i].y + this.list[i].height) {
+                pzx = Math.max(this.list[i].x + this.list[i].width, pzx);
+            } else if (y + vo.height > this.list[i].y && y + vo.height < this.list[i].y + this.list[i].height) {
+                pzx = Math.max(this.list[i].x + this.list[i].width, pzx);
+            }
+        }
+        x = Math.max(pzx, x);
+        return Laya.Point.create().setTo(x, y);
+    }
+}
+
+class TeamHelperVo {
+    setTo(name, head, team, rank = 1) {
+        this.name = name;
+        this.head = head;
+        this.team = team;
+        this.rank = rank;
+        return this;
+    }
+
+    clear() {
+        this.name = null;
+        this.head = null;
+        this.team = null;
+        this.rank = null;
+    }
+}

@@ -1,0 +1,85 @@
+class Panel_marketActivity_surpriseCrit extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_surpriseCrit',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.btn_close.addComponent(S_click_Panel_marketActivity_surpriseCrit_close)
+        this.btn_buy.addComponent(S_click_Panel_marketActivity_surpriseCrit_buy)
+    }
+    onEnable() {
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '惊喜暴击', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        showActivityPanel('surpriseCrit');
+
+        let a = new Date().toDateString();
+        let b = miniApi.getItem(__data.uid + ':show_panel_surpriseCrit_loginTime')
+        if (!b) {
+            b = '[]'
+        }
+        b = JSON.parse(b)
+
+        miniApi.setItem(__data.uid + ':show_panel_surpriseCrit_time', Date.now())
+        this.update_time();
+        Laya.timer.loop(1000, this, this.update_time)
+    }
+    onDisable() {
+        Laya.timer.clearAll(this)
+        hallTestShowPanel()
+    }
+    clickMask() { }
+    update_time() {
+        let now = new Date();
+        let end = Panel_marketActivity_surpriseCrit.time
+        let diff = Math.round((end.getTime() - now.getTime()) / 1000);
+        this.txt_time.text = '限时抢购，剩余' + diff + '秒'
+        if (diff <= 0) {
+            Laya.timer.clearAll(this)
+            game.scene.remove(this);
+            game.cb.event('marketActivity_panel_close')
+        }
+    }
+}
+Panel_marketActivity_surpriseCrit.time = 0
+class S_click_Panel_marketActivity_surpriseCrit_close extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(this.owner.parent);
+    }
+}
+class S_click_Panel_marketActivity_surpriseCrit_buy extends Laya.Script {
+    async onClick(e) {
+        await game.server.send(16020);
+        if (__data.onoff_pay != 1) return __tips(__lang.nocan_pay)
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': `惊喜暴击购买` })
+        if (__data.pay_curValue + shopConfig.surpriseCrit.price > __data.pay_maxValue) {
+            __tips(__lang.pay_over_max);
+            return;
+        }
+        // '18元'
+        if (window['wx'] || window.IOSPay || (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP)) {
+            // 获取订单信息
+            // IOS能支付修改
+            // if (miniApi.isIOS) return 1;
+            miniApi.pay({
+                goodsId: shopConfig.surpriseCrit.goodsId,
+                successCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                },
+                failCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                }
+            })
+            if (__data.isSupportUser != 1) {
+                miniApi.trackEvent('Mj_Pay', {
+                    Mj_ADPreference: miniApi.adUserValueLevel,
+                    'Mj_PayName': '惊喜暴击',
+                    'Mj_PayPrice': shopConfig.surpriseCrit.price,
+                    'Mj_Paytype': '点击',
+                    'Mj_UserID': String(__data.uid),
+                })
+            }
+        } else {
+            game.server.send(2406, shopConfig.surpriseCrit.goodsId)
+        }
+    }
+}

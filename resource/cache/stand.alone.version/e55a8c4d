@@ -1,0 +1,102 @@
+class Panel_marketActivity_todayDiscount extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_todayDiscount',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.addComponent(Panel_marketActivity_todayDiscount_Comp);
+        this.btn_buy.addComponent(Panel_marketActivity_todayDiscount_Buy);
+    }
+    onEnable() {
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '今日特惠', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_todayDiscount_time', 1)
+        showActivityPanel('todayDiscount');
+    }
+    onDisable() {
+        hallTestShowPanel()
+    }
+    clickMask() { }
+}
+
+
+class Panel_marketActivity_todayDiscount_Comp extends Laya.Script {
+    onEnable() {
+        game.cb.on('update_activity_todayDiscount', this, this.updateUI);
+        this.init();
+        this.request();
+    }
+
+    onDisable() {
+        game.cb.off('update_activity_todayDiscount', this, this.updateUI);
+    }
+
+    onUpdate() {
+        this.owner.txt_date.text = `优惠倒计时：${__data.activity.todayDiscount.getRemainingTimeToMidnight()}`;
+    }
+
+    // 为了防止尴尬，先隐藏部分UI，等待数据更新后再显示
+    init() {
+        this.owner.btn_buy.visible = false;
+    }
+
+    async request() {
+        game.server.send(19007);
+        this.updateUI();
+    }
+
+    updateUI() {
+        let deal = __data.activity.todayDiscount.deal;
+        if (deal) {
+            this.owner.txt_gold.text = `金币×${__data.activity.todayDiscount.formatGold(deal.gold)}`;
+            this.owner.txt_bamboo.text = `富贵竹×${deal.bamboo}`;
+            this.owner.txt_time.text = `可购买次数：${__data.activity.todayDiscount.allCount - __data.activity.todayDiscount.purchaseCount}`;
+            this.owner.txt_old.text = `原价：${deal.old}元`;
+            this.owner.txt_new.text = `${deal.new}元购买`;
+            SkinUtils.gray(this.owner.btn_buy, !__data.activity.todayDiscount.isAllowBuy);
+            this.owner.btn_buy.visible = true;
+        }
+    }
+}
+
+class Panel_marketActivity_todayDiscount_Buy extends Laya.Script {
+    async onClick(e) {
+        // 购买次数为0
+        if (!__data.activity.todayDiscount.isAllowBuy) return;
+        await game.server.send(16020);
+        if (__data.onoff_pay != 1) return __tips(__lang.nocan_pay)
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': `今日特惠购买` })
+        let goodsId = __data.activity.todayDiscount.dailyDealId;
+        let shopVO = shopConfig.todayDiscount[goodsId];
+        if (__data.pay_curValue + shopVO.price > __data.pay_maxValue) {
+            __tips(__lang.pay_over_max);
+            return;
+        }
+        // '18元'
+        if (window['wx'] || window.IOSPay || (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP)) {
+            // 获取订单信息
+            // IOS能支付修改
+            // if (miniApi.isIOS) return 1;
+            miniApi.pay({
+                goodsId,
+                successCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                },
+                failCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                }
+            })
+            if (__data.isSupportUser != 1) {
+                miniApi.trackEvent('Mj_Pay', {
+                    Mj_ADPreference: miniApi.adUserValueLevel,
+                    'Mj_PayName': '今日特惠',
+                    'Mj_PayPrice': shopVO.price,
+                    'Mj_Paytype': '点击',
+                    'Mj_UserID': String(__data.uid),
+                })
+            }
+        } else {
+            game.server.send(2406, goodsId)
+        }
+    }
+}

@@ -1,0 +1,671 @@
+
+class MahjongQuickPrayMenuBase extends game.ModuleBase {
+    constructor(name, removeAfterClick) {
+        super({
+            map: `scene_game/mahjong/${name}`,
+            module: false
+        })
+        this.removeAfterClick = removeAfterClick;
+    }
+    
+    onEnable(){
+        this.btn_pray.on(Laya.Event.CLICK, this, this.onPray);
+        this.bless = this.getBless();
+        this.setBless(this.bless);
+        trace("随机祝福：", this.bless);
+    }
+
+    onDisable(){
+        this.btn_pray.off(Laya.Event.CLICK, this, this.onPray);
+    }
+
+    onPray(){
+        MahjongBless.data.isQuick = 1;
+        MahjongBless.data.quickInfo = this.info;
+        this.bless.baseMul = 1;
+        bless_buy_logic(this.bless, 2);
+        this.removeAfterClick && game.utils.remove(this);
+    }
+
+    setBless(bless){
+        this.txt_cost.text = bless.baseStoneCost;
+        SkinUtils.setSkin(this.icon, `cdn/bless_mj/${bless.quickImg}.png`);
+    }
+
+    source(info, type){
+        this.info = info;
+        this.info.type = type + info.number;
+        this.txt.text = info.content;
+    }
+
+    // MahjongBless.data 前三个随机
+    // d1.firstFree == 1 && firstFree_isBuy == 1 是免费的
+    // baseStoneCost 钻石
+    getBless(){
+        let arrays = [];
+        // 如果金蝉不免费，在随机队列中
+        if(!(MahjongBless.data.d1.firstFree == 1 && MahjongBless.data.firstFree_isBuy == 1)){
+            arrays = [MahjongBless.data.d1, MahjongBless.data.d2, MahjongBless.data.d3];
+        }
+        // 如果金蝉免费，不在随机队列中
+        else{
+            arrays = [MahjongBless.data.d2, MahjongBless.data.d3];
+        }
+        let index = Math.floor(Math.random() * arrays.length);
+        return arrays[index];
+    }
+}
+// 对局中快速祈福
+class MahjongQuickPrayMenu extends MahjongQuickPrayMenuBase {
+    constructor() {
+        super('MahjongQuickPrayMenu');
+    }
+}
+// 结算快速祈福
+class MahjongQuickPrayResultMenu extends MahjongQuickPrayMenuBase {
+    constructor() {
+        super('MahjongQuickPrayResultMenu', true);
+    }
+}
+
+
+
+// 快速祈福组件
+class MahjongQuickPrayComponent extends Laya.Script{
+
+    onAwake(){
+        this.quickPrayMenu = new MahjongQuickPrayMenu();
+        this.quickPrayMenu.bar.getComponent(VideoCountDown).setAfter(this.onOvertime.bind(this));// 倒计时条走完
+    }
+
+    onEnable(){
+        Laya.timer.callLater(PrayStatistics.instance, PrayStatistics.instance.checkJoinGameTrigger);
+        game.cb.on('quick_pray', this, this.onQuickPray);
+    }
+
+    onDisable(){
+        game.cb.off('quick_pray', this, this.onQuickPray);
+    }
+
+    onQuickPray(content, number){
+        game.utils.remove(this.quickPrayMenu);
+        this.quickPrayMenu.source({ content, number }, '对局');
+        this.owner.addChild(this.quickPrayMenu).pos(-this.owner.x - this.quickPrayMenu.width, this.player.y + this.player.height - this.quickPrayMenu.height - 25);
+        Laya.Tween.to(this.quickPrayMenu, {x: this.player.x + this.player.width + 15 }, 150, Laya.Ease.QuartOut, Laya.Handler.create(this, this._showComplete));
+    }
+
+    // 计时结束
+    onOvertime(){
+        game.utils.remove(this.quickPrayMenu);
+        Laya.Tween.clearAll(this.quickPrayMenu);
+    }
+
+    get container(){
+        if (this.owner.ready && this.owner.ready.parent) {
+            return this.owner.ready;
+        } else {
+            return this.owner.game;
+        }
+    }
+
+    get player(){
+        if (this.owner.ready && this.owner.ready.parent) {
+            return this.owner.ready.getChildByName('player_down');
+        } else {
+            return this.owner.game.getChildByName('player_down');;
+        }
+    }
+}
+
+
+// 祈福统计
+class PrayStatistics{
+
+    static get SIGN(){ return ','; }
+    static get ALL_SCORE(){ return '大局积分'; }
+    static get CATCH(){ return '抓牌'; }
+    static get THROW(){ return '弃牌'; }
+    static get CATCH_NO_HU(){ return '抓牌不胡'; }
+    static get MINI_GAME_RESULT(){ return '小局输赢'; }
+    static get MINI_GAME_TING_RESULT(){ return '小局听牌未胡记录'; }
+    static get MINI_GAME_SCORE(){ return '小局得分'; }
+
+    static get GAME_QUICK_PRAY_STATE(){ return '对局中快速祈福'; }
+    static get RESULT_QUICK_PRAY_STATE(){ return '结算快速祈福'; }
+
+    static get UID(){ return __data.uid; }
+    // 上听状态
+    static set tingState(state){ this._tingState = state; }
+    static get tingState(){ return this._tingState; }
+
+    static get log(){ return true; }
+
+    // 听牌后第一次弃牌检查
+    set checkAfterThrowState(state){ this._checkAfterThrowState = state; }
+    get checkAfterThrowState(){ return this._checkAfterThrowState; }
+
+    get logs(){
+        console.log("大局总积分：", this.getLastGameScoreList());
+        console.log("未上听抓牌：", this.getCatchList());
+        console.log("未上听弃牌：", this.getThrowByList());
+        console.log("上听抓牌：", this.getCatchNoHuByList());
+        console.log("听牌状态：", PrayStatistics.tingState);
+        console.log("胡牌记录：", this.getLastMiniGameResultByList());
+
+        console.log("小局得分记录：", this.getLastMiniGameScoreByList());
+        console.log("听牌未胡记录：", this.getLastMiniGameTingResultByList());
+    }
+    // 可使用状态  不可使用的时候不进行任何操作与存储*/
+    get available(){
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) 
+            return true;
+        else 
+            return false;
+    }
+
+    //----------------------------------------------------------------------------
+    //大局得分
+    setLastGameScoreByList(score){
+        // TODO: 保存最后游戏分数
+        let values = this.getLastGameScoreList();
+        // 添加分数
+        values.push(score);
+        // 保存分数
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.ALL_SCORE, values.join(PrayStatistics.SIGN));
+    }
+    getLastGameScoreList(){
+        // TODO: 获取最后游戏分数
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.ALL_SCORE);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    //----------------------------------------------------------------------------
+    //小局胜负  
+    setLastMiniGameResultByList(result){
+        // TODO: 保存小局输赢
+        let values = this.getLastMiniGameResultByList();
+        // 添加分数
+        values.push(result);
+        // 保存分数
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_RESULT, values.join(PrayStatistics.SIGN));
+    }
+    getLastMiniGameResultByList(){
+        // TODO: 获取小局输赢
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_RESULT);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearLastMiniGameResult(){
+        // TODO: 清空小局输赢
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_RESULT, '');
+    }
+
+    //----------------------------------------------------------------------------
+    //小局听牌未胡记录  
+    setLastMiniGameTingResultByList(result){
+        // TODO: 保存小局输赢
+        let values = this.getLastMiniGameTingResultByList();
+        // 添加分数
+        values.push(result);
+        // 保存分数
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_TING_RESULT, values.join(PrayStatistics.SIGN));
+    }
+    getLastMiniGameTingResultByList(){
+        // TODO: 获取小局输赢
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_TING_RESULT);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearLastMiniGameTingResult(){
+        // TODO: 清空小局输赢
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_TING_RESULT, '');
+    }
+    //----------------------------------------------------------------------------
+    //小局得分  
+    setLastMiniGameScoreByList(result){
+        // TODO: 保存小局得分
+        let values = this.getLastMiniGameScoreByList();
+        // 添加分数
+        values.push(result);
+        // 保存分数
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_SCORE, values.join(PrayStatistics.SIGN));
+    }
+    getLastMiniGameScoreByList(){
+        // TODO: 获取小局得分
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_SCORE);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearLastMiniGameScore(){
+        // TODO: 清空小局得分
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.MINI_GAME_SCORE, '');
+    }
+    //----------------------------------------------------------------------------
+    // 抓牌
+    setCatchByList(code){
+        // TODO: 保存抓牌
+        let values = this.getCatchList();
+        // 添加抓牌
+        values.push(code);
+        // 保存抓牌
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.CATCH, values.join(PrayStatistics.SIGN));
+    }
+    getCatchList(){
+        // TODO: 获取抓牌
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.CATCH);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearCatch(){
+        // TODO: 清空抓牌
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.CATCH, '');
+    }
+    //----------------------------------------------------------------------------
+    // 弃牌
+    setThrowByList(code){
+        // TODO: 保存弃牌
+        let values = this.getThrowByList();
+        // 添加弃牌
+        values.push(code);
+        // 保存弃牌
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.THROW, values.join(PrayStatistics.SIGN));
+    }
+    getThrowByList(){
+        // TODO: 获取弃牌
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.THROW);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearThrow(){
+        // TODO: 清空弃牌
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.THROW, '');
+    }
+    //----------------------------------------------------------------------------
+    // 抓牌不胡
+    setCatchNoHuByList(code){     
+        // TODO: 保存抓牌不胡
+        let values = this.getCatchNoHuByList();
+        // 添加抓牌不胡
+        values.push(code);
+        // 保存抓牌不胡
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.CATCH_NO_HU, values.join(PrayStatistics.SIGN));
+    }
+    getCatchNoHuByList(){
+        // TODO: 获取抓牌不胡
+        let value = LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.CATCH_NO_HU);
+        // 根据逗号分隔成数组
+        return value ? value.split(PrayStatistics.SIGN) : [];
+    }
+    clearCatchNoHu(){
+        // TODO: 清空抓牌不胡
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.CATCH_NO_HU, '');
+    }
+    //----------------------------------------------------------------------------
+    setGameQuickPrayState(state){
+        // TODO: 保存对局中快速祈福状态
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.GAME_QUICK_PRAY_STATE, state);
+    }
+    getGameQuickPrayState(){
+        // TODO: 获取对局中快速祈福状态
+        return LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.GAME_QUICK_PRAY_STATE);
+    }
+    setResultQuickPrayState(state){
+        // TODO: 保存结算快速祈福状态
+        LocalUtils.set(PrayStatistics.UID + '_' + PrayStatistics.RESULT_QUICK_PRAY_STATE, state);
+    }
+    getResultQuickPrayState(){
+        // TODO: 获取结算快速祈福状态
+        return LocalUtils.get(PrayStatistics.UID + '_' + PrayStatistics.RESULT_QUICK_PRAY_STATE);
+    }
+    //----------------------------------------------------------------------------
+    checkQingyise(){
+        // TODO: 检查是否为清一色
+        let doorGroups = this.getDoorGroups();
+        if(!doorGroups)return false;// 门前牌组就不满足，直接否定清一色
+        let self = __data.deskData.roomVo.getPlayerBySeat(0);
+        let values = self.handValue.split(',');
+        let commons = values.filter(value => value < 40);
+        let wans = commons.filter(common => common < 10);
+        if(wans.length == commons.length){ return true; }// 万清一色
+        let tongs = commons.filter(common => common < 20 && common >= 10);
+        if(tongs.length == commons.length){ return true; }// 筒清一色
+        let tiaos = commons.filter(common => common < 30 && common >= 20);
+        if(tiaos.length == commons.length){ return true; }// 条清一色
+        return false;
+    }
+    // 门前牌组，用来辅助判断是否满足清一色
+    getDoorGroups(){
+        try {
+            // 检查喜或者掌是否满足2个及以上
+            let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+            let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+            let values = desk.downlist.doordata.map(groups => {
+                let data = __compUtils.getAnalysis(groups);
+                return data.group[0];
+            }).filter(value => value < 40);
+            let wans = values.filter(value => value < 10);
+            if(wans.length == values.length){ return true; }// 门前牌都是万
+            let tongs = values.filter(value => value < 20 && value >= 10);
+            if(tongs.length == values.length){ return true; }// 门前牌都是筒
+            let tiaos = values.filter(value => value < 30 && value >= 20);
+            if(tiaos.length == values.length){ return true; }// 门前牌都是条
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    checkMultiple(){
+        // TODO: 检查倍数
+        let self = __data.deskData.roomVo.getPlayerBySeat(0);
+        if(self && self.hupai && self.hupai.length){ 
+            let rate = Math.max(...self.hupai.map(item => item.rate));
+            if(rate >= 16)return true;
+        }
+        return false;
+    }
+    checkXiZhang(){
+        // TODO: 检查喜掌
+        try {
+            // 检查喜或者掌是否满足2个及以上
+            let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+            let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+            let xizhangs = desk.downlist.doordata.filter(groups => {
+                let data = __compUtils.getAnalysis(groups);
+                return data.type == 81 || data.type == 82;
+            });
+            return xizhangs.length >= 2;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    //----------------------------------------------------------------------------
+    setTing(value){
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->设置听牌状态：' + value, `color: ${this.color}`);
+        // 保存听牌状态
+        PrayStatistics.tingState = value;
+        // TODO: 设置听牌
+        if(value){// 听牌  ---清理数据
+            this.clearCatch(); // 听牌了，清理未上听时抓牌的数据
+            this.clearThrow(); // 听牌了，清理未上听时弃牌的数据
+            this.checkAfterThrowState = true;// 听牌后第一次出牌需要检测
+        }else{// 未听牌  ---清理数据
+            this.clearCatchNoHu();// 未听牌，清理抓牌不胡的数据
+        }
+    }
+    getGroups(){
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->获取了门前牌，清理数据.', `color: ${this.color}`);
+        // TODO: 获取了门前牌
+        this.clearCatch(); // 获取门前牌，清理未上听时抓牌的数据
+        this.clearThrow(); // 获取门前牌，清理未上听时弃牌的数据
+    }
+    catch(code){
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->抓牌：' + code, `color: ${this.color}`);
+        // TODO: 抓牌
+        let self = __data.deskData.roomVo.getPlayerBySeat(0);
+        if(self && self.tingState >= 1){// 听牌状态下抓牌
+            this.setCatchNoHuByList(code);
+            this.checkThrowNoHuTrigger();// 检查是否触发快速祈福
+        }else if(self && self.hupai && self.hupai.length){ // 知道可以胡什么牌的情况下抓牌（某些玩法不带听牌）
+            this.setCatchNoHuByList(code);
+            this.checkThrowNoHuTrigger();// 检查是否触发快速祈福
+        }else{// 未听牌的情况下摸牌
+            this.setCatchByList(code);
+        }
+    }
+    throw(code){
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->弃牌：' + code, `color: ${this.color}`);
+        // TODO: 弃牌
+        let self = __data.deskData.roomVo.getPlayerBySeat(0);
+        if(this.checkAfterThrowState){
+            this.checkTingTrigger();// 检查是否触发快速祈福
+        }else if(self && self.tingState >= 1){// 听牌状态下弃牌
+            // this.checkThrowNoHuTrigger();// 检查是否触发快速祈福
+        }else if(self && self.hupai && self.hupai.length){ // 知道可以胡什么牌的情况下弃牌（某些玩法不带听牌）
+            // this.checkThrowNoHuTrigger();// 检查是否触发快速祈福
+        }else{// 未听牌的情况下弃牌
+            this.setThrowByList(code);
+            this.checkThrowTrigger();// 检查是否触发快速祈福
+        }
+
+
+    }
+    over(){
+        if(!this.available){ return; }
+        // TODO: 游戏结束
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        this.setLastMiniGameResultByList(result);
+        PrayStatistics.log && trace('%c Statistics-->小局结束，对局结果：' + result ? '赢' : '输', `color: ${this.color}`);
+        let score = __data.deskData.roomVo.smallResultData.myScore;
+        this.setLastMiniGameScoreByList(score);
+        PrayStatistics.log && trace('%c Statistics-->小局结束，对局得分：' + score, `color: ${this.color}`);
+        
+        // 胡了，清理听牌未胡记录
+        if(result)this.clearLastMiniGameTingResult();
+        else if(!result && PrayStatistics.tingState)this.setLastMiniGameTingResultByList(1);
+        PrayStatistics.log && trace('%c Statistics-->小局结束，听牌未胡：' + result + '-->' + PrayStatistics.tingState, `color: ${this.color}`);
+    }
+    allOver(){
+        if(!this.available){ return; }
+        // TODO: 所有游戏结束   获取用户积分 存储
+        let players =__data.deskData.roomVo.allRoundResult.playerArray;
+        let score = players.find(player => player.id == __data.uid).score;
+        this.setLastGameScoreByList(score);
+        PrayStatistics.log && trace('%c Statistics-->房间结束获得积分：' + score, `color: ${this.color}`);
+    }
+    // 新的一个房间，清理数据
+    newRoom(){
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->进入新房间，清理数据.', `color: ${this.color}`);
+        this.newGame();
+        this.clearLastMiniGameScore();// 清理小对局的得分记录
+        this.clearLastMiniGameResult();// 清理小对局结果记录
+        this.clearLastMiniGameTingResult();// 清理小对局听牌未胡记录
+        this.setGameQuickPrayState('');
+        this.setResultQuickPrayState('');
+    }
+    // 新的一场对局，清理数据
+    newGame(){ 
+        if(!this.available){ return; }
+        PrayStatistics.log && trace('%c Statistics-->开始新一局，清理数据.', `color: ${this.color}`);
+        PrayStatistics.tingState = false;// 听牌状态重置
+        this.clearCatch(); // 清理抓牌的数据
+        this.clearThrow(); // 清理弃牌的数据
+        this.clearCatchNoHu();// 清理抓牌不胡的数据
+        this.setGameQuickPrayState('');
+        this.setResultQuickPrayState('');
+    }
+
+    get color(){ return '#883399'; }
+
+    // 最近2次大局总分小于0   触发快速祈福 1.1
+    checkJoinGameTrigger(){
+        if(!this.available){ return; }
+        let state = this.getGameQuickPrayState();// 是否已经弹出过该弹窗
+        if(state){ return ""; }// 已经展示过 不再进行展示
+        // TODO: 保存最后游戏分数
+        let values = this.getLastGameScoreList();
+        let len = 2;
+        if(values.length >= len){
+            let lastTwoValues = values.slice(-len);// 取最后存储的len个分数
+            let scores = lastTwoValues.filter(value => value < 0);// 这len次分数都是负分，也就是输了
+            if(scores.length == len){ this.taskHandle('总输？这次该转运了', 1);return true; }// len局都输算触发
+        }
+        PrayStatistics.log && trace('%c Statistics-->checkJoinGameTrigger：' + values, `color: ${this.color}`);
+        return false;
+    }
+
+    // 未上听的情况下，本小局连续3轮抓啥打啥    触发快速祈福 1.2
+    checkThrowTrigger(){
+        if(!this.available){ return; }
+        let state = this.getGameQuickPrayState();// 是否已经弹出过该弹窗
+        if(state){ return ""; }// 已经展示过 不再进行展示
+        let catches = this.getCatchList();
+        let throws = this.getThrowByList();
+        PrayStatistics.log && trace('%c Statistics-->checkThrowTrigger：', `color: ${this.color}`);
+        PrayStatistics.log && trace('%c Statistics-->抓牌：' + catches, `color: ${this.color}`);
+        PrayStatistics.log && trace('%c Statistics-->弃牌：' + throws, `color: ${this.color}`);
+        if(catches.length >= 3 && throws.length >= 3){
+            // 都取最后3张牌
+            catches = catches.slice(-3);
+            throws = throws.slice(-3);
+            if(JSON.stringify(catches) === JSON.stringify(throws)){// 抓打的完全一样
+                this.taskHandle('牌路不顺，破局趁现在', 2);
+                return true;
+            };
+        }
+        return false;
+    }
+
+    // 已上听的情况下，3轮未胡牌    触发快速祈福 1.3
+    checkThrowNoHuTrigger(){
+        if(!this.available){ return; }
+        let state = this.getGameQuickPrayState();// 是否已经弹出过该弹窗
+        if(state){ return ""; }// 已经展示过 不再进行展示
+        let catches = this.getCatchNoHuByList();
+        PrayStatistics.log && trace('%c Statistics-->checkThrowNoHuTrigger：' + catches, `color: ${this.color}`);
+        if(catches.length == 3){
+            this.taskHandle('听牌了，求自摸！', 3);
+            return true;// 3轮未胡牌算触发
+        }
+        return false;
+    }
+    // 已上听的牌型不小  且前两句都没有胡牌    触发快速祈福 1.4
+    checkTingTrigger(){
+        if(!this.available){ return; }
+        let state = this.getGameQuickPrayState();// 是否已经弹出过该弹窗
+        if(state){ return ""; }// 已经展示过 不再进行展示
+        // TODO: 检查是否触发快速祈福
+        let results = this.getLastMiniGameResultByList();
+        if(results.length < 2)return false;// 2小局未胡牌条件不满足
+        let isAllLose = results.slice(-2).every(result => result == 0);// 前2局都输了
+        let result = false;
+        if(PrayStatistics.tingState && isAllLose){
+            if(this.checkQingyise())// 满足清一色
+                result = true;
+            else if(this.checkMultiple())// 满足高倍率
+                result = true;
+            else if(this.checkXiZhang())// 满足亮喜两张组数
+                result = true;
+            if(result)this.taskHandle('大牌在手，好运速来！', 4);
+        }
+        PrayStatistics.log && trace('%c Statistics-->checkTingTrigger：' + result, `color: ${this.color}`);
+        return result;
+    }
+
+    // 处理快速祈福
+    taskHandle(content, number){
+        if(!this.available){ return; }
+        game.cb.event('quick_pray', [content, number]);
+        this.setGameQuickPrayState(1);
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': `对局${number}`, 'Mj_MarketingType':'快速祈福', 'Mj_MarketingStatus':'曝光' })
+    }
+
+    // 结算
+    checkResultTrigger(){
+        if(!this.available){ return; }
+        let state = this.getResultQuickPrayState();// 是否已经弹出过该弹窗
+        PrayStatistics.log && trace('%c Statistics-->快速祈福结算状态：' + state, `color: ${this.color}`);
+        if(state){ return ""; }// 已经展示过 不再进行展示
+        let content = '';
+        let number = 0;
+        content = this.checkResultLoseTrigger();// 结算连续3局得分小于0
+        PrayStatistics.log && trace('%c Statistics-->结算快速祈福判断[1]：' + content, `color: ${this.color}`);
+        if(content){ 
+            number = 1;
+            miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': `结算${number}`, 'Mj_MarketingType':'快速祈福', 'Mj_MarketingStatus':'曝光' })
+            this.setResultQuickPrayState(1);
+            return { content, number }; 
+        }
+        content = this.checkResultLoseMostTrigger();// 对局超过一半且自己输分超过总输分的75%
+        PrayStatistics.log && trace('%c Statistics-->结算快速祈福判断[2]：' + content, `color: ${this.color}`);
+        if(content){ 
+            number = 2;
+            miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': `结算${number}`, 'Mj_MarketingType':'快速祈福', 'Mj_MarketingStatus':'曝光' })
+            this.setResultQuickPrayState(1);
+            return { content, number }; 
+        }
+        content = this.checkResultKeepLoseTrigger();// 连续5小局未胡牌
+        PrayStatistics.log && trace('%c Statistics-->结算快速祈福判断[3]：' + content, `color: ${this.color}`);
+        if(content){ 
+            number = 3;
+            miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': `结算${number}`, 'Mj_MarketingType':'快速祈福', 'Mj_MarketingStatus':'曝光' })
+            this.setResultQuickPrayState(1);
+            return { content, number }; 
+        }
+        content = this.checkResultTingAndLoseTrigger();// 上听至少2次且未胡牌
+        PrayStatistics.log && trace('%c Statistics-->结算快速祈福判断[4]：' + content, `color: ${this.color}`);
+        if(content){ 
+            number = 4;
+            miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': `结算${number}`, 'Mj_MarketingType':'快速祈福', 'Mj_MarketingStatus':'曝光' })
+            this.setResultQuickPrayState(1);
+            return { content, number }; 
+        }
+        PrayStatistics.log && trace('%c Statistics-->结算快速祈福判断[5]：' + content, `color: ${this.color}`);
+        return null;
+    }
+
+    // 结算连续3局得分小于0
+    checkResultLoseTrigger(){
+        if(!this.available){ return; }
+        let scores = this.getLastMiniGameScoreByList();
+        PrayStatistics.log && trace('%c Statistics-->checkResultLoseTrigger：' + scores, `color: ${this.color}`);
+        if(scores.length >= 3){
+            let result = scores.slice(-3).every(score => score < 0);
+            if(result)return "运气不佳？祈福好运！";
+        }
+        return "";
+    }
+
+    // 对局超过一半且自己输分超过总输分的75%
+    checkResultLoseMostTrigger(){
+        if(!this.available){ return; }
+        if(__data.deskData.roomVo.allGame <= 1)return false;// 这种是对局总数不确定的对局，所以不处理
+        if(__data.deskData.roomVo.curGame <= __data.deskData.roomVo.allGame / 2)return false;// 这种是对局数没有超过一半, 所以不处理
+        // 自己输分 如果超过100
+        let myScore = __data.deskData.roomVo.getPlayer(__data.uid).score;
+        PrayStatistics.log && trace('%c Statistics-->checkResultLoseMostTrigger：' + myScore, `color: ${this.color}`);
+        if(myScore < -100){ return "绝境深处，祈福翻盘！"; }
+        let ids = __data.deskData.roomVo.getPlayerIds();
+        let allLoseScore = 0;// 所有输的玩家的总分
+        ids.filter(id => __data.deskData.roomVo.getPlayer(id).score < 0).map(id=> allLoseScore += parseInt(__data.deskData.roomVo.getPlayer(id).score));
+        PrayStatistics.log && trace('%c Statistics-->checkResultLoseMostTrigger：' + allLoseScore + '-->' + allLoseScore * 0.75, `color: ${this.color}`);
+        if(allLoseScore * 0.75 > myScore){ return "绝境深处，祈福翻盘！"; }
+        return "";
+    }
+
+    // 连续5小局未胡牌
+    checkResultKeepLoseTrigger(){
+        if(!this.available){ return; }
+        let results = this.getLastMiniGameResultByList();
+        PrayStatistics.log && trace('%c Statistics-->checkResultKeepLoseTrigger：' + results, `color: ${this.color}`);
+        if(results.length >= 5){
+            let result = results.slice(-5).every(result => result == 0);
+            if(result)return "运气不佳？祈福好运！";
+        }
+        return "";
+    }
+
+    // 上听至少2次且未胡牌
+    checkResultTingAndLoseTrigger(){
+        if(!this.available){ return; }
+        let tingResults = this.getLastMiniGameTingResultByList();
+        PrayStatistics.log && trace('%c Statistics-->checkResultTingAndLoseTrigger：' + tingResults, `color: ${this.color}`);
+        if(tingResults.length >= 2){
+            return "运气不佳？祈福好运！";
+        }
+        return "";
+    }
+
+    static get instance(){
+        if(!this._instance){
+            this._instance = new PrayStatistics();
+        }
+        return this._instance;
+    }
+}

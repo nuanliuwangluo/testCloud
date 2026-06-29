@@ -1,0 +1,184 @@
+class GameMainGoldNoEnough extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_goldNoEnough',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_close_gne)
+    }
+    added(matchModelType, minGold) {
+        this.matchModelType = matchModelType
+        let d = GameMainGoldNoEnough.goods[matchModelType];
+        this.scene_goods1.dataSource = d.goods1
+        this.scene_goods2.dataSource = d.goods2
+        game.server.send(13001)
+    }
+    onDisable() {
+
+    }
+    clickMask() { }
+}
+class S_close_gne extends Laya.Script {
+    async onClick(e) {
+        if (this.owner.parent.matchModelType == 1 && AdData.isActive && AdData.time > 0) {
+            let a = await miniApi.video_ready('adunit-24f34675f1830a6c')
+            if (a.pullVideo)
+                __showScene.show_gameMain_ad()
+        }
+        else if (__data.garden.task.isRedPoint) {
+            __showScene.show_garden_mainScene_bombbox()
+        } else {
+            __showScene.show_mjSmallGame_guide_bombbox()
+        }
+        game.scene.remove(GameMainGoldNoEnough)
+    }
+}
+class GameMainGoldNoEnoughItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_goldNoEnoughItem',
+            module: false
+        })
+        this.data;
+        this.btn_buy_stone.addComponent(S_gne_buy_stone)
+        this.btn_buy_rmb.addComponent(S_gne_buy_rmb)
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.sp_gold)
+        this.clearAwait && this.clearAwait()
+    }
+    set dataSource(value) {
+        if (!value) return;
+        this.data = value;
+        this.img_bg.skin = value.isRight ? 'cdn/goldNoEnough/img_jbbzbox2.png' : 'cdn/goldNoEnough/img_jbbzbox1.png'
+        this.img_extra.visible = value.give > 0
+        this.txt_extra_give.text = value.give + '%'
+        this.txt_gold.text = bigNumberToCH(value.gold).replace('万', '')
+
+        this.txt_g.x = this.txt_gold.textField.textWidth;
+        let w = this.txt_g.x + this.txt_g.textField.textWidth;
+        this.sp_gold.x = this.btn_buy_stone.x - w / 2;
+        this.sp_gold_width = w;
+
+        this.txt_need_stone.text = value.stone;
+        w = this.txt_need_stone.x + this.txt_need_stone.textField.textWidth;
+        this.sp_stone.x = this.sp_stone.parent.width / 2 - w / 2;
+
+        this.btn_buy_stone.visible = false
+        this.btn_buy_rmb.visible = false
+        if (__data.stone > value.stone) {
+            this.btn_buy_stone.visible = true
+            this.txt_tips.text = `售价${value.stone}钻`
+            this.txt_surplus.text = `购买后剩余${Number(__data.stone) - value.stone}钻`
+        } else {
+            this.btn_buy_rmb.visible = true
+            let needStone = value.stone - Number(__data.stone)
+            this.txt_tips.text = `售价${value.stone}钻\n还需充值${needStone}钻`;
+            for (const key in shopConfig.stone) {
+                let d = shopConfig.stone[key]
+                if (d.num > needStone) {
+                    this.rmb_shopGoodsId = d.goodsId
+                    this.txt_rmb.text = '¥' + d.price;
+                    this.txt_surplus.text = `购买后剩余${Number(__data.stone) + d.num - value.stone}钻`
+                    break
+                }
+            }
+        }
+        if (value.isRight) this.effect()
+    }
+    async effect() {
+        Laya.Tween.clearAll(this.sp_gold)
+        this.sp_gold.x = this.btn_buy_stone.x - this.sp_gold_width / 2;
+        this.sp_gold.pivotX = this.sp_gold_width / 2;
+        this.sp_gold.x += this.sp_gold.pivotX
+
+        await __tool.tweenp(this.sp_gold, {
+            scaleX: 1.1,
+            scaleY: 1.1,
+        }, 500)
+        await __tool.tweenp(this.sp_gold, {
+            scaleX: 0.9,
+            scaleY: 0.9,
+        }, 500)
+
+        this.effect()
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_goldNoEnoughItemUI', GameMainGoldNoEnoughItem);
+
+class S_gne_buy_stone extends Laya.Script {
+    onClick() {
+        let goodsId = this.owner.parent.data.shopGoodsId
+        // 购买金币
+        game.server.send(2404, goodsId)
+    }
+}
+class S_gne_buy_rmb extends Laya.Script {
+    async onClick() {
+        let goodsId = this.owner.parent.rmb_shopGoodsId;
+        S_gne_buy_rmb.needBuyGold_goodsId = this.owner.parent.data.shopGoodsId
+        pay_stone_logic(goodsId)
+    }
+}
+
+GameMainGoldNoEnough.goods = {};
+GameMainGoldNoEnough.goods[1] = {
+    goods1: {
+        gold: 30000,
+        stone: 30,
+        give: 0,
+        shopGoodsId: 9001
+    },
+    goods2: {
+        gold: 66000,
+        stone: 60,
+        give: 10,
+        isRight: 1,
+        shopGoodsId: 9002
+    },
+}
+GameMainGoldNoEnough.goods[2] = {
+    goods1: {
+        gold: 30000,
+        stone: 30,
+        give: 0,
+        shopGoodsId: 9001
+    },
+    goods2: {
+        gold: 66000,
+        stone: 60,
+        give: 10,
+        isRight: 1,
+        shopGoodsId: 9002
+    },
+}
+GameMainGoldNoEnough.goods[3] = {
+    goods1: {
+        gold: 66000,
+        stone: 60,
+        give: 10,
+        shopGoodsId: 9002
+    },
+    goods2: {
+        gold: 184000,
+        stone: 160,
+        give: 15,
+        isRight: 1,
+        shopGoodsId: 9003
+    },
+}
+GameMainGoldNoEnough.goods[4] = {
+    goods1: {
+        gold: 312000,
+        stone: 260,
+        give: 20,
+        shopGoodsId: 9004
+    },
+    goods2: {
+        gold: 1560000,
+        stone: 1200,
+        give: 30,
+        isRight: 1,
+        shopGoodsId: 9006
+    },
+}

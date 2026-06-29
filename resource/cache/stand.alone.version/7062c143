@@ -1,0 +1,80 @@
+class GameMainSeasonReward extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_propGet',
+            layer: 'panel'
+        })
+        this.btn_sure.addComponent(S_click_GameMainSeasonReward_remove);
+        this.allProps = [];
+        this.img_ad.addComponent(S_click_prop_get_ad);
+
+        this.container_inity = this.__container.y;
+        this.sp_1_inity = this.sp_1.y;
+        this.img_title.skin = 'ab/a_panel_prop_get/img_sjjl.png'
+    }
+    added(props) {
+        __sound.gameSound('get');
+        for (let index = 0, length = this.allProps.length; index < length; index++) {
+            const e = this.allProps[index];
+            game.utils.remove(e)
+        };
+        let w = 0;
+        let h = 0
+        this.txt_btn.text = '确定'
+        let isHaveStar;
+        // this.img_title.skin = 'ab/a_panel_prop_get/img_gxhd1.png'
+        let testHaveCard = 1
+        for (let index = 0, length = props.length; index < length; index++) {
+            const e = props[index];
+
+            let desScript = null;
+            let prop01 = PropIcon.icon[e.propId];
+            if (prop01) {
+                if (prop01.isJiangbei || prop01.isJiangpai) {
+                    desScript = S_prop_show_des_seasonRule
+                }
+                else if (prop01.isHeadFrame) {
+                    desScript = S_prop_show_name
+                }
+            }
+
+            // let pp = this.allProps[index] || new gameMainPropGetItem(desScript)
+            let pp = new gameMainPropGetItem(desScript)
+            this.allProps[index] = pp;
+            this.__container.addChild(pp)
+            pp.visible = true;
+            pp.dataSource = e;
+            pp.x = index % 5 * (pp.width + 0)
+            pp.y = Math.floor(index / 5) * (pp.height - 20)
+            w = Math.max(pp.x + pp.width, w);
+            h = Math.max(pp.y + pp.height - 20, h)
+            if (e.propId == 5) {
+                isHaveStar = true;
+            }
+        };
+        this.__container.x = (this.width - w) / 2
+        this.__container.y = this.container_inity - h / 2;
+
+        if (isHaveStar) {
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '花园Banner' })
+            this.sp_1.y = this.sp_1_inity;
+            this.img_ad.visible = true
+        } else {
+            this.img_ad.visible = false;
+            this.sp_1.y = 100;
+        }
+    }
+    clickMask() { }
+    onDisable() {
+        for (let index = 0, length = this.allProps.length; index < length; index++) {
+            const e = this.allProps[index];
+            game.utils.remove(e)
+        };
+        __showScene.show_seasonStart()
+    }
+}
+class S_click_GameMainSeasonReward_remove extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainSeasonReward)
+    }
+}

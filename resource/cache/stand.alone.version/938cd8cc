@@ -1,0 +1,5 @@
+class S_stopPropagation_mousedown extends Laya.Script {
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}

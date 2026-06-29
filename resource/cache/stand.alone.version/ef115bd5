@@ -1,0 +1,23 @@
+class TestInput extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestInput',
+            layer: 'panel'
+        })
+        this.btn_sure.addComponent(S_TestInput_sure)
+    }
+    added(title, tips, callback) {
+        this.callback = callback;
+        this.txt_content.text = ''
+        this.txt_content.prompt = tips;
+        this.txt_title.text = title;
+    }
+}
+class S_TestInput_sure extends Laya.Script {
+    onClick(e) {
+        if (this.owner.parent.txt_content.text.length) {
+            game.scene.remove(TestInput)
+            this.owner.parent.callback(this.owner.parent.txt_content.text)
+        }
+    }
+}

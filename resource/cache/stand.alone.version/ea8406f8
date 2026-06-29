@@ -1,0 +1,24 @@
+class FriendRoomRedSuccess extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_red_success',
+            layer: 'panel'
+        })
+        this.btn_goLook.addComponent(S_fr_red_look)
+    }
+    added(uid) {
+        this.uid = uid;
+        let name = __data.othersVO[uid].name
+        function truncateString(str) {
+            if (!str) return '';
+            return str.length > 8 ? str.substring(0, 8) + '...' : str;
+        }
+        this.txt_name.text = truncateString(name);
+        __tool.labelParentCenterAndSetXY(this.sp_a, this.width / 2, 0)
+    }
+}
+class S_fr_red_look extends Laya.Script {
+    onClick(e) {
+        __showScene.show_friendRoom_redOtherOpen(this.owner.parent.uid)
+    }
+}

@@ -1,0 +1,4 @@
+__data.sub = {
+    isSubActivity: 0,
+    isSubSystemUpdate: 0,
+}

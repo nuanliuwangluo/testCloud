@@ -1,0 +1,41 @@
+class Garden_bombbox_fugui_manor extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_bombbox_fugui_manor',
+            layer: 'panel'
+        })
+        this.btn_buy.addComponent(S_g_fugui_buy)
+        this.btn_close.addComponent(S_g_fugui_close)
+    }
+    onEnable() {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_fuguiManor', 1)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '富贵庄园界面' })
+        this.txt_price.text = shopConfig.garden[10126].price;
+        __tool.labelParentCenterAndSetXY(this.sp_price, this.btn_buy.width / 2, 5)
+    }
+    onDisable() {
+    }
+    clickMask() {
+        game.scene.remove(this)
+        hallTestShowPanel()
+    }
+}
+class S_g_fugui_close extends Laya.Script {
+    onClick(e) {
+        hallTestShowPanel()
+    }
+}
+class S_g_fugui_buy extends Laya.Script {
+    onClick(e) {
+        if (__data.garden.fuguiManor.buyNum >= 1) {
+            __tips('此活动每人仅限参与一次')
+            return
+        }
+        let cx = __data.garden.fuguiManor.unlock()
+        if (!cx) {
+            __tips('装饰所在任务尚未开启')
+            return
+        }
+        game.server.send(2404, 10126);
+    }
+}

@@ -1,0 +1,57 @@
+class GameMainAllPlayerRed_luck extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_allPlayerRed_luck',
+            module: false
+        })
+        this.addComponent(S_luck_click_1)
+    }
+    onEnable() {
+        this.visible = false;
+        effectUtils.breathe(this.sp_icon, 1, 1.1, 300)
+        this.updateData()
+        game.cb.on('update_allPlayerRed_data', this, this.updateData)
+        Laya.timer.loop(1000, this, this.updateTime)
+    }
+    onDisable() {
+        effectUtils.stopBreathe(this.sp_icon)
+        Laya.timer.clearAll(this)
+        Laya.Tween.clearAll(this.sp_icon)
+        game.cb.off('update_allPlayerRed_data', this, this.updateData)
+    }
+    updateData() {
+        let luck = __data.allPlayerRed.luck
+        if (luck == undefined || luck == null || luck == NaN || luck == -1) {
+            // 没资格
+            this.visible = false;
+        } else if (luck == -2) {
+            // 今天领过激励金了
+            this.visible = true
+        } else if (luck >= 10) {
+            // 就代表可以领取了
+            this.visible = true
+        } else if (luck >= 0) {
+            // 有资格 并且 已经完成了 n次  
+            this.visible = true
+        }
+        this.updateTime()
+    }
+    updateTime(e) {
+        const now = new Date();
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 0, 0);
+        const secondsLeft = Math.floor((endOfDay - now) / 1000);
+        if (secondsLeft >= 0) {
+            let a = game.utils.numberToTime(secondsLeft)
+            this.txt_time.text = a;
+        } else {
+            this.visible = false;
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_allPlayerRed_luckUI', GameMainAllPlayerRed_luck);
+
+class S_luck_click_1 extends Laya.Script {
+    onClick(e) {
+        __showScene.show_allPlayerRed_luckRed()
+    }
+}

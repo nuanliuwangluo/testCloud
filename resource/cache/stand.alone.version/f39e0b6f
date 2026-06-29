@@ -1,0 +1,65 @@
+__data.seven = {
+    seven_hasReceiveNum: 0,
+    seven_todayIsHasReceive: 0,
+    seven_data: {
+        '1': {
+            day: 1,
+            title: '第一天',
+            propId: 1,
+            propNum: 600,
+            propIcon: 'bag_icon/img_gold1.png',
+        },
+        '2': {
+            day: 2,
+            title: '第二天',
+            propId: 1,
+            propNum: 800,
+            propIcon: 'bag_icon/img_gold2.png',
+        },
+        '3': {
+            day: 3,
+            title: '第三天',
+            propId: 1,
+            propNum: 1200,
+            propIcon: 'bag_icon/img_gold3.png',
+        },
+        '4': {
+            day: 4,
+            title: '第四天',
+            propId: 1,
+            propNum: 1600,
+            propIcon: 'bag_icon/img_gold4.png',
+        },
+        '5': {
+            day: 5,
+            title: '第五天',
+            propId: 1,
+            propNum: 2400,
+            propIcon: 'bag_icon/img_gold5.png',
+        },
+        '6': {
+            day: 6,
+            title: '第六天',
+            propId: 1,
+            propNum: 3200,
+            propIcon: 'bag_icon/img_gold6.png',
+        },
+        '7': {
+            day: 7,
+            title: '第七天',
+            propId: 1,
+            propNum: 4000,
+            propIcon: 'bag_icon/img_gold9.png',
+        },
+    },
+    // 是否红点 是就是可以领取
+    get isRedPoint() {
+        if (__data.seven.seven_hasReceiveNum < 7) {
+            if (__data.seven.seven_todayIsHasReceive == 0) {
+                return true
+            }
+        }
+
+        return false;
+    }
+}

@@ -1,0 +1,111 @@
+class Horn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/horn',
+            layer: 'tips'
+            // up: true,
+        })
+        this.playing = false;
+        this.btn_hide.addComponent(S_horn_hide)
+    }
+    added(o) {
+        this.playing = true;
+        let name;
+        try {
+            name = excelUtils.getCityName_mj(o.cityId)
+        } catch (error) {
+
+        }
+        let n = name || '未知麻将';
+        this.txt.text = `[${n}]${o && o.name}`
+        __tool.labelParentCenterAndSetXY(this.sp_1, 0, 5)
+        this.sp_1.x = this._mask.width;
+        Laya.timer.clearAll(this)
+        Laya.timer.frameLoop(1, this, this.update)
+    }
+    onDisable() {
+        Laya.timer.clearAll(this)
+        this.playing = false;
+    }
+    update() {
+        this.sp_1.x -= 6;
+        if (this.sp_1.x <= -(this.sp_1.width + 20)) {
+            this.onDisable()
+            let len;
+            try {
+                len = Horn.content.length
+            } catch (error) {
+
+            }
+            if (!len) {
+                game.scene.remove(Horn)
+            } else {
+                Horn.play()
+            }
+        }
+    }
+}
+class S_horn_hide extends Laya.Script {
+    onClick(e) {
+        __showScene.show_prompt_select('今日将不再接收广播\n确认隐藏吗？', async () => {
+            miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_horn', 'no')
+            game.scene.remove(Horn)
+            Horn.content = [];
+        }, () => {
+
+        })
+    }
+}
+Horn.play = () => {
+    // let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':show_horn')
+    // if (a == 'no') return;
+    let len;
+    try {
+        len = Horn.content.length
+    } catch (error) {
+
+    }
+    if (!len) {
+        return
+    }
+    let h = game.scene.get(Horn)
+    if (h && h.playing) {
+        return
+    }
+    game.scene.add(Horn, [Horn.content.shift()])
+}
+// class S_horn extends Laya.Script {
+//     init() {
+//         this.bg = this.owner.img_horn
+//         this.txt = this.owner.txt_horn
+//         this._r = new Laya.Rectangle()
+//         this._r.width = this.txt.width
+//         this._r.height = this.txt.height
+//         this.txt.scrollRect = this._r
+//         game.cb.on('game_horn', this, this.showHornHandler)
+//     }
+//     onEnable() { }
+//     onDisable() { }
+//     onUpdate() {
+//         if (!this.bg.visible) return;
+//         this._r.x++;
+//         if (this._r.x >= this.txt.textField.textWidth) {
+//             game.scene.remove(Horn)
+//             this.__ing = false;
+
+//             this.showHornHandler();
+//         }
+//     }
+//     showHornHandler() {
+//         return; // 先屏蔽掉这个逻辑
+//         if (!__data.hornContent.length) return;
+//         game.scene.add(Horn)
+//         if (this.__ing) {
+//             return
+//         }
+//         this.__ing = true
+//         this.txt.text = __data.hornContent.shift();
+//         this._r.x = -this.txt.width;
+//     }
+// }
+console.log('giveup s horn');

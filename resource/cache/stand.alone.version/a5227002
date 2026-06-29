@@ -1,0 +1,89 @@
+class FriendRoom_hallPlay_leftUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_hallPlay_leftUp',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+    }
+    added() {
+        game.cb.on('update_hallPlay_firend_ruleItemView', this, this.updateInfo001)
+        this.updateRuleItem()
+        this.updateRuleIndexDefault()
+    }
+    onDisable() {
+        game.cb.off('update_hallPlay_firend_ruleItemView', this, this.updateInfo001)
+    }
+    updateRuleItem() {
+        this.scene_rule1.visible = false
+        this.scene_rule2.visible = false
+        this.scene_rule3.visible = false
+        this.scene_rule4.visible = false
+        let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId);
+
+        for (let index = 0, length = ud.friend_allPlay.length; index < length; index++) {
+            const e23 = ud.friend_allPlay[index];
+
+            let e = this[`scene_rule${index + 1}`]
+            e.visible = true;
+            e._ruleIndex = index;
+            e.clearRuleId();
+            if (ud.friend_offPlayId.includes(e23.playId)) {
+                e.offRuleId = e23.playId
+            } else {
+                e.onRuleId = e23.playId
+            }
+            e.updateLabel(e23.playName)
+        };
+    }
+    updateRuleIndexDefault(type) {
+        let getkey1 = __data.uid + `:friendRoom:cityId:${HallPlay.lastCityId}-ruleId`
+        let youLastSelectRuleId = miniApi.getItem(getkey1)
+        let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId);
+        if (!Number.isFinite(parseInt(youLastSelectRuleId))) {
+            let getkey = __data.uid + `:friendRoom:cityId:${HallPlay.lastCityId}-ruleIndex`
+            let index = miniApi.getItem(getkey)
+            if (parseInt(index) >= 0) {
+                // 如果你用上个版本缓存ruleIndex有值 那么重进进行计算获得ruleId;
+                if (ud.friend_onPlayId[index]) {
+                    // 再开启列表范围内
+                    youLastSelectRuleId = ud.friend_onPlayId[index];
+                } else {
+                    // 再开启列表范围外 就是大众经济 提示大众竞技关闭 选择改为红中玩法
+                    youLastSelectRuleId = ud.friend_defaultPlayId;
+                }
+            } else {
+                youLastSelectRuleId = ud.friend_defaultPlayId;
+            }
+            miniApi.setItem(getkey1, youLastSelectRuleId);
+        }
+        // 如果选择玩法不在开启列表改成默认玩法
+        if (!ud.friend_onPlayId.includes(String(youLastSelectRuleId))) {
+            youLastSelectRuleId = ud.friend_defaultPlayId;
+            miniApi.setItem(getkey1, youLastSelectRuleId);
+        }
+
+        HallPlay.curRuleId = youLastSelectRuleId;
+        Laya.timer.frameOnce(1, this, () => {
+            game.cb.event('update_hallPlay_firend_ruleItemView')
+        })
+    }
+    updateInfo001() {
+        //     let getkey = __data.uid + `:friendRoom:cityId:${HallPlay.lastCityId}-ruleIndex`
+        //     let index = miniApi.getItem(getkey)
+        //     this.cal_ruleIndex(index)
+    }
+    // cal_ruleIndex(e1) {
+    //     let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId)
+    //     let b = ud.friend_allPlay.filter((e) => {
+    //         return ud.friend_onPlayId.includes(e.playId)
+    //     })
+    //     let c = b.map((e) => {
+    //         return e.playName
+    //     })
+    //     HallPlay.curRuleIdIndex = e1 < c.length ? e1 : 0;
+    // }
+}

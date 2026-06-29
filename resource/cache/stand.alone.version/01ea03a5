@@ -1,0 +1,78 @@
+__data.redPacket = {
+    // wx领取红包vo对象
+    redVO: {
+        redId: 0,
+        redType: '',
+        titleType: '',
+        num: 0,
+        package_info: ''
+    },
+    _gold: 0,
+    isHaveData: false,
+    rookieState: true,
+    everyState: true,
+    friendState: true,
+    inviteState: true,
+    get gold() {
+        return this._gold;
+    },
+    set gold(v) {
+        this._gold = v;
+        this.isHaveData = true;
+    },
+    get isRedPoint() {
+        return this._gold > 0
+    },
+    async send(haveDataSendTest) {
+        await gtool.query([16001], haveDataSendTest, 1)
+        return 1
+    },
+    updateState(list) {
+        this.rookieState = list[0] && 'rookieRedState' in list[0] ? Boolean(list[0].rookieRedState) : true;
+        this.everyState = list[0] && 'everyRedState' in list[0] ? Boolean(list[0].everyRedState) : true;
+        this.friendState = list[0] && 'friendRedState' in list[0] ? Boolean(list[0].friendRedState) : true;
+        this.inviteState = list[0] && 'inviteRedState' in list[0] ? Boolean(list[0].inviteRedState) : true;
+        trace('新人红包开关：', this.rookieState);
+        trace('每日红包开关：', this.everyState);
+        trace('好友红包开关：', this.friendState);
+        trace('邀请红包开关：', this.inviteState);
+        // this.rookieState = false; // 测试
+    },
+    /**
+     * 判断是否可以显示好友红包图标
+     * @returns {boolean} 可以显示返回 true，否则返回 false
+     */
+    canShowInviteRedIcon() {
+        if (!__data.redPacket.inviteState) return false;
+        if (miniApi.clientType == 'app') return false;
+        if (miniApi.getWxDeviceName() === 'windows') return false;
+
+        if (__data.activity.inviteRed.taskData) {// 有数据
+            let mission_count = __data.activity.inviteRed.getMissionCount();// 接任务次数
+            let all_invite = __data.activity.inviteRed.getInviteNumbers();// 累计邀请人数
+            let state = __data.activity.inviteRed.taskData.state;// 状态 0-未领取任务 1-已领取任务
+            if (mission_count >= 2 && (all_invite / mission_count) < 0.5 && state == 0) {
+                return false;
+            }
+        }
+        return true;
+    },
+    canShowFriendRedIcon() {
+        if (!__data.redPacket.friendState) return false;
+        if (miniApi.clientType == 'app') return false;
+        if (miniApi.getWxDeviceName() === 'windows') return false;
+        return true;
+    },
+    canShowNewPlayerRedIcon() {
+        if (!__data.redPacket.rookieState) return false;
+        if (miniApi.clientType == 'app') return false;
+        if (miniApi.getWxDeviceName() === 'windows') return false;
+        return true;
+    },
+    canShowAllPlayerRedIcon() {
+        if (!__data.redPacket.everyState) return false;
+        if (miniApi.clientType == 'app') return false;
+        if (miniApi.getWxDeviceName() === 'windows') return false;
+        return true;
+    },
+}

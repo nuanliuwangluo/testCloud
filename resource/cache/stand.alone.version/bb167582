@@ -1,0 +1,39 @@
+class MM_noLevel extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_noLevel',
+            layer: 'panel',
+        })
+        this.btn_sure.addComponent(S_mm_no_level_sure)
+    }
+    onEnable() {
+        this.btn_sure.visible = miniApi.clientType != 'app';
+    }
+}
+class S_mm_no_level_sure extends Laya.Script {
+    async onClick(e) {
+        // __tips('反馈成功')
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '消消乐催促加急' });
+
+        if (!__data.sub.isSubSystemUpdate) {
+            let a = await miniApi.systemUpdateSubscribe();
+            if (a == 1) {
+                game.server.send(16006, 2)
+                game.scene.remove(MM_noLevel)
+            }
+        }
+        else {
+            game.scene.remove(MM_noLevel)
+        }
+    }
+}
+class MM_cheat extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_cheat',
+            layer: 'panel',
+        })
+        this.btn_sure.addComponent(S_mm_pause_giveup)
+        this.btn_close.addComponent(S_mm_pause_giveup)
+    }
+}

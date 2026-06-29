@@ -1,0 +1,19 @@
+
+class HallPlayCenterUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_playCenterUp',
+            up: true,
+        })
+        this.addComponent(S_hall_money_logic)
+
+        this.img_stone_bg.visible = true;
+        // this.btn_add_gold.visible = true;
+        // IOS能支付修改
+        // if (miniApi.isIOS) {
+        //     this.img_stone_bg.visible = false;
+        //     // this.btn_add_gold.visible = false;
+        //     this.img_star_bg.x = this.img_stone_bg.x;
+        // }
+    }
+}

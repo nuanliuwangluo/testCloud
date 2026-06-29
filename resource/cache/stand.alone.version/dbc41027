@@ -1,0 +1,69 @@
+class MM_loading_bg extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_loading_bg',
+            scaleType: 'max',
+        })
+    }
+}
+class MM_loading extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_loading',
+        })
+
+        this.rect = new Laya.Rectangle()
+        this.rect.width = this.img_bar.width;
+        this.rect.height = this.img_bar.height;
+        this.img_bar.scrollRect = this.rect;
+        this.pvo = {
+            v: 0
+        }
+        // this.btn_return.addComponent(S_scene_return)
+    }
+    added(returnLastScene) {
+        this.returnLastScene = returnLastScene;
+        this.pvo.v = 0
+        this.updateProgress(this.pvo.v)
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.pvo);
+        Laya.timer.clearAll(this)
+    }
+    progress(a, isTween = false) {
+        if (isTween) {
+            Laya.Tween.clearAll(this.pvo);
+            let time = a - this.pvo.v;
+            let t = Laya.Tween.to(this.pvo, {
+                v: a
+            }, time * 500);
+            __tool.tweenUpdate(t, () => {
+                this.updateProgress(this.pvo.v)
+            })
+        } else {
+            this.pvo.v = a;
+            this.updateProgress(this.pvo.v)
+        }
+    }
+    updateProgress(a) {
+        this.rect.width = a * this.img_bar.width;
+        a = 100 * a;
+        a = Math.floor(a);
+        this.txt_progress.text = a + '%';
+    }
+}
+class S_mm_loading_return extends Laya.Script {
+    onClick(e) {
+        let a = __data.lastSceneQueue.pop()
+        a && a();
+        // if (this.owner.parent.returnLastScene) {
+        //     this.owner.parent.returnLastScene();
+        // }
+    }
+}
+class S_scene_return extends Laya.Script {
+    onClick(e) {
+        let a = __data.lastSceneQueue.pop()
+        a && a();
+    }
+}

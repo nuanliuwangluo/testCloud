@@ -1,0 +1,1594 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-06-30 09:49:35
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-13 16:08:36
+ */
+let __cur_game_event_type = ''
+var __data = window.__data = {
+    tryAnalysis() {
+        try {
+            __data.analysisParams(wx.onshow_res.query);
+        } catch (e) { };
+    },
+    // 解析小游戏参数， 参数使用规则：用后即焚，防止再次错误使用
+    analysisParams(parsms) {
+        trace('开始解析参数.', parsms);
+        this.invite_your_uid = this.invite_your_uid || (parsms && parsms.uid) || null;
+        console.log('share invite_your_uid', this.invite_your_uid);
+        this.room_pwd = parsms ? parsms.roomPwd : null;
+        this.roCityId = parsms ? parsms.roCityId : null;// 房主的cityid
+        this.resultData = parsms ? parsms.resultData : this.resultData ? this.resultData : null;
+        // scene 需要使用 decodeURIComponent 才能获取到生成二维码时传入的 scene
+        let scene = parsms.scene ? decodeURIComponent(parsms.scene) : null;
+        try{
+            if(scene){ this.scene_poster = Object.fromEntries(new URLSearchParams(scene)); }
+        }catch(e){
+            if(scene){
+                this.scene_poster = {};
+                scene.split('&').forEach(pair => {
+                    let [k, v] = pair.split('=');
+                    this.scene_poster[decodeURIComponent(k)] = decodeURIComponent(v || '');
+                });
+            }
+        }
+        console.log('解析scene', this.scene_poster);
+        let r = false;
+        __showScene.handleResultParams();
+        r = __showScene.handleRoomParams();
+        this.deleteParams();
+        return r;
+    },
+    //删除参数
+    deleteParams() {
+        try {
+            if (!window.wx) return;
+            wx.onshow_res.query.roomPwd = null;
+            wx.onshow_res.query.roCityId = null;
+            wx.onshow_res.query.resultData = null;
+            wx.onshow_res.query.scene = "";
+            console.log('参数删除成功.', wx.onshow_res.query);
+        } catch (e) { console.log('删除参数失败：', e); }
+    },
+    // 解析web参数， 参数使用规则：用后即焚，防止再次错误使用
+    analysisWebParams() {
+        this.room_pwd = game.utils.getWebParams("roomId") ? game.utils.getWebParams("roomId") : this.room_pwd;
+        this.roCityId = game.utils.getWebParams("cityId") ? game.utils.getWebParams("cityId") : this.roCityId;// 房主的cityid
+    },
+    openid: '',
+    uid: 0,
+    _name: 'testname_1',
+    _updateName: false,
+    get name() {
+        if (!this._updateName) this.name = '匿名' + (Math.floor(Math.random() * 6000000) + 1000000);
+        return this._name;
+    },
+    set name(_v) {
+        this._name = _v;
+        this._updateName = true;
+    },
+    _head: '',
+    get head() {
+        if (!this._updateName) this.head = this.defaultHead;
+        return this._head
+    },
+    set head(v) {
+        this._head = v;
+    },
+    defaultHead: 'local/head/1/defaultHead.png',
+    _headFrameId: '301',
+    getHeadTestDefault(url) {
+        if (!url) return url;
+        if (url && url.includes('defaultHead')) return __data.defaultHead;
+        return url;
+    },
+    get headFrameId() { return this._headFrameId },
+    set headFrameId(v) {
+        if (this._headFrameId != v) {
+            this._headFrameId = v;
+            game.cb.event('update_headFrame')
+        }
+    },
+    set sex(value) { this._sex = Math.max(value, 1); },
+    get sex() { return this._sex; },
+    lastSceneQueue: [],
+    // 收货人
+    consignee: '',
+    // 联系电话
+    contactNumber: '',
+    // 收货地址
+    address: '',
+
+    get clientType() {
+        if (miniApi.clientType == 'web') return 1
+        if (miniApi.clientType == 'wx') return 2
+        if (miniApi.clientType == 'app') return 3
+    },
+    get loginType() {
+        if (miniApi.clientType == 'web') return 1
+        if (miniApi.clientType == 'wx') {
+            if (miniApi.getWxDeviceName() === 'windows') {
+                return 5
+            } else {
+                return 2
+            }
+        }
+        if (miniApi.clientType == 'app') {
+            let a = miniApi.getItem('loginType')
+            if (a == 'wx') {
+                return 2
+            } else if (a == 'ios') {
+                return 3
+            } else if (a == 'password') {
+                return 4
+            }
+        }
+    },
+
+    realName: '',
+    cardNo: '',
+    gold: 0,
+    stone: 0,
+    card: 0,
+    matchCount: 0, // 匹配次数
+    memory_cd_time: 0,
+    memory_time: 60, // 记牌器冷却时间
+
+    // 斗地主上次匹配模式id
+    prev_match_modelId: 0,
+
+    takeGoodsPeopleName: null,
+    takeGoodsPeoplePhone: null,
+    takeGoodsPeopleAddress: null,
+    invite_your_uid: null,
+    receive_countCard_video_time: 0,
+    // 我报名的比赛iD集合
+    iJoinMatchIds: [],
+    // {page:[]} page==my 是自己
+    rank_list1: {}, // 个人
+    rankLvData: [],
+    rankCity: {}, // {cityId:{pageNum:[]}}
+    rank_lastLevel: 0,
+    rank_lastCup: 0,
+    hall_rank_levelInfo_update_count: 0,
+
+    // hornContent: [],
+
+    helpGold_num: 1500,
+    helpGold_count: 20,
+    // today_loseWinMaxGold: 0,
+    // today_loseWinGoldSum: 0,
+
+    matchData: [],
+    // 段位等级
+    rank_level: 0,
+    // 总奖杯
+    _cup: 0,
+    // int 城市ID 8-方正；10-通河；13-富锦；
+    // int 玩家分数
+    // int 玩家段位
+    hashCityLevelCup: {},
+    seasonEndData: {}, // 赛季结算数据
+    set cup(v) {
+        this._cup = v;
+        this._cup = Math.max(this._cup, 0)
+    },
+    get cup() {
+        return this._cup
+    },
+
+    gameId: {
+
+        // ddz: 1,
+        // run: 2,
+        fjmj: 13,
+
+        lastId: 0, // 上次游戏的gameid
+        curId: 0, // 当前正在游戏的gameid
+        isMahjong(id) {
+            if (id != this.ddz && id != this.run)
+                return true;
+            return false;
+        }
+    },
+    rankAPageDataNum: 10,
+    bagData: {
+        1: {
+            name: '金币'
+        },
+        2: {
+            name: '钻石'
+        },
+    },
+
+    // 麻将默认设置
+    mahjong_set: {
+        modelIndex: 1,
+        bgIndex: 0,
+        cardIndex: 0,
+        wallIndex: 0,
+        speedIndex: 1,
+        sexIndex: 0
+    },
+
+    addMoney(id, num) {
+        if (id == 1) {
+            __data.gold = __bigNumberCal.add(__data.gold, num);
+            game.cb.event('update_gold')
+            game.cb.event('updateMathInfo')
+        } else if (id == 2) {
+            __data.stone = __bigNumberCal.add(__data.stone, num);
+            game.cb.event('update_stone')
+        } else if (id == 5) {
+            __data.garden.star += num;
+            __data.garden.star = __tool.clamp(__data.garden.star, 0, __data.garden.maxStar);
+            game.cb.event('update_star')
+        } else if (id == 6) {
+            __data.garden.buildValue += num;
+            game.cb.event('update_buildValue')
+        }
+    },
+    othersVO: [],
+    // 
+    deskData: {},
+    // 邀请数据
+    inviteData: [],
+    hasInviteEmptyPosition() {
+        for (let i = 0; i < __data.inviteData.length; i++) {
+            if (__data.inviteData[i].invitedArr.length != __data.inviteData[i].allPlayer) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    domain: 13,
+    lastDomain: 0,
+
+    // 匹配信息
+    getMatchDataById(ruleId, cityId, matchModelType) {
+        // for (let i = 0; i < this.matchData.length; i++) {
+        //     if (this.matchData[i].ruleId == ruleId && this.matchData[i].cityId == cityId && this.matchData[i].matchModelType ==
+        //         index) return this.matchData[i];
+        // }
+        let d = __data.matchData.find((e) => {
+            if (ruleId < 0) return matchModelType == e.matchModelType && ruleId == e.ruleId
+            else return matchModelType == e.matchModelType && cityId == e.cityId && ruleId == e.ruleId
+        })
+        return d;
+    },
+
+    getAreaName(domain) {
+        return '富锦'
+    },
+    get myCityName() {
+        return excelUtils.getUmEventName(__data.myCityId)
+    },
+    hashCityIdRank: {},
+    myCityId: 0,
+    get myCityRank() {
+        let useData = __data[`rank_list${2}`]
+        let data = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            data.push(...useData[page])
+        }
+        for (let index = 0, length = data.length; index < length; index++) {
+            const e = data[index];
+            if (e.cityId == __data.myCityId) {
+                return e.rank
+            }
+        };
+        if (this.hashCityIdRank[__data.myCityId]) {
+            return this.hashCityIdRank[__data.myCityId];
+        }
+        return 0
+    },
+    hashCityIdRuleIdToModel: {},
+    hashMatchModelTypeName: {
+        1: '入门场',
+        2: '标准场',
+        3: '精英场',
+        4: '至尊场',
+    },
+    __userType: '1',
+    get userType() {
+        return this.__userType;
+    },
+    set userType(v) {
+        this.__userType = v;
+    },
+    retention() {
+        let lastDS = miniApi.getItem(__data.uid + ':loginDayCount')
+        lastDS = lastDS || '{"d":[]}'
+        lastD = JSON.parse(lastDS)
+        let days = __tool.getDayCount(Date.now())
+
+        let lastUserType = miniApi.getItem(__data.uid + ':lastUserType')
+        let Mj_OldType;
+        if (!lastUserType) {
+            Mj_OldType = '未知';
+            miniApi.setItem(__data.uid + ':lastUserType', __data.userType)
+            lastD = { d: [] };
+        }
+        else if (lastUserType == __data.userType) {
+            Mj_OldType = '保持';
+        }
+        else {
+            Mj_OldType = lastUserType;
+            miniApi.setItem(__data.uid + ':lastUserType', __data.userType)
+            lastD = { d: [] };
+        }
+        // lastD = { d: [20400, 20435, 20436, 20438] }
+
+        let a = parseInt(lastD.d.at(-1))
+        // let a = parseInt(lastD.d[lastD.d.length - 1])
+        a = Number.isFinite(a) ? a : 0;
+
+        if (days > a) {
+            // 每日首次登录时上报
+        } else if (Mj_OldType != '保持') {
+            // 以及每次用户类型变更时上报
+        } else {
+            return;
+        }
+
+        lastD.d.push(days)
+        lastD.d = [...new Set(lastD.d)];
+        lastD.d = lastD.d.slice(-15);
+        miniApi.setItem(__data.uid + ':loginDayCount', JSON.stringify(lastD))
+
+        // 倒数第一个
+        const last1 = lastD.d.at(-1); // 50
+        // const last1 = lastD.d[lastD.d.length - 1]; // 50
+        // 倒数第二个
+        const last2 = lastD.d.at(-2); // 40
+        // const last2 = lastD.d[lastD.d.length - 2]; // 40
+        let Mj_Login2;
+        if (lastD.d.length == 1) {
+            Mj_Login2 = '首次登录'
+        }
+        else if (last1 - last2 == 1) {
+            Mj_Login2 = '是'
+        }
+        else if (last1 - last2 > 1) {
+            Mj_Login2 = '否'
+        }
+
+        // 方式3：函数封装（推荐）
+        // function generateSequence(start, count) {
+        //     return Array.from({ length: count }, (_, i) => start - i);
+        // }
+
+        // let Mj_Login3
+        // let Mj_Login7
+        // let Mj_Login15
+        // let a3 = generateSequence(days, 3)
+        // let a7 = generateSequence(days, 7)
+        // let a15 = generateSequence(days, 15)
+        let l3 = lastD.d.filter((e) => {
+            return e > (days - 3)
+        })
+        let l7 = lastD.d.filter((e) => {
+            return e > (days - 7)
+        })
+        let l15 = lastD.d.filter((e) => {
+            return e > (days - 15)
+        })
+        let v = {
+            'Mj_UserType': __data.userType,
+            'Mj_OldType': Mj_OldType,
+            'Mj_Login2': Mj_Login2,
+            'Mj_Login3': l3.length,
+            'Mj_Login7': l7.length,
+            'Mj_Login15': l15.length,
+        }
+        miniApi.trackEvent('Mj_Retention', v)
+    }
+};
+
+__data.deskData.roomVo = {
+    LIMIT_TIME: 15,// 出牌限制时间
+    lx_operation_status: false,
+    waiting_result: false,
+    // 好友房
+    FRIEND: 'FRIEND',
+    // 匹配房
+    MATCH: 'MATCH',
+    // 是否已经关闭里
+    close: false,
+    // 游戏阶段
+    phase: 'ready',
+    //房主
+    roomOwner: -1,
+    //房间ID
+    roomID: 0,
+    //房间玩家
+    roomPlayer: 4,
+    //当前局数
+    curGame: 1,
+    //总局数
+    allGame: 1,
+    //房间玩法
+    roomPlay: '',
+    //房间限制
+    limit: '',
+    //房间模式
+    roomModel: '',
+    // 模式id
+    modelId: 0,
+    //消耗房卡
+    needCard: '',
+    //当前房间是否属于亲友圈
+    qyqID: '',
+    //当前房间是否属于体验馆
+    tygID: '',
+    //操作者 的位置
+    operatorPosition: 0,
+    //房间圈局
+    bureauRule: [],
+    //是否为解散结束的房间
+    dissolveOver: false,
+    //剩余牌数
+    surplus: 0,
+    //宝牌
+    baoCode: 255,
+
+    // 好友圈新增属性
+    roomType: 0,
+    friendId: 0,
+    unionId: 0,
+    autoPlayId: 0,
+    autoPlaySign: '',
+    alias: -1,
+    // 好友圈新增属性
+
+
+
+    //房间玩家vo数组
+    playerArr: [],
+    sortArr: [],
+
+    cache: null,
+    //是否是观看录像模式
+    isRecordPlaying: false,
+    //回放码
+    recordCode: -1,
+    //回放录像ID
+    recordViewerID: -1,
+    //是否正在游戏中(断线需要)
+    isPlayingGame: false, //
+    //是否可以打牌
+    isCanPlay: false, //
+    //计算用户位置的基础数值
+    countSeatBaseValue: 100, //
+    //计算用户位置的起始位置
+    seatInitPosition: 1, //
+    //是否有宝的麻将
+    baoType: 1,
+    //网速快慢的定义
+    msData: {
+        slowms: 1000,
+        fastms: 300,
+        veryFastms: 100
+    },
+    //间距
+    cInterval: 10,
+    // 钓鱼时间
+    fish_time: 3000,
+    //聊天泡显示时间  单位毫秒
+    chatTime: 2500,
+    //聊天冷却  不允许用户无限制发送聊天 表情
+    chatCd: 3000,
+    //打牌速度 慢速 不建议高于300毫秒
+    com_time: 100,
+    //打牌速度， 不建议低于100毫秒
+    fast_time: 30,
+
+    //出牌指向缓动时间  单次移动时间
+    sign_time: 500,
+    //大结算数据
+    allRoundResult: null,
+    //小结算数据
+    smallResultData: null,
+    //3D场景引用
+    scene: null,
+
+
+    matchName: '',
+    bottomScore: 0,
+    syncPlayerInfo: function (id) {
+        var vo = __data.othersVO[id];
+        if (!vo) { return; }
+        var __pvo = __data.deskData.roomVo.getPlayer(id);
+        if (__pvo) {
+            __pvo.name = vo.name
+            __pvo.url = vo.headUrl
+            __pvo.frameUrl = PropIcon.icon[vo.headFrameId || 301].skin; // 'cdn/headFrame/img_txk_mr.png';
+            __pvo.sex = (vo.sex == 0) ? 1 : vo.sex;
+            __pvo.gold = vo.gold;
+        }
+    },
+    //加入一个玩家
+    addPlayer: function (vo) {
+        try {
+            vo.checkTileGroupBugArray = null;
+            vo.tingAutoStatus = false;
+            this.playerArr[vo.id] = vo
+            this.playerArr[vo.position] = vo
+
+            this.sortArr[vo.position] = vo;
+            this.reCountPlayer();
+            this.syncPlayerInfo(vo.id);
+        } catch (e) {
+            trace(e)
+        }
+    },
+    //获取一个用户vo
+    getPlayer: function (value) {
+        try {
+            for (var a in this.playerArr) {
+                if (!this.playerArr[a]) {
+                    continue
+                } else if (this.playerArr[a]) {
+                    if (this.playerArr[a].id == value) return this.playerArr[a]
+                    else if (this.playerArr[a].position == value) return this.playerArr[a]
+                    else if (this.playerArr[a].seat == value) return this.playerArr[a]
+                    else if (this.playerArr[a].seat_tag == value) return this.playerArr[a]
+                }
+            }
+            return null
+        } catch (e) {
+            trace(e);
+            throw new Error("不存在该用户")
+        }
+    },
+    getResultPlayer: function (uid) {
+        let players = this.smallResultData ? this.smallResultData.playerArray : [];
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].id == uid) return players[i];
+        }
+    },
+    getPlayerIds: function () {
+        let playerIds = [];
+        for (const index in this.playerArr) {
+            if (Object.hasOwnProperty.call(this.playerArr, index)) {
+                const element = this.playerArr[index];
+                if (element && playerIds.indexOf(element.id) == -1) {
+                    playerIds.push(element.id);
+                }
+            }
+        }
+        return playerIds;
+    },
+    //获取一个用户vo  
+    getPlayerBySeat: function (seat) {
+        let __seat = this.countSeatBaseValue + this.seatInitPosition + seat
+        try {
+            for (var a in this.playerArr) {
+                if (!this.playerArr[a]) {
+                    continue
+                } else if (this.playerArr[a].seat == __seat) return this.playerArr[a]
+            }
+            return null
+        } catch (e) {
+            trace(e);
+            throw new Error("不存在该用户")
+        }
+    },
+
+    //获取语音发送对象
+    getTalkPlayer: function () {
+        var playerArr = [];
+        for (var i = this.countSeatBaseValue + this.seatInitPosition; i < this.countSeatBaseValue + this.seatInitPosition + 4; i++) {
+            var vo = this.getPlayer(i);
+            if (!vo) {
+                continue
+            } else if (vo.id != __data.uid) {
+                playerArr.push(vo.id)
+            }
+        }
+        return playerArr
+    },
+    //获取分享 所需的人数  以及所缺人数
+    getNeedPlayer: function () {
+        var playerArr = [];
+        for (var i = this.countSeatBaseValue + this.seatInitPosition; i < this.countSeatBaseValue + this.seatInitPosition + 4; i++) {
+            var vo = this.getPlayer(i);
+            if (!vo) {
+                continue
+            }
+            playerArr.push(vo.id)
+        }
+        return playerArr
+    },
+
+    calcuPlayerSeat: function () {
+        trace("----------------------------------------------------------------------------")
+        trace("开始执行游戏排位")
+        if (this.isRecordPlaying) {
+            if (this.recordViewerID <= 0) return
+            if (this.roomPlayer == 2) {
+                trace("二人场游戏排位")
+                //获取当前用户是否获取到信息  如果没有  不进行以下计算
+                var vo = this.getPlayer(this.recordViewerID);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 4; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != this.recordViewerID) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = this.countSeatBaseValue + this.seatInitPosition + 2;
+                        this.addPlayer(othervo)
+                        break;
+                    }
+                }
+                this.addPlayer(vo)
+            } else if (this.roomPlayer == 3) {
+                trace("三人场游戏排位")
+                var vo = this.getPlayer(this.recordViewerID);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 3; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != this.recordViewerID && othervo.position > vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    } else if (othervo.id != this.recordViewerID && othervo.position < vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position + 4 - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    }
+                }
+                this.addPlayer(vo)
+            } else if (this.roomPlayer == 4) {
+                trace("四人场游戏排位")
+                var vo = this.getPlayer(this.recordViewerID);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 4; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (othervo) trace(othervo.id, othervo.position)
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != this.recordViewerID && othervo.position > vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    } else if (othervo.id != this.recordViewerID && othervo.position < vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position + 4 - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    }
+                }
+                this.addPlayer(vo)
+            }
+        } else {
+            if (this.roomPlayer == 2) {
+                trace("二人场游戏排位")
+                //获取当前用户是否获取到信息  如果没有  不进行以下计算
+                var vo = this.getPlayer(__data.uid);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 4; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != __data.uid) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = this.countSeatBaseValue + this.seatInitPosition + 2;
+                        this.addPlayer(othervo)
+                        break;
+                    }
+                }
+                this.addPlayer(vo)
+            } else if (this.roomPlayer == 3) {
+                trace("三人场游戏排位")
+                var vo = this.getPlayer(__data.uid);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 3; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != __data.uid && othervo.position > vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    } else if (othervo.id != __data.uid && othervo.position < vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position + 4 - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    }
+                }
+                this.addPlayer(vo)
+            } else if (this.roomPlayer == 4) {
+                trace("四人场游戏排位")
+                var vo = this.getPlayer(__data.uid);
+                if (!vo) {
+                    return
+                }
+                //我的位置在最下方
+                vo.seat = this.countSeatBaseValue + this.seatInitPosition;
+                for (var i = this.seatInitPosition; i < this.seatInitPosition + 4; i++) {
+                    var othervo = this.getPlayer(i);
+                    if (othervo) trace(othervo.id, othervo.position)
+                    if (!othervo) {
+                        continue
+                    } else if (othervo.id != __data.uid && othervo.position > vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    } else if (othervo.id != __data.uid && othervo.position < vo.position) {
+                        //另一个人放在最上方的位置
+                        othervo.seat = othervo.position + 4 - vo.position + this.countSeatBaseValue + this.seatInitPosition;
+                        this.addPlayer(othervo)
+                    }
+                }
+                this.addPlayer(vo)
+            }
+        }
+
+        for (var i = this.countSeatBaseValue + this.seatInitPosition; i < this.countSeatBaseValue + this.seatInitPosition + 4; i++) {
+            var vo = this.getPlayer(i);
+            if (vo) {
+                if (i == this.countSeatBaseValue + this.seatInitPosition) {
+                    vo.seat_tag = 'down'
+                } else if (i == this.countSeatBaseValue + this.seatInitPosition + 1) {
+                    vo.seat_tag = 'right'
+                } else if (i == this.countSeatBaseValue + this.seatInitPosition + 2) {
+                    vo.seat_tag = 'up'
+                } else if (i == this.countSeatBaseValue + this.seatInitPosition + 3) {
+                    vo.seat_tag = 'left'
+                }
+            }
+            if (vo) trace("id：" + vo.id, "seat：" + vo.seat, "position：" + vo.position)
+            if (vo) trace("vo：", vo)
+        }
+        trace("执行游戏排位结束")
+        trace("----------------------------------------------------------------------------")
+    },
+
+    clearByVo: function (vo) {
+        try {
+            this.playerArr[vo.id] = null
+            this.playerArr[vo.position] = null
+            this.playerArr[vo.seat] = null
+            this.sortArr[vo.position] = null;
+            this.reCountPlayer();
+        } catch (e) {
+            trace(e)
+        }
+    },
+
+    reset: function () {
+        // this.isCanPlay = false
+        this.surplus = 0;
+        this.islx = false;
+        this.baoCode = 255;
+        for (var index in this.playerArr) {
+            this.playerArr[index] && this.playerArr[index].reset()
+        }
+    },
+    //重新计算房间内人数
+    reCountPlayer() {
+        let __allArr = [];
+        this.sortArr.filter(function (value) {
+            if (!value || !value.id) return false;
+            let __in = __allArr.indexOf(value.id) > -1 ? false : true
+            __in && __allArr.push(value.id)
+            return __in
+        })
+        this.currPlayer = __allArr.length;
+    },
+
+    // 好友房大赢家 是否包含自己
+    getWinnersByMe() {
+        let ids = this.getWinners();
+        if (!ids) { return false; }
+        // id集合中是否包含自己
+        let includesMe = ids.some(id => id == __data.uid);
+        return includesMe;
+    },
+
+    // 好友房大赢家的id集合
+    getWinners() {
+        // 没有大结算数据  返回0
+        if (!this.allRoundResult) return 0;
+        // 玩家集合
+        let players = this.allRoundResult.playerArray;
+        // 1. 获取最高分数
+        let maxScore = Math.max(...players.map(item => item.score));
+        // 没有赢家 返回0
+        if (maxScore <= 0) return 0;
+        // 2. 获取取得最高分数的ID集合
+        let ids = players.filter(item => item.score == maxScore).map(item => item.id);
+        // 将最高分数的id集合返回
+        return ids;
+    },
+
+    getShareWf: function () {
+        var a = __data.deskData.roomVo.roomPlay.split(",")
+        var contentStr = ""
+        var index = 4
+        var endIndex = 0
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] == 31 || a[i] == 32 || a[i] == 33 || a[i] == 34 || a[i] == 35) continue
+            endIndex = (a[i] == index) ? i : endIndex
+            if (a[i] >= index) {
+                contentStr += (contentStr == "") ? __data.deskConfig.wfArr[a[i]] : "," + __data.deskConfig.wfArr[a[i]]
+            }
+        }
+        return contentStr
+    },
+
+    getResultWf: function () {
+        var a = __data.deskData.roomVo.roomPlay.split(",")
+        var contentStr = ""
+        for (var i = 0; i < a.length; i++) {
+            if (i % 9 == 0 && i != 0) contentStr += "\n"
+            contentStr += (contentStr == "") ? __data.deskConfig.wfArr[a[i]] : "," + __data.deskConfig.wfArr[a[i]]
+        }
+        return contentStr
+    },
+
+    getCheckWf: function () {
+        var a = __data.deskData.roomVo.roomPlay.split(",")
+        var contentStr = ""
+        for (var i = 0; i < a.length; i++) {
+            contentStr += (contentStr == "") ? __data.deskConfig.wfArr[a[i]] : "," + __data.deskConfig.wfArr[a[i]]
+        }
+        return contentStr
+    },
+
+    getRoomWf: function (value) {
+
+        var a = __data.deskData.roomVo.roomPlay.split(",")
+
+        var str = ""
+        var contentStr = ""
+        var index = 4
+        var endIndex = 0
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] == 31 || a[i] == 32 || a[i] == 33 || a[i] == 34 || a[i] == 35) continue
+            endIndex = (a[i] == index) ? i : endIndex
+            if (a[i] < index && !value) {
+                str += (str == "") ? __data.deskConfig.wfArr[a[i]] : " " + __data.deskConfig.wfArr[a[i]]
+            } else if (a[i] >= index) {
+                contentStr += (contentStr == "") ? __data.deskConfig.wfArr[a[i]] : ((i - endIndex) % 3 == 0) ? "\n" + __data.deskConfig.wfArr[a[i]] : " " + __data.deskConfig.wfArr[a[i]]
+            }
+        }
+        return str + "\n" + contentStr
+    },
+
+    // 是否包含某个玩法  包含true  不包含false
+    getIncludeRule: function (value) {
+        var list = __data.deskData.roomVo.roomPlay.split(",");
+        return list.indexOf(value) > -1
+    },
+
+    getRoomWfInfo: function (play) {
+
+        var a = play.split(",")
+
+        var str = ""
+        var contentStr = ""
+        var index = 4
+        var endIndex = 0
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] == 31 || a[i] == 32 || a[i] == 33 || a[i] == 34 || a[i] == 35) continue
+            endIndex = (a[i] == index) ? i : endIndex
+            if (a[i] >= index) {
+                contentStr += (contentStr == "") ? __data.deskConfig.wfArr[a[i]] : ((i - endIndex) % 3 == 0) ? "\n" + __data.deskConfig.wfArr[a[i]] : "，" + __data.deskConfig.wfArr[a[i]]
+            }
+        }
+        return contentStr
+    },
+
+    getShareInfo: function () {
+        let __title = '';
+        let __des = '';
+        let __url = '';
+        // 好友圈或者联盟
+        if (this.roomModel == 6 || this.roomModel == 7) {
+
+            if (!__data.deskData.roomVo.friendId) return null;
+            else {
+                let __info = __data.friendData.getInfo(__data.deskData.roomVo.friendId);
+                if (__info) {
+                    // 普通房间
+                    if (__data.deskData.roomVo.roomType == 2) {
+                        __title = this.aliasToName(this.alias) + ',房号【' + this.roomID + '】,'
+                        if (this.currPlayer == 0) __title += '新建空房'
+                        else if (this.currPlayer == this.roomPlayer) __title += '房间已满'
+                        else __title += this.currPlayer + '缺' + (this.roomPlayer - this.currPlayer)
+
+                        __url = user.shareAddress() + '&roomid=' + this.roomID;
+                        if (__data.deskData.roomVo.friendId > 0 && __data.deskData.roomVo.alias > 0)
+                            __url = __url + '&friendId=' + __data.deskData.roomVo.friendId + '&friendAlias=' + __data.deskData.roomVo.alias;
+
+                        __des = this.aliasToName(__data.deskData.roomVo.alias) + ',普通房间,' + this.modelToString(this.roomModel) + ',' + this.roomPlayer + '人,' + this.allGame + this.roundUnit(this.roomPlayer, this.roomID, this.alias) + ',' + this.allPlayToString()
+                    }
+                    // 自动房
+                    else if (__data.deskData.roomVo.roomType == 1) {
+                        // 有联盟  且有信息
+                        if (__data.deskData.roomVo.unionId > 0 && __info.unionData) {
+                            __title = __info.unionData.name;
+                        }
+                        // 没有联盟
+                        else if (__data.deskData.roomVo.unionId == 0) {
+                            __title = __info.name;
+                        } else return null;
+
+                        // 自动房玩法id
+                        if (__data.deskData.roomVo.autoPlayId > 0) {
+                            __url = user.shareAddress() + '&friendId=' + __data.deskData.roomVo.friendId + '&friendAutoPlayId=' + __data.deskData.roomVo.autoPlayId + '&friendAlias=' + __data.deskData.roomVo.alias;
+                        }
+                        __des = this.aliasToName(__data.deskData.roomVo.alias) + ',自动房间,' + this.modelToString(this.roomModel) + ',' + this.roomPlayer + '人,' + this.allGame + this.roundUnit(this.roomPlayer, this.roomID, this.alias) + ',' + this.allPlayToString()
+                    } else return null;
+                } else return null;
+            }
+        } else if (this.roomModel == 5) {
+            __title = this.aliasToName(this.alias) + ',体验馆[ ' + this.tygID + ' ]无需房号，永久有效'
+
+            __url = user.shareAddress() + '&tygid=' + this.tygID
+
+            __des = this.modelToString(this.roomModel) + ',' + this.roomPlayer + '人,' + this.allGame + this.roundUnit(this.roomPlayer, this.roomID, this.alias) + ',' + this.allPlayToString()
+        } else {
+            __title = this.aliasToName(this.alias) + ',房号【' + this.roomID + '】,'
+            if (this.currPlayer == 0) {
+                __title += '新建空房'
+            } else if (this.currPlayer == this.roomPlayer) {
+                __title += '房间已满'
+            } else {
+                __title += this.currPlayer + '缺' + (this.roomPlayer - this.currPlayer)
+            }
+            __url = user.shareAddress() + '&roomid=' + this.roomID;
+
+            __des = this.modelToString(this.roomModel) + ',' + this.roomPlayer + '人,' + this.allGame + this.roundUnit(this.roomPlayer, this.roomID, this.alias) + ',' + this.allPlayToString()
+        }
+
+
+        return {
+            title: __title,
+            des: __des,
+            url: __url
+        }
+    },
+
+    // 请求好友圈信息
+    requestFriendRoomInfo: function (roomModel) {
+        roomModel = roomModel || __data.deskData.roomVo.roomModel;
+        if (roomModel == 6 || roomModel == 7) game.server.send(9206);
+    },
+
+    //真是的玩家数量
+    truthPlayer: function () {
+        let __allArr = []
+        for (let i in this.playerArr) {
+            let __in = __allArr.some(function (value) {
+                return vo.id == value
+            })
+            if (!__in) __allArr.push(this.playerArr[i].id)
+        }
+        return __allArr
+    },
+
+    //圈局的单位  根据 2016 消息接收到的  bureauRule 来判定  需要一个房间人数
+    roundUnit: function (value, roomID, alias) {
+        let __unit = ''
+        if (this.bureauRule.indexOf(value) > -1) {
+            __unit = '局'
+        } else __unit = '圈'
+
+        if (roomID) {
+            //除了麻将
+            let __gameType = __compUtils.idToGame(roomID)
+            __unit = __gameType == 1 ? __unit : '局'
+        }
+        if (alias) {
+            //除了麻将
+            __unit = alias == 1 ? __unit : '局'
+        }
+
+        return __unit
+    },
+
+    modelToString: function (value) {
+        if (value == 1)
+            return '房主模式'
+        else if (value == 2)
+            return 'AA模式'
+        else if (value == 3)
+            return '体验模式'
+        else if (value == 4)
+            return '亲友圈模式'
+        else if (value == 5)
+            return '体验馆模式'
+        else if (value == 6)
+            return '好友圈模式'
+        else if (value == 7)
+            return '联盟模式'
+        return '';
+    },
+
+    stringToModel: function (value) {
+        if (value == '房主模式')
+            return 1
+        else if (value == 'AA模式')
+            return 2
+        else if (value == '体验模式')
+            return 3
+        else if (value == '亲友圈模式')
+            return 4
+        else if (value == '体验馆模式')
+            return 5
+        else if (value == '好友圈模式')
+            return 6
+        else if (value == '联盟模式')
+            return 7
+        return 0;
+    },
+
+    roomRound: function () {
+        let round = this.bureauRule.indexOf(this.roomPlayer) > -1 ? this.allGame.toString() + '局' : this.allGame.toString() + '圈'
+        round = this.alias > 1 ? '局' : round
+        return round
+    },
+    //封顶  目前已知的大区   没有出现第5种封顶模式    而且出现第5中的话  代表的数字需要商定
+    scoreTop: function (alias, play) {
+
+        alias = alias || __data.deskData.roomVo.alias
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == alias;
+        })[0]
+
+        let score = ''
+        let __playArr = play ? play.split(',') : this.roomPlay.split(',')
+        if (alias == 1) {
+            score = __playArr.indexOf('0') > -1 ? data.playArr[0] : __playArr.indexOf('1') > -1 ? data.playArr[1] : __playArr.indexOf('2') > -1 ? data.playArr[2] : __playArr.indexOf('3') > -1 ? data.playArr[3] : ''
+        } else if (alias == 2) {
+            score = __playArr.indexOf('1') > -1 ? data.playArr[1] : __playArr.indexOf('2') > -1 ? data.playArr[2] : __playArr.indexOf('3') > -1 ? data.playArr[3] : __playArr.indexOf('23') > -1 ? data.playArr[23] : ''
+        } else if (alias == 3) {
+            score = __playArr.indexOf('0') > -1 ? data.playArr[0] : ''
+        }
+
+        return score
+    },
+    //底分  目前已知的大区   没有出现第6种底分模式    而且出现第5中的话  代表的数字需要商定
+    scoreBottom: function (alias, play) {
+        alias = alias || __data.deskData.roomVo.alias
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == alias
+        })[0]
+
+        let score = ''
+        let __playArr = play ? play.split(',') : this.roomPlay.split(',')
+        if (alias == 1) {
+            score = __playArr.indexOf('31') > -1 ? data.playArr[31] : __playArr.indexOf('32') > -1 ? data.playArr[32] : __playArr.indexOf('33') > -1 ? data.playArr[33] : __playArr.indexOf('34') > -1 ? data.playArr[34] : __playArr.indexOf('35') > -1 ? data.playArr[35] : ''
+        } else if (alias == 2) {
+            score = __playArr.indexOf('4') > -1 ? data.playArr[4] : __playArr.indexOf('5') > -1 ? data.playArr[5] : ''
+        } else if (alias == 3) {
+            score = __playArr.indexOf('6') > -1 ? data.playArr[6] : ''
+        }
+
+        return score
+    },
+
+    //进房限制  数字转换成文字
+    limitToString: function (alias, limit) {
+        alias = alias || __data.deskData.roomVo.alias;
+        let limitArr = limit == '' || limit ? limit.split(',') : this.limit.split(',');
+
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == alias;
+        })[0]
+
+        let strArr = []
+        for (let i = 0; i < limitArr.length; i++)
+            data.limitArr[limitArr[i]] && strArr.push(data.limitArr[limitArr[i]])
+
+        trace('进房限制：', strArr, strArr.length > 0 ? strArr.toString() : '无')
+        return strArr.length > 0 ? strArr.toString() : '无'
+    },
+
+    // 是否有距离检测需求
+    getDistanceTest: function (limit) {
+        let limitArr = limit == '' || limit ? limit.split(',') : this.limit.split(',');
+        return (limitArr.indexOf("3") != -1) ? true : false;
+    },
+
+    //玩法   数字转换成文字 
+    playToString: function (alias, value) {
+        alias = alias || __data.deskData.roomVo.alias;
+        let playArr = value ? value.split(',') : this.roomPlay.split(',');
+
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == alias;
+        })[0]
+
+        let strArr = []
+        for (let i = 0; i < playArr.length; i++) {
+            // if( parseInt(playArr[i]) < 4)continue
+            // else if( parseInt(playArr[i]) > 30 && parseInt(playArr[i]) < 36 ) continue
+            data && data.playArr[playArr[i]] && strArr.push(data.playArr[playArr[i]])
+        }
+        trace('玩法啊：', strArr)
+        return strArr.length > 0 ? strArr.toString() : '无'
+    },
+
+    //玩法   数字转换成文字 
+    allPlayToString: function () {
+        let playArr = this.roomPlay.split(',');
+
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == __data.deskData.roomVo.alias
+        })[0]
+
+        let strArr = []
+        for (let i = 0; i < playArr.length; i++) {
+            data && data.playArr[playArr[i]] && strArr.push(data.playArr[playArr[i]])
+        }
+        return strArr.length > 0 ? strArr.toString() : '无'
+    },
+
+    aliasToName: function (alias) {
+        let __alias = alias ? alias : __data.deskData.roomVo.alias
+
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == __alias
+        })[0]
+
+        return data.name
+    },
+
+    // 好友圈玩法描述
+    friendPlayToString(alias, play, limit, model, player, round) {
+        let _name = this.aliasToName(alias);
+        let _play = this.playToString(alias, play);
+        let _limit = this.limitToString(alias, limit);
+        let _model = this.modelToString(model);
+        let _player = player;
+        let _round = round;
+        _play = (_play == '无') ? '' : _play;
+        _limit = (_limit == '无') ? '' : _limit;
+
+        let _str = _name + ',' + _model + ',' + _player + '人,' + _round + this.roundUnit(player);
+        _str += _play ? ',' + _play : '';
+        _str += _limit ? ',' + _limit : '';
+
+        try {
+            _str = _str.replaceAll(',', '、');
+        } catch (e) {
+            console.warn('string replaceAll error.');
+            if (_str) {
+                for (let i = 0; i < _str.length; i++) {
+                    let __index = _str.indexOf(',');
+                    if (__index == -1) {
+                        break;
+                    } else {
+                        _str = _str.replace(',', '、');
+                    }
+                }
+            }
+        }
+
+        return _str;
+    },
+
+    //回合
+    roundToString: function () {
+        let __unit = this.roundUnit(this.roomPlayer);
+        return this.curGame + '/' + this.allGame + __unit;
+    },
+
+    //数字转化为资源数字
+    numberToCard: function (value) {
+        return value < 10 ? '0' + value.toString() : value.toString()
+    },
+    //资源数字转化为数字
+    stringToCard: function (value) {
+        return parseInt(value)
+    },
+
+    //判定是否开门
+    openDoor: function (doorArr) {
+        let __result = doorArr.some(function (value) {
+            let vArr = value.split(',');
+
+            return vArr[0] == 1 || vArr[0] == 2 || vArr[0] == 3 || vArr[0] == 82 || vArr[0] == 5 && vArr[2] != 5
+        })
+        // trace('判定开门结果：', doorArr, __result)
+        return __result
+    },
+
+    limitKickTime: function () {
+        let __limitArr = this.limit.split(',')
+
+        let createData = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag
+
+        let __alias = this.alias
+        //获取和当前房间类型一样的数据   然后处理封顶获取
+        let data = createData.filter(function (value) {
+            return value.alias == __alias
+        })[0]
+
+        if (__limitArr.indexOf('7') > -1 || __limitArr.indexOf(7) > -1) {
+            return 0
+        } else if (__limitArr.indexOf('8') > -1 || __limitArr.indexOf(8) > -1) {
+            return data ? data.kickTimeArr[0] : 0
+        } else if (__limitArr.indexOf('9') > -1 || __limitArr.indexOf(9) > -1) {
+            return data ? data.kickTimeArr[1] : 0
+        } else if (__limitArr.indexOf('10') > -1 || __limitArr.indexOf(10) > -1) {
+            return data ? data.kickTimeArr[2] : 0
+        }
+
+        return 0
+    },
+
+    getEsp: function () {
+        // let createData = gameConfig['create_room_'+__data.domain].tag
+        // //获取和当前房间类型一样的数据   然后处理封顶获取
+        // let data = createData.filter( function(value){ return value.alias == 1 } )[0]
+        //
+        this.esp = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)] ? gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].esp : false;
+    },
+
+    clear: function () {
+        DeskRadio.clear();
+
+        this.lx_operation_status = false;
+
+        this.waiting_result = false
+
+        this.close = false
+
+        this.phase = 'ready'
+
+        this.roomOwner = -1
+
+        this.roomID = 0
+
+        this.roomPlayer = 0
+
+        this.baoCode = 255
+
+        this.curGame = 1
+
+        this.allGame = 1
+
+        this.roomPlay = ''
+
+        this.limit = ''
+
+        this.roomModel = ''
+
+        this.needCard = ''
+
+        this.qyqID = ''
+
+        this.tygID = ''
+
+        this.roomType = 0;
+        this.friendId = 0;
+        this.unionId = 0;
+        this.autoPlayId = 0;
+        this.autoPlaySign = '';
+        this.alias = -1;
+
+        this.playerArr = []
+
+        this.isRecordPlaying = false
+
+        this.recordCode = -1
+
+        this.recordViewerID = -1
+
+        this.isCanPlay = false
+        //大结算数据
+        this.allRoundResult = null
+        // 小结算数据
+        // this.smallResultData = null
+
+        this.dissolveOver = false
+
+        this.scene = null;
+
+        this.matchName = '';
+        this.bottomScore = 0;
+
+        ELD.clearList();
+    },
+
+    clearPlayer: function () {
+        this.playerArr = [];
+    }
+}
+
+
+__data.deskData.PlayerVo = function () {
+    // 默认倍率
+    this.rate = 1;
+    //用户昵称
+    this.name = "";
+    //用户性别
+    this.sex = 1;
+    //用户头像地址
+    this.url = "";
+    //ip地址
+    this.ipAddress = "";
+    //真实地址
+    this.address = "";
+    //经纬度
+    this.longitude = "";
+    this.latitude = "";
+    //用户ID
+    this.id = 0;
+    //游戏币
+    this.score = 0;
+    // 芜湖交分
+    this.wuhu_jiaofen = 0;
+    //游戏币
+    this.gold = 0;
+    //座位编号
+    this.seat = 0;
+    //代号
+    this.seat_tag = '';
+    //位置
+    this.position = 0;
+    //准备状态
+    this.readyState = 0;
+    //托管状态
+    this.autoState = 0;
+    //听牌状态
+    this.tingState = 0;
+    //在线状态
+    this.onlineState = 1;
+
+    //用户的手牌
+    this.handValue = "";
+    //门前牌
+    this.doorValue = "";
+    //出去的牌
+    this.outValue = "";
+
+    //用户胡的牌
+    this.hupai = []
+    // 同江怼混
+    this.hunArr = [];
+    //手牌的数量
+    this.handNumber = 13;
+
+    this.clear = function () { }
+
+    this.reset = function () {
+        //托管状态
+        this.autoState = 0;
+        //听牌状态
+        this.tingState = 0;
+        //用户的手牌
+        this.handValue = "";
+        //门前牌
+        this.doorValue = "";
+        //出去的牌
+        this.outValue = "";
+        //用户胡的牌
+        this.hupai = []
+        // 同江怼混
+        this.hunArr = []
+        //手牌的数量
+        this.handNumber = 13;
+        //上听类型 （票  七对）
+        this.tingType = 0;
+        // 默认倍率
+        this.rate = 1;
+    }
+}
+
+window.__cName = {
+    d: 'down_hand_card',
+    u: 'up_hand_card',
+    rhand: 'result_hand_card',
+    ddoor: 'down_door_card',
+    udoor: 'up_door_card',
+    ldoor: 'left_door_card',
+    rdoor: 'right_door_card',
+    do: 'down_out_card',
+    uo: 'up_out_card',
+    lo: 'left_out_card',
+    lo: 'right_out_card',
+    ope: 'operation',
+    opc: 'operation_container',
+    opt: 'operation_choice_frame',
+    opv: 'operation_video',
+    hc: 'hu_card',
+    he: 'hu_effect',
+    ce: 'common_effect',
+    ste: 'score_text_effect'
+};
+// 事件头
+window.__eh = '';
+
+
+
+/**
+ * 
+ */
+class AdData {
+    static set time(value) {
+        AdData._time = value >= 0 ? value : 0;
+    }
+
+    static get time() {
+        return AdData._time;
+    }
+
+    static get isActive() {
+        let key = __data.uid + ':' + new Date().toDateString() + ":adActive";
+        let a = miniApi.getItem(key);
+        return a == 1;
+    }
+
+    static testAdActive() {
+        if (!AdData.isActive) {
+            if (__bigNumberCal.lt(__data.gold, 1500)) {
+                if (__data.helpGold_count <= 0) {
+                    if (!__data.vip.isVip) {
+                        let key = __data.uid + ':' + new Date().toDateString() + ":adActive";
+                        miniApi.setItem(key, 1);
+                        game.cb.event('update_ad')
+                    }
+                }
+            }
+        }
+    }
+}
+// 抽奖次数
+AdData._time = 0;
+// 奖品
+AdData.list = [];
+
+AdData.send = async (haveDataSendTest) => {
+    await gtool.query([2213], haveDataSendTest);
+    return 1
+}
+
+// 道具图标
+class PropIcon { }
+PropIcon.icon = {
+    '1': { skin: 'bag_icon/img_icon_1.png', name: '金币' },
+    '2': { skin: 'bag_icon/img_icon_2.png', name: '钻石' },
+    '3': { skin: 'bag_icon/img_icon_5.png', name: '免输卡', describe: '对局失败时可免输奖杯，对局结束时自动使用。' },
+    '4': { skin: 'bag_icon/img_icon_3.png', name: '红包' },
+    '5': { skin: 'bag_icon/img_hyzx.png', name: '雀神之星' },
+    '6': { skin: 'bag_icon/img_hyzx.png', name: '繁荣度' },
+
+    'gold9': { skin: 'bag_icon/img_gold9.png', name: '10万金币' },
+
+    '101': { propId: '101', skin: 'cdn/cupAndMedal/img_jb1.png', name: '奖杯金', describe: '上赛季获得全国榜金杯获得', des1: '金杯：每个赛季全国榜排名第1-10名的玩家获得', isJiangbei: true },
+    '102': { propId: '102', skin: 'cdn/cupAndMedal/img_jb2.png', name: '奖杯银', describe: '上赛季获得全国榜银杯获得', des1: '银杯：每个赛季全国榜排名第11-100名的玩家获得', isJiangbei: true },
+    '103': { propId: '103', skin: 'cdn/cupAndMedal/img_jb3.png', name: '奖杯铜', describe: '上赛季获得全国榜铜杯获得', des1: '铜杯：每个赛季全国榜排名第101-500名的玩家获得', isJiangbei: true },
+
+    '201': { propId: '201', skin: 'cdn/cupAndMedal/img_jp1.png', name: '奖牌金', describe: '上赛季获得本地榜金牌获得', des1: '金牌：每个赛季本地榜排名第1-5名的玩家获得', isJiangpai: true },
+    '202': { propId: '202', skin: 'cdn/cupAndMedal/img_jp2.png', name: '奖牌银', describe: '上赛季获得本地榜银牌获得', des1: '银牌：每个赛季本地榜排名第6-50名的玩家获得', isJiangpai: true },
+    '203': { propId: '203', skin: 'cdn/cupAndMedal/img_jp3.png', name: '奖牌铜', describe: '上赛季获得本地榜铜牌获得', des1: '铜牌：每个赛季本地榜排名第51-200名的玩家获得', isJiangpai: true },
+
+    '301': { propId: '301', skin: 'cdn/headFrame/img_txk_mr.png', name: '默认', describe: '', isHeadFrame: true, isDefault: true },
+    '302': { propId: '302', skin: 'cdn/headFrame/img_txk_jb1.png', name: '金杯之框', describe: '上赛季获得全国榜金杯解锁', des1: '金杯之框：每个赛季全国榜排名第1-10名的玩家解锁', isHeadFrame: true },
+    '303': { propId: '303', skin: 'cdn/headFrame/img_txk_jb2.png', name: '银杯之框', describe: '上赛季获得全国榜银杯解锁', des1: '银杯之框：每个赛季全国榜排名第11-100名的玩家解锁', isHeadFrame: true },
+    '304': { propId: '304', skin: 'cdn/headFrame/img_txk_jb3.png', name: '铜杯之框', describe: '上赛季获得全国榜铜杯解锁', des1: '铜杯之框：每个赛季全国榜排名第101-500名的玩家解锁', isHeadFrame: true },
+    '305': { propId: '305', skin: 'cdn/headFrame/img_txk_jp1.png', name: '金牌之框', describe: '上赛季获得本地榜金牌解锁', des1: '金牌之框：每个赛季本地榜排名第1-5名的玩家解锁', isHeadFrame: true },
+    '306': { propId: '306', skin: 'cdn/headFrame/img_txk_jp2.png', name: '银牌之框', describe: '上赛季获得本地榜银牌解锁', des1: '银牌之框：每个赛季本地榜排名第6-50名的玩家解锁', isHeadFrame: true },
+    '307': { propId: '307', skin: 'cdn/headFrame/img_txk_jp3.png', name: '铜牌之框', describe: '上赛季获得本地榜铜牌解锁', des1: '铜牌之框：每个赛季本地榜排名第51-200名的玩家解锁', isHeadFrame: true },
+    '308': { propId: '308', skin: 'cdn/headFrame/308.png', name: '铸铁相框', describe: '雀神之路达到铸铁段位奖励', des1: '雀神之路达到铸铁段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '309': { propId: '309', skin: 'cdn/headFrame/309.png', name: '黄铜相框', describe: '雀神之路达到黄铜段位奖励', des1: '雀神之路达到黄铜段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '310': { propId: '310', skin: 'cdn/headFrame/310.png', name: '亮银相框', describe: '雀神之路达到亮银段位奖励', des1: '雀神之路达到亮银段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '311': { propId: '311', skin: 'cdn/headFrame/311.png', name: '紫金相框', describe: '雀神之路达到紫金段位奖励', des1: '雀神之路达到紫金段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '312': { propId: '312', skin: 'cdn/headFrame/312.png', name: '铂金相框', describe: '雀神之路达到铂金段位奖励', des1: '雀神之路达到铂金段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '313': { propId: '313', skin: 'cdn/headFrame/313.png', name: '钻石相框', describe: '雀神之路达到钻石段位奖励', des1: '雀神之路达到钻石段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '314': { propId: '314', skin: 'cdn/headFrame/314.png', name: '大师相框', describe: '雀神之路达到大师段位奖励', des1: '雀神之路达到大师段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '315': { propId: '315', skin: 'cdn/headFrame/315.png', name: '宗师相框', describe: '雀神之路达到宗师段位奖励', des1: '雀神之路达到宗师段位奖励', isHeadFrame: true, isQueShenRoad: true },
+    '316': { propId: '316', skin: 'cdn/headFrame/316.png', name: '雀神相框', describe: '雀神之路达到雀神段位奖励', des1: '雀神之路达到雀神段位奖励', isHeadFrame: true, isQueShenRoad: true },
+
+    '501': { propId: '501', skin: 'cdn/gift/flower.png', name: '鲜花', describe: '鲜花，可在对局中发送给其他玩家', des1: '鲜花1', isMjThrowProp: true, price: 1, buyType: 'stone' },
+    '502': { propId: '502', skin: 'cdn/gift/egg.png', name: '鸡蛋', describe: '鸡蛋，可在对局中发送给其他玩家', des1: '鸡蛋1', isMjThrowProp: true, price: 1, buyType: 'stone' },
+    '503': { propId: '503', skin: 'cdn/gift/beer.png', name: '啤酒', describe: '啤酒，可在对局中发送给其他玩家', des1: '啤酒1', isMjThrowProp: true, price: 1, buyType: 'stone' },
+    '504': { propId: '504', skin: 'cdn/gift/boon.png', name: '炸弹', describe: '炸弹，可在对局中发送给其他玩家', des1: '炸弹1', isMjThrowProp: true, price: 1, buyType: 'stone' },
+    '505': { propId: '505', skin: 'cdn/gift/sliper.png', name: '拖鞋', describe: '拖鞋，可在对局中发送给其他玩家', des1: '拖鞋1', isMjThrowProp: true, price: 1, buyType: 'stone' },
+
+    '601': { skin: 'bag_icon/img_icon_6.png', name: '互动符', describe: '用于发送互动道具' },
+
+    '701': { skin: 'bag_icon/img_vipyk.png', name: 'VIP特权体验1天', describe: 'VIP特权体验1天' },
+    '702': { skin: 'bag_icon/img_vipjk.png', name: 'VIP特权体验1天', describe: 'VIP特权体验1天' },
+    '703': { skin: 'bag_icon/img_vipnk.png', name: 'VIP特权体验1天', describe: 'VIP特权体验1天' },
+    '704': { skin: 'bag_icon/img_vipyk.png', name: 'VIP特权体验1天', describe: 'VIP特权体验1天' },
+
+    '8005': { skin: 'bag_icon/img_fgz.png', name: '富贵竹', describe: '对局胜利时可额外获得60%奖杯，对局结束时自动使用。' },
+    '8006': { skin: 'bag_icon/img_hjbx.png', name: '黄金宝箱', describe: '黄金宝箱' },
+    '9000': { skin: 'bag_icon/img_gold1.png', name: '金币' },
+    '9001': { skin: 'bag_icon/img_gold2.png', name: '金币' },
+    '9002': { skin: 'bag_icon/img_gold3.png', name: '金币' },
+    '9003': { skin: 'bag_icon/img_gold4.png', name: '金币' },
+    '9004': { skin: 'bag_icon/img_gold5.png', name: '金币' },
+    '9005': { skin: 'bag_icon/img_gold6.png', name: '金币' },
+    '9006': { skin: 'bag_icon/img_gold7.png', name: '金币' },
+    '9007': { skin: 'bag_icon/img_gold8.png', name: '金币' },
+}
+
+// 背包信息
+class BagData {
+
+    static clear() { BagData._list = []; }
+
+    static get list() {
+        if (BagData._list.length < this._min) {
+            let gap = this._min - BagData._list.length;
+            for (let i = 0; i < gap; i++) {
+                BagData._list.push({
+                    type: 0,
+                    number: 0
+                });
+            }
+        }
+        return BagData._list;
+    }
+
+    static getPropNumber(typeOrId) {
+        let n = BagData.list.find((e) => {
+            return typeOrId == e.type;
+        })
+        return n ? n.number : 0;
+    }
+
+    static addProp(propId, num) {
+        let n = BagData.list.find((e1) => {
+            return propId == e1.type
+        })
+        n.number += num;
+    }
+
+    static reduceProp(propId, num) {
+        let n = BagData.list.find((e1) => {
+            return propId == e1.type
+        })
+        n.number -= num;
+    }
+
+    static get gifts() { return ['501', '502', '503', '504', '505'] }
+}
+// 背包列表数据 ， 请使用get 方法获取list
+BagData._list = [];
+// 背包最少需要显示28个格子
+BagData._min = 28;

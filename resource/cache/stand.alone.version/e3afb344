@@ -1,0 +1,108 @@
+class LoadingSmall extends game.ModuleBase {
+    constructor(data) {
+        data = data || {
+            map: 'scene_load/loadingSmall',
+            layer: 'panel1'
+        }
+        super(data);
+        this.round.skin = '';
+        this.pvo = {
+            v: 0
+        }
+    }
+    onEnable(content = '正在加载资源') {
+        console.log('圈圈被添加了.');
+        this.txt_tips.text = content;
+        this.pvo.v = 0
+        // this.updateProgress(this.pvo.v)
+        // this.txt_progress.visible = false
+        // this.txt_progress.text = 0 + '%';
+        // this.ani1.play(0, true)
+
+        this.ani2 = this.ani2 || new game.Dragon('common/loading.sk', 0, 0, true)
+        this.addChild(this.ani2)
+        this.ani2.play(0, true)
+        this.ani2.x = this.width / 2;
+        this.ani2.y = this.height / 2;
+        game.cb.on(LoadingSmall.PROGRESS_EVENT, this, this.updateProgress);
+        game.cb.on(LoadingSmall.CLOSE_EVENT, this, this.closeSelf);
+    }
+    onDisable() {
+        console.log('圈圈被移除了.');
+        // this.ani1.stop()
+        this.ani2.stop()
+        Laya.Tween.clearAll(this.pvo);
+        game.cb.off(LoadingSmall.PROGRESS_EVENT, this, this.updateProgress);
+        game.cb.off(LoadingSmall.CLOSE_EVENT, this, this.closeSelf);
+    }
+    progress(a, isTween = false) {
+        if (isTween) {
+            Laya.Tween.clearAll(this.pvo);
+            let time = a - this.pvo.v;
+            let t = Laya.Tween.to(this.pvo, {
+                v: a
+            }, time * 1000);
+            __tool.tweenUpdate(t, () => {
+                this.updateProgress(this.pvo.v)
+            })
+        } else {
+            this.pvo.v = a;
+            this.updateProgress(this.pvo.v)
+        }
+    }
+    updateProgress(a) {
+        // this.txt_progress.visible = true;
+        this.txt_progress.text = parseInt(a * 100) + '%';
+    }
+
+    closeSelf() { game.scene.remove(this); }
+    static get PROGRESS_EVENT() { return 'loading_small_progress_event' }
+    static get CLOSE_EVENT() { return 'loading_small_close_event' }
+    clickMask() { }
+}
+window.LoadingSmall = LoadingSmall;
+class LoadingSmallSon extends LoadingSmall {
+    constructor() {
+        super();
+        this.round.skin = 'local/loading/1/ic_loads1.png';
+        this.bg.visible = true;
+        this.txt_progress.visible = true;
+    }
+    onEnable() {
+        super.onEnable();
+        this.stopAni2();
+        this.ani1.play(0, true)
+    }
+    onDisable() {
+        super.onDisable();
+        this.stopAni2();
+        this.ani1.stop()
+    }
+    stopAni2() {
+        game.utils.remove(this.ani2);
+        this.ani2.stop()
+    }
+}
+class LoadingAwait extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadingAwait',
+            layer: 'panel1'
+        })
+    }
+    onEnable(tip_content) {
+        this.txt_tips.text = tip_content
+        // this.ani1.play(0, true)
+        this.ani2 = this.ani2 || new game.Dragon('common/loading.sk', 0, 0, true)
+        this.addChild(this.ani2)
+        this.ani2.play(0, true)
+        this.ani2.x = this.width / 2;
+        this.ani2.y = this.height / 2;
+    }
+    onDisable() {
+        // this.ani1.stop()
+        this.ani2.stop()
+        Laya.Tween.clearAll(this.pvo);
+    }
+    clickMask() { }
+}

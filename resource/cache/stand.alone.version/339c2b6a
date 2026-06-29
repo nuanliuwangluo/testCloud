@@ -1,0 +1,138 @@
+class S_garden_groud_click extends Laya.Script {
+    onEnable() {
+        game.cb.on('garden_groud_remove_filter_ani', this, this.garden_groud_remove_filter_ani)
+        game.cb.on('garden_groud_add_filter_ani', this, this.garden_groud_add_filter_ani)
+        game.cb.on('garden_groud_remove_alpha_ani', this, this.garden_groud_remove_alpha_ani)
+        game.cb.on('garden_groud_add_alpha_ani', this, this.garden_groud_add_alpha_ani)
+    }
+    onDisable() {
+        game.cb.off('garden_groud_remove_filter_ani', this, this.garden_groud_remove_filter_ani)
+        game.cb.off('garden_groud_add_filter_ani', this, this.garden_groud_add_filter_ani)
+        game.cb.off('garden_groud_remove_alpha_ani', this, this.garden_groud_remove_alpha_ani)
+        game.cb.off('garden_groud_add_alpha_ani', this, this.garden_groud_add_alpha_ani)
+        this.garden_groud_remove_filter_ani()
+    }
+    garden_groud_add_alpha_ani(positionId) {
+        this.garden_groud_remove_alpha_ani()
+        this.filterTileArray12 = Garden_groud.get_effective_tile_by_positionId(positionId);
+        this.filterTileArray12.forEach(e => {
+            e.alpha = 0
+        });
+        Laya.timer.loop(60, this, this.updateAlpha)
+    }
+    updateAlpha() {
+        this.filterTileArray12.forEach(e => {
+            e.alpha += 0.07
+        });
+        if (this.filterTileArray12[0].alpha >= 1) {
+            this.garden_groud_remove_alpha_ani()
+        }
+    }
+    garden_groud_remove_alpha_ani() {
+        if (this.filterTileArray12)
+            this.filterTileArray12.forEach(e => {
+                e.alpha = 1
+            });
+        this.filterTileArray12 = [];
+        Laya.timer.clear(this, this.updateAlpha)
+    }
+
+    garden_groud_remove_filter_ani() {
+        Laya.timer.clear(this, this.updateColorFilter)
+        if (this.filterTileArray && this.filterTileArray.length) {
+            this.filterTileArray.forEach(e => {
+                e.filters = [];
+            });
+            this.filterTileArray = [];
+        }
+    }
+    garden_groud_add_filter_ani(positionId) {
+        this.colorFilter = this.colorFilter || new Laya.ColorFilter([]);
+        this.colorValue = 0
+        this.colorValueOff = 5
+        this.colorFilter.color(this.colorValue, this.colorValue, this.colorValue, 1)
+
+        this.filterTileArray = Garden_groud.get_effective_tile_by_positionId(positionId);
+        this.filterTileArray.forEach(e => {
+            e.filters = [this.colorFilter];
+        });
+        Laya.timer.loop(60, this, this.updateColorFilter)
+    }
+    onClick(e) {
+        // if (!this.owner.s1.isClickTile) return;
+        if (S_garden_groud_move.stage_x != game.stage.mouseX && S_garden_groud_move.stage_y != game.stage.mouseY) return
+        // S_garden_groud_move.stage_x = game.stage.mouseX;
+        // S_garden_groud_move.stage_y = game.stage.mouseY;
+
+        let gc1 = game.scene.get(GardenOther_centerDown)
+        if (gc1 && gc1.parent) return;
+
+        if (this.owner.curGardenUid != __data.uid) return;
+        let screenX = this.owner.mouseX / this.owner.tileMap.scale - (-this.owner.tileMap._viewPortX);
+        let screenY = this.owner.mouseY / this.owner.tileMap.scale - (-this.owner.tileMap._viewPortY);
+        // trace('点击花园地图屏幕坐标', screenX, screenY)
+
+        let a = this.owner.tileMap.getTilePositionByScreenXY(screenX, screenY);
+        let unlock_chapter = Garden_groud.chapter_unlock_area[a.ux + '-' + a.uy]
+        if (unlock_chapter) {
+            if (Number(unlock_chapter) > Number(__data.garden.task.curChapterId)) {
+                return __tips('区域尚未解锁')
+            }
+        }
+        let b23 = this.owner.tileMap.getGroupTileByTileXY(a.ux, a.uy)
+        // trace('点击花园地图瓦片u坐标', a.ux, a.uy)
+        if (!b23 || !b23.length) return
+        // 如果点击区域重叠 仙查找有任务的
+        let b = b23.find((e) => {
+            return e.name.includes('click-' + __data.garden.task.branchTaskId)
+        })
+        if (!b) {
+            b = b23.find((e) => {
+                if (e.name.includes('click-')) {
+                    // 如果不是任务点击
+                    // 必须有更换装饰
+                    let p1 = e.name.replace('click-', '')
+                    let a123 = __data.garden.task.dressSelect(p1);
+                    if (a123 && a123.length && a123.length >= 2) return true
+                }
+                return false;
+            })
+        }
+        // 点击的地方 任务没做到 但是点击的地方 1换1的装饰
+        if (!b) return
+
+        let positionId = __data.excelConfig.hash_groupName_positionId[b.name];
+        let data = __data.excelConfig.hashGardenPositionArea[positionId]
+
+        if (positionId > __data.garden.task.branchTaskId) return;
+
+        if (positionId == __data.garden.task.branchTaskId) {
+            new S_garden_build().onClick()
+            return
+        }
+        let a123 = __data.garden.task.dressSelect(positionId);
+        if (!a123.length || a123.length <= 1) return;
+
+        this.garden_groud_remove_filter_ani();
+        this.garden_groud_add_filter_ani(positionId)
+        // 移动窗口
+        this.owner.moveTo(...data.centerXY.toArray('_'), true)
+        game.cb.event('garden_groud_scale', ['min', true])
+        // 显示建造选项
+        game.cb.event('garden_remove_main_ui')
+        game.scene.add(GardenBuildMask);
+        game.scene.add(GardenBuild, [positionId, 'collect'])
+    }
+    updateColorFilter() {
+        this.colorValue += this.colorValueOff
+        if (this.colorValue <= 0) {
+            this.colorValue = 0
+            this.colorValueOff = 5
+        }
+        if (this.colorValue >= 50) {
+            this.colorValue = 50
+            this.colorValueOff = -5
+        }
+        this.colorFilter.color(this.colorValue, this.colorValue, this.colorValue, 1)
+    }
+}   

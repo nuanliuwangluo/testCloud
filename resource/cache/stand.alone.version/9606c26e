@@ -1,0 +1,1106 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-01-04 10:54:45
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-07-15 13:27:41
+ */
+class DeskCommonUI extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskCommon',
+            layer: 'middle',
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width
+            },
+            offy: 0,
+            centerx: false,
+            centery: false,
+            up: true,
+            down: false,
+            left: true,
+            right: false
+        });
+        this.addComponent(DeskCommonUI_Update_UI_Script)
+        this.addComponent(DeskCommonUI_Update_RoomId_Script)
+        this.addComponent(DeskCommonUI_Script_play_show_remove)
+
+        this.btn_tuo.addComponent(DeskCommonUI_tuo_Script)
+        this.btn_set.addComponent(DeskCommonUI_Script_set)
+        this.img_more.addComponent(DeskCommonUI_Script_imgMore).init(this)
+        this.btn_dissolve.addComponent(DeskCommonUI_Script_dissolve)
+        this.btn_out.addComponent(DeskCommonUI_Script_out)
+        this.btn_rule.addComponent(DeskCommonUI_Script_rule)
+        this.btn_map.addComponent(DeskCommonUI_Script_map)
+
+        this.box3.getChildByName('txt_id').addComponent(CopyRoomIdComponent);
+
+        this.addComponent(HallRightClickTestScript);
+
+        game.utils.remove(this.img_more);
+    }
+
+    onAwake() {
+        this.txt_delay.text = '';
+        this.mahjong.visible = false;
+
+        TimerUtils.addFunc('update_common_time', this.updateTime.bind(this));
+        // this.s_box = this.box1.getChildByName('box').addComponent(S_click_show_des_set).prefab('prefab/ChallengeBoxTips.json').init(__lang.des_goldBox);
+    }
+
+    onEnable() {
+        // this.btn_chat.visible = DeskCommonUI.scene == 2 ? false : true;
+        let __name = __data.mahjong_set.modelIndex.toString() === '0' ? __data.mahjong_set.cardIndex % 2 : __data.mahjong_set.cardIndex % 2
+        this.cSkin.texture = 'local/mahjong_common/1/' + __name.toString() + '_smj.png'
+
+        game.cb.on(__eh + "update_wifi_strength", this, this.wifiStrengthHandler);
+        game.cb.on('update_dailyTask_data', this, this.update_dailyTask_data);
+        game.cb.on('start_game', this, this._triggerStart);
+        game.cb.on("show_desk_cost_rate_tips", this, this._gameStart);
+        game.cb.on('update_game_icons', this, this.iconHandle);
+        // game.cb.on('udpate_collect_data', this, this.udpate_collect_data);
+
+        this.hideBoxUI();
+        // this.showBoxUI();
+        this.update_dailyTask_data();
+        this.refreshUI();
+    }
+
+    onDisable() {
+        game.cb.off(__eh + "update_wifi_strength", this, this.wifiStrengthHandler);
+        game.cb.off('update_dailyTask_data', this, this.update_dailyTask_data);
+        game.cb.off('start_game', this, this._triggerStart);
+        game.cb.off("show_desk_cost_rate_tips", this, this._gameStart);
+        game.cb.off('update_game_icons', this, this.iconHandle);
+        // game.cb.off('udpate_collect_data', this, this.udpate_collect_data);
+    }
+
+    hideBoxUI() {
+        this.box1.visible = false;
+        this.box2.visible = false;
+        this.box3.visible = false;
+    }
+
+    update_dailyTask_data() {
+        let data = __data.dailyTask;
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            // this.box3.visible = true;
+            this.showBox3UI();
+        } else if (!data.des || data.des.includes('未完成')) {
+            // this.box1.visible = true;
+            this.showBox1UI();
+            // } else if (data.today_comNum < data.today_limitNum) {
+        } else {
+            // this.box2.visible = true;
+            this.showBox2UI();
+        }
+    }
+
+    udpate_collect_data() {
+        // let a = Object.values(__data.collect)
+        // if (a.length == 0) {
+        //     this.s_box.init(__lang.des_goldBox)
+        //     return
+        // }
+        // for (const key in __data.collect) {
+        //     if (__data.collect[key].num == 0) {
+        //         this.s_box.init(__lang.des_goldBox)
+        //         return
+        //     }
+        // }
+        // this.s_box.init(__lang.des_goldBox_full)
+    }
+
+    showBox1UI() {
+        if (__data.dailyMatch.curCount >= __data.dailyMatch.maxCount) {
+            this.box1.visible = true;
+            this.box1.getChildByName('txt_num').text = __data.dailyMatch.reward[0] ? '×' + __data.dailyMatch.reward[0].count : '×0';
+            this.box1.getChildByName('txt_progress').text = '已完成';
+        } else {
+            this.box1.visible = true;
+            this.box1.getChildByName('txt_num').text = __data.dailyMatch.reward[0] ? '×' + __data.dailyMatch.reward[0].count : '×0';
+            this.box1.getChildByName('txt_progress').text = `再赢${__data.dailyMatch.maxCount - __data.dailyMatch.curCount}局`;
+        }
+    }
+
+    showBox2UI() {
+        if (__data.dailyTask.pro >= __data.dailyTask.need || __data.dailyTask.isFinalTask) {
+            this.box2.visible = true;
+            this.box2.getChildByName('txt_des').text = __data.dailyTask.simpleDes;
+        } else {
+            this.box2.visible = true;
+            this.box2.getChildByName('txt_des').text = __data.dailyTask.simpleDes;
+        }
+    }
+
+    showBox3UI() {
+        this.box3.visible = true;
+        this.box3.getChildByName('txt_id').text = `房间号:${__data.deskData.roomVo.roomID}`;
+        this.box3.getChildByName('txt_round').text = this.getRound();
+        game.utils.remove(this.play_c);
+    }
+
+    getRound() {
+        if (HallPlay.curRuleId == FriendRoomPlays.AREA.WUHU) {
+            return `第${__data.deskData.roomVo.curGame}局`;
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.TONGJIANG) {
+            return `第${__data.deskData.roomVo.curGame}局`;
+        } else {
+            return `第${__data.deskData.roomVo.curGame}/${__data.deskData.roomVo.allGame}局`;
+        }
+    }
+
+
+    refreshUI() {
+        if (DeskCommonUI.isPre) {
+            // this.box1.visible = false;
+        }
+        this.gift.scale(0.6);
+
+        // 方案二：在头像和菜单按钮中间的位置显示红包
+        // let desk = MahjongDesk.getDesk();
+        // if(desk){
+        //     let player_right = desk.game.getChildByName('player_right');
+        //     let y = (desk.y + player_right.y) / 2;
+        //     this.friendRed.pos(this.friendRed.x, y);
+        // }
+
+        this.iconHandle();
+    }
+
+    async iconHandle() {
+
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            this.icons.visible = false;// 好友房隐藏图标
+            this.friendIcons = [];
+            if (__data.redPacket.canShowInviteRedIcon()) {
+                this.inviteRed.visible = true; // 显示可能隐藏过的邀请红包图标
+                this.friendIcons.push(this.inviteRed);
+            } else {
+                this.inviteRed.visible = false; // 隐藏邀请红包图标
+            }
+            this.friendIcons.push(this.friendRed);
+            let [dynamicW, dynamicS] = [20, 20];
+            this.friendIcons.map((item, index) => { item.pos(dynamicW, item.y); dynamicW = item.x + item.width * item.scaleX + dynamicS; return item; });
+        } else {
+            this.inviteRed.visible = false;// 金币房隐藏邀请红包图标
+            await __data.firstPay.send(1);
+            this.icons.visible = true;// 金币房显示图标
+
+            let numbers = [];
+            // 邀请红包和 祈福  2选1
+            if (__data.redPacket.canShowInviteRedIcon()) {
+                numbers = [6].concat(this.getIconsCanShow());
+            } else {
+                numbers = [1].concat(this.getIconsCanShow());
+            }
+            this.icons.array = numbers;
+            this.icons.repeatX = numbers.length;
+        }
+    }
+
+    getIconsCanShow() {
+        if (!__data.firstPay.isHasBuy) { return 2; }
+        if (__data.activity.todayDiscount.isAllowBuy) { return 3 }
+        if (!__data.activity.stepstepGift.isEnd) { return 4 }
+        return 5;
+    }
+
+    //信号强度
+    wifiStrengthHandler(delay, id) {
+        return
+        if (!id || __data.uid == id) {
+            //根据不同延时  文本设置不同颜色
+            if (delay >= __data.deskData.roomVo.msData.slowms) {
+                this.txt_delay.color = "#ff0000"
+                this.txt_delay.text = "延时：>" + __data.deskData.roomVo.msData.slowms + "ms"
+            } else if (delay > __data.deskData.roomVo.msData.fastms && delay < __data.deskData.roomVo.msData.slowms) {
+                this.txt_delay.color = "#e87912"
+                this.txt_delay.text = "延时：" + delay + "ms"
+            } else if (delay > __data.deskData.roomVo.msData.veryFastms && delay < __data.deskData.roomVo.msData.fastms) {
+                this.txt_delay.color = "#d9c31f"
+                this.txt_delay.text = "延时：" + delay + "ms"
+            } else if (delay <= __data.deskData.roomVo.msData.veryFastms) {
+                this.txt_delay.color = "#25e001"
+                this.txt_delay.text = "延时：" + delay + "ms"
+            }
+        }
+    }
+
+    //时间
+    updateTime() {
+        // game.cb.event('BatteryStatusChange', [Interface.phoneBattery])
+    }
+
+    voiceAndChat() {
+        // let limitArr = __data.deskData.roomVo.limit.split(',');
+        // this.btn_chat.visible = limitArr.indexOf('12') > -1 ? true : false
+    }
+
+    _triggerStart() {
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) { return; }
+        game.scene.add(DeskCommonUI_Chat);
+        game.scene.add(DeskCommonUI_Talk);
+    }
+
+    _gameStart() {
+        // 好友房不增加此 动画效果
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) { return; }
+        let safe_area = miniApi.statusBarRatio() * game.width;
+
+        let data = __data.getMatchDataById(__data.prev_match_modelId, __data.gameId.curId, __data.prev_match_lv);
+        this.tips_cost = this.tips_cost || new DeskCostRateTips();
+        // this.tips_rate = this.tips_rate || new DeskCostRateTips();
+        this.tips_cost.setTxt(`本场门票${data.cost}金币`);
+        // this.tips_rate.setTxt(`输赢上限${data.cupMultipty}倍`);
+
+        let cost_x = game.width / game.scale - safe_area - this.tips_cost.width;
+        // let rate_x = game.width / game.scale - safe_area - this.tips_rate.width;
+
+        this.addChild(this.tips_cost).pos(cost_x, game.height / game.scale - this.tips_cost.height);
+        // this.addChild(this.tips_rate).pos(game.width / game.scale, this.tips_cost.y + this.tips_cost.height + 20);
+
+        ComponentUtils.clearScript(this.tips_cost, DeskCostRateTipsComponent);
+        ComponentUtils.clearScript(this.tips_rate, DeskCostRateTipsComponent);
+        // this.tips_cost.addComponent(DeskCostRateTipsComponent).toX(cost_x);
+        // this.tips_rate.addComponent(DeskCostRateTipsComponent).toX(rate_x);
+
+        this.tips_cost.addComponent(DeskCostRateTipsComponent).hide();
+    }
+
+    static set isPre(value) { DeskCommonUI._isPre = value; }
+    static get isPre() { return DeskCommonUI._isPre; }
+}
+
+class DeskCostRateTipsComponent extends Laya.Script {
+    toX(x, time = 200) {
+        this._x = x;
+        this._time = time;
+        this.start();
+    }
+
+    start() {
+        Laya.Tween.to(this.owner, { x: this._x }, this._time, null, Laya.Handler.create(this, this._disappear));
+    }
+
+    _disappear() {
+        Laya.Tween.to(this.owner, { alpha: 0 }, this._time / 2, null, Laya.Handler.create(this, this._removeSelf), 1000);
+    }
+
+    _removeSelf() {
+        game.utils.remove(this.owner);
+        this.owner.alpha = 1;
+    }
+
+    hide(delay = 1200) {
+        Laya.Tween.to(this.owner, { alpha: 0 }, 300, null, Laya.Handler.create(this, this._removeSelf), delay);
+    }
+}
+
+class DeskCostRateTips extends game.ModuleBase {
+    constructor(content = "") {
+        super({
+            map: 'scene_game_common/game_common_desk_tips',
+            module: false
+        })
+        this.setTxt(content);
+    }
+
+    setTxt(value) { this.txt.text = value; }
+}
+
+class DeskCommonUI_Time extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskCommonTime',
+            layer: 'middle',
+            right: true,
+            up: true,
+            offx: -15,
+            offy: 20
+        })
+    }
+
+    onEnable() {
+        this._update();
+        Laya.timer.loop(60 * 1000, this, this._update);
+    }
+
+    onDisable() {
+        Laya.timer.clear(this, this._update);
+    }
+
+    _update() {
+        this.txt_time.text = this.systemTime();
+    }
+
+    /**
+     * 获取当前时间
+     * [curTime description]
+     * @param  {[type]} unit [description]
+     * @return {[type]}      [description]
+     */
+    systemTime() {
+        let __len = 2;
+        let __date = new Date();
+        let hours = (__date.getHours() < 10) ? "0" + __date.getHours().toString() : __date.getHours().toString();
+        let minutes = (__date.getMinutes() < 10) ? "0" + __date.getMinutes().toString() : __date.getMinutes().toString();
+        let seconds = (__date.getSeconds() < 10) ? "0" + __date.getSeconds().toString() : __date.getSeconds().toString();
+        return __len == 2 ? hours + ":" + minutes : hours + ":" + minutes + ':' + seconds;
+    }
+}
+
+class DeskCommonUI_Chat extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskCommonChat',
+            layer: 'middle',
+            right: true,
+            centery: true,
+            offx: () => {
+                return -50 - miniApi.statusBarRatio() * Laya.stage.width
+            },
+            offy: 80
+        })
+        this.btn_chat.addComponent(DeskCommonUI_Script_chat)
+    }
+
+    static set status(value) { this._status = value; }
+    static get status() { return this._status; }
+}
+
+class DeskCommonUI_Talk extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskCommonTalk',
+            layer: 'middle',
+            right: true,
+            centery: true,
+            offx: () => {
+                return -50 - miniApi.statusBarRatio() * Laya.stage.width
+            },
+            offy: 220
+        })
+        this.btn_talk.addComponent(DeskCommonUI_Script_talk);
+    }
+
+    static set status(value) { this._status = value; }
+    static get status() { return this._status; }
+}
+
+class DeskRecordTips extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskRecordTips',
+            module: false
+        })
+    }
+
+    onEnable() {
+        this.ani.play();
+        this.stopTime();
+        this.startTime();
+    }
+
+    onDisable() {
+        this.ani.stop();
+        this.stopTime();
+    }
+
+    startTime() {
+        this.time = 30;
+        this._updateTxt();
+        Laya.timer.loop(1000, this, this._countdown);
+    }
+
+    stopTime() {
+        Laya.timer.clear(this, this._countdown);
+    }
+
+    _countdown() {
+        this.time = Math.max(0, --this.time);
+        this._updateTxt();
+    }
+
+    _updateTxt() {
+        this.txt_voice_time.text = `${this.time}s`;
+    }
+}
+
+class DeskCommonUI_Update_UI_Script extends Laya.Script {
+    onEnable() {
+        // this.owner.txt_score.text = '';
+        this.owner.txt_memory.text = '';
+        if (DeskCommonUI.scene == 1) {
+            this.owner.img_bg2.visible = false;
+            this.owner.memory.visible = false;
+        } else if (DeskCommonUI.scene == 2) {
+            this.owner.img_bg2.visible = false;
+            this.owner.memory.visible = false;
+        } else if (DeskCommonUI.scene == 3) {
+            this.owner.img_bg2.visible = false;
+        }
+    }
+}
+
+class DeskCommonUI_Update_RoomId_Script extends Laya.Script {
+    onEnable() {
+        game.cb.on('update_roomId', this, this.update_roomId)
+    }
+    onDisable() {
+        game.cb.off('update_roomId', this, this.update_roomId)
+    }
+
+    //是否显示麻将剩余牌数
+    update_roomId(a, isShow, surps) {
+        if (DeskCommonUI.scene == 1) {
+            // this.owner.txt_score.text = "底分：" + GoldFormatUtils.format(__data.deskData.roomVo.bottomScore.toString(), 2);
+        }
+        // this.owner.img_bg2.width = this.owner.txt_score.x * 2 + this.owner.txt_score.width;
+
+        this.owner.img_bg2.visible = false;
+        // this.owner.txt_score.text = a ? a : '';
+        // this.owner.txt_roomInfo.text = a ? a : '';
+        // this.owner.mahjong.visible = isShow;
+        // this.owner.txt_mahjong_surps.text = surps ? surps.toString() : '';
+    }
+}
+class DeskCommonUI_tuo_Script extends Laya.Script {
+    onClick(e) {
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '托管按钮' });
+        if (DeskCommonUI.scene == 1) {
+            if (__data.deskData.roomVo.phase == 'game') {
+                game.server.send(6001, 105)
+            }
+        }
+    }
+}
+class DeskCommonUI_cancelTuo_Script extends Laya.Script {
+    onClick(e) {
+        if (DeskCommonUI.scene == 1) {
+            if (__data.deskData.roomVo.phase == 'game') {
+                game.server.send(6001, 106)
+            }
+        }
+    }
+}
+class DeskCommonUI_Script_chat extends Laya.Script {
+    onEnable() {
+        game.cb.on('room_chat_to_player', this, this.chatCdHandler)
+    }
+    onDisable() {
+        game.cb.off('room_chat_to_player', this, this.chatCdHandler)
+    }
+    onClick(e) {
+        __showScene.show_game_chat();
+    }
+
+    chatCdHandler(e) {
+        this.onDis()
+        Laya.timer.once(__data.deskData.roomVo.chatTime, this, this.offDis)
+    }
+
+    onDis() {
+        this.owner.disabled = true;
+    }
+    offDis() {
+        this.owner.disabled = false;
+    }
+}
+
+class DeskCommonUI_Script_talk extends Laya.Script {
+
+    onAwake() {
+        this.tips = new DeskRecordTips();
+    }
+
+    onEnable() {
+        this._btnUI();
+        game.cb.on('start_recoder', this, this.start);
+        game.cb.on('stop_recoder', this, this.stop);
+        game.cb.on('update_vip_data', this, this._btnUI)
+        this._onRecoder = false;
+        this._updateSkins();
+    }
+
+    onDisable() {
+        game.cb.off('start_recoder', this, this._addTips);
+        game.cb.off('stop_recoder', this, this.stop);
+        game.cb.off('update_vip_data', this, this._btnUI)
+        this._onRecoder = false;
+        this._updateSkins();
+    }
+
+    _btnUI() {
+        if (!__data.vip.isVip) {
+            SkinUtils.gray(this.owner, true, true);
+        } else {
+            SkinUtils.gray(this.owner, false, true);
+        }
+    }
+
+    onClick(e) {
+        if (!__data.vip.isVip) { __showScene.show_friendRoom_vipSale(FriendRoom_vipSale.voice); return; }
+        // if (this._onRecoder) { GameRecoder.stop(); }
+        // else { GameRecoder.start(); }
+    }
+
+    onMouseDown(e) {
+        if (!__data.vip.isVip) { return; }
+        if (miniApi.clientType == Platform.APP) AppGameRecoder.start();
+        else GameRecoder.start();
+    }
+
+    onStageMouseUp(e) {
+        if (!__data.vip.isVip) { return; }
+        if (!this._onRecoder) { return; }
+        if (miniApi.clientType == Platform.APP) AppGameRecoder.stop();
+        else GameRecoder.stop();
+    }
+
+    start() {
+        this._onRecoder = true;
+        this._addTips();
+        this._updateSkins();
+        this._btnUI();
+    }
+
+    stop() {
+        this._onRecoder = false;
+        this._removeTips();
+        this._updateSkins();
+        this._btnUI();
+        this._startTalkCd();
+    }
+
+    _updateSkins() {
+        SkinUtils.setSkin(this.owner, this._onRecoder ? 'local/game_common/1/img_yy2.png' : 'local/game_common/1/img_yy1.png')
+    }
+
+    _addTips() {
+        this.layer.addChild(this.tips).pos(Laya.stage.width - this.tips.width >> 1, Laya.stage.height - this.tips.height >> 1);
+    }
+
+    _removeTips() {
+        game.utils.remove(this.tips);
+    }
+
+    _startTalkCd() {
+        this._onDis();
+        Laya.timer.once(__data.deskData.roomVo.chatTime, this, this._offDis)
+    }
+
+    _onDis() { this.owner.disabled = true; }
+    _offDis() { this.owner.disabled = false; }
+
+    /**
+     * 广播播报的层
+     * @return Laya.Sprite
+     */
+    get layer() {
+        return game.scene.layer['middle'].c;
+    }
+}
+
+// 点击左上角更多按钮-显示更多按钮容器
+class DeskCommonUI_Script_imgMore extends Laya.Script {
+    init(a) {
+        this.deskCommon = a;
+    }
+    onAwake() {
+        this.starty = this.deskCommon.btn_set.y - this.deskCommon.btn_set.height / 2;
+        this.offy = 15;
+        this.downSpace = this.deskCommon.img_more.height - this.deskCommon.btn_out.y
+    }
+    onEnable() {
+        // 用来排序显示的按钮的位置的数组
+        this.btnArray = this.list;
+
+        if (this.owner.parent) {
+            // 托管显示逻辑
+            if (DeskCommonUI.scene == 1) {
+                let __vo = __data.deskData.roomVo.getPlayerBySeat(0)
+
+
+                // 更新托管按钮
+                if (__vo && __vo.autoState) {
+                    this.owner.parent.btn_tuo.visible = false
+                } else {
+                    this.owner.parent.btn_tuo.visible = true
+                }
+                // 更新解散退出按钮
+                if (__data.deskData.roomVo.phase == 'ready') {
+                    if (__data.deskData.roomVo.roomModel == 6 || __data.deskData.roomVo.roomModel == 7) {
+                        this.readyTestShowBtnOutAndBtnDissolve()
+                    } else if (__data.deskData.roomVo.roomModel == 5) {
+                        this.readyTestShowBtnOutAndBtnDissolve()
+                    } else if (__data.deskData.roomVo.roomOwner == __data.uid) {
+                        this.readyTestShowBtnOutAndBtnDissolve()
+                    } else {
+                        this.owner.parent.btn_out.visible = true
+                        this.owner.parent.btn_dissolve.visible = false
+                    }
+                } else if (__data.deskData.roomVo.phase == 'over') {
+                    this.owner.parent.btn_out.visible = true
+                } else {
+                    this.owner.parent.btn_out.visible = false
+                    this.owner.parent.btn_dissolve.visible = __data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND ? true : false;
+                    this.startedGrayDissolveBtn();
+                }
+            }
+        }
+        this.sortBtnPosition()
+    }
+
+
+    get list() {
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            return [this.deskCommon.btn_set, this.deskCommon.btn_tuo, this.deskCommon.btn_rule, this.deskCommon.btn_out, this.deskCommon.btn_dissolve]
+        } else {
+            return [this.deskCommon.btn_set, this.deskCommon.btn_tuo, this.deskCommon.btn_rule, this.deskCommon.btn_out]
+        }
+    }
+
+
+    startedGrayDissolveBtn() {
+
+    }
+
+    // 游戏准备阶段检测 显示退出按钮和解散按钮 的逻辑
+    readyTestShowBtnOutAndBtnDissolve() {
+        // 1房主 2AA 3体验 4亲友圈 体验馆5
+        // 解散退出显示逻辑
+        var roomModel = __data.deskData.roomVo.roomModel;
+        // 房主模式  aa模式  房主只能解散 没退出
+        if (roomModel == __data.deskData.roomVo.FRIEND) {
+            // 房主
+            if (__data.deskData.roomVo.roomOwner == __data.uid) {
+                this.deskCommon.btn_out.visible = false;
+                this.deskCommon.btn_dissolve.visible = true;
+            }
+            // 不是房主
+            else {
+                this.deskCommon.btn_out.visible = true;
+                this.deskCommon.btn_dissolve.visible = false;
+            }
+        } else if (roomModel == 3) {
+            // 体验模式房间  房主可退出可解散
+            this.deskCommon.btn_out.visible = true;
+        } else if (roomModel == 5) {
+            // 体验馆的房间类型  我记得是只有退出好像
+            this.deskCommon.btn_out.visible = true;
+            //只有一个人
+            if (__data.deskData.roomVo.currPlayer == 1) {
+                // 体验馆的房间类型  我记得是只有退出好像
+                this.deskCommon.btn_out.visible = false;
+            }
+        } else if (roomModel == 6 || roomModel == 7) {
+            // 自动房
+            if (__data.deskData.roomVo.roomType == 1) {
+                this.deskCommon.btn_out.visible = true;
+            }
+            // 普通房
+            else if (__data.deskData.roomVo.roomType == 2) {
+                // 房主 且不是普通用户  只能解散
+                if (__data.deskData.roomVo.roomOwner == __data.uid) {
+                    let __info = __data.friendData.getInfo(__data.deskData.roomVo.friendId);
+                    // 房主 是好友圈普通成员 只能解散
+                    if (__info && __info.role == 2) {
+                        this.deskCommon.btn_out.visible = false;
+                    }
+                    // 房主是特殊成员  解散退出都有
+                    else if (__info && __info.role != 2) {
+                        this.deskCommon.btn_out.visible = true;
+                    }
+                    // 自己的列表里没有这个好友圈
+                    else if (!__info) {
+                        this.deskCommon.btn_out.visible = false;
+                    }
+                }
+                // 不是房主
+                else {
+                    let __info = __data.friendData.getInfo(__data.deskData.roomVo.friendId);
+                    //是好友圈普通成员 只能解散
+                    if (__info && __info.role == 2) {
+                        this.deskCommon.btn_out.visible = true;
+                    }
+                    //是特殊成员  退出
+                    else if (__info && __info.role != 2) {
+                        this.deskCommon.btn_out.visible = true;
+                    }
+                    // 自己的列表里没有这个好友圈
+                    else if (!__info) {
+                        this.deskCommon.btn_out.visible = true;
+                    }
+                }
+
+            }
+        }
+    }
+
+    // 排序显示的按钮位置
+    sortBtnPosition() {
+        var __h = this.starty;
+        var __last_height = 0;
+        for (var i = 0; i < this.btnArray.length; i++) {
+            if (this.btnArray[i].visible == true) {
+                this.btnArray[i].y = __h + __last_height + this.btnArray[i].height / 2;
+                __last_height = this.btnArray[i].height / 2; // 上一个按钮的一半距离
+                __h = this.btnArray[i].y + this.offy;
+
+                // __h += this.btnArray[i].height + this.offy;
+                // trace('this.btnArray[i].height', this.btnArray[i].height)
+                // trace('__h', __h)
+            }
+        }
+
+        this.deskCommon.img_more.height = __h - this.offy + this.downSpace;
+        // __h = __h - this.offy;
+        // this.deskCommon.img_more.height = __h + this.downSpace;
+    }
+}
+
+// 点击退出
+class DeskCommonUI_Script_out extends Laya.Script {
+    onClick(e) {
+        if (DeskCommonUI.isPre) {
+            __data.deskData.roomVo.clear();
+            __data.lastSceneQueue.push(__showScene.show_hall)
+            __showScene.show_hall_play(HallPlay.lastCityId);
+            return;
+        }
+        (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) && miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '退出匹配按钮' });
+
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) {
+            game.server.send(3004);
+        } else {
+            game.server.send(14007);
+        }
+    }
+}
+
+// 解散
+class DeskCommonUI_Script_dissolve extends Laya.Script {
+    onClick(e) {
+        __showScene.show_prompt_select(__tipsName[7014], this.doHandler.bind(this));
+    }
+
+    doHandler() {
+        // 准备阶段 房主直接申请解散
+        if (__data.deskData.roomVo.phase == 'ready' && __data.uid == __data.deskData.roomVo.roomOwner) {
+            game.server.send(14018);
+        } else {
+            game.server.send(14008);
+        }
+    }
+}
+
+// 规则
+class DeskCommonUI_Script_rule extends Laya.Script {
+    onClick(e) {
+        // let list = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag;
+
+        // trace(list[DeskCommonUI.scene - 1].play)
+        // trace(list[1 - 1].play)
+        // trace(list[2 - 1].play)
+        // trace(list[3 - 1].play)
+
+        __showScene.show_gameMain_rule();
+        // game.scene.add(DeskCommonRule, [list[DeskCommonUI.scene - 1].play]);
+    }
+}
+
+class DeskCommonUI_Script_map extends Laya.Script {
+    onEnable() {
+        this.updateUI();
+        game.cb.on('DANGEROUS_OR_SAFE', this, this.distanceJudge)
+        game.cb.on('update_vip_data', this, this.updateUI)
+    }
+    onDisable() {
+        game.cb.off('DANGEROUS_OR_SAFE', this, this.distanceJudge)
+        game.cb.off('update_vip_data', this, this.updateUI)
+    }
+
+    updateUI() {
+        if (!__data.vip.isVip) {
+            SkinUtils.gray(this.owner, true, true);
+        } else {
+            SkinUtils.gray(this.owner, false, true);
+        }
+    }
+
+    //距离过近与否的图片切换  1  代表存在过近   0  不存在
+    distanceJudge(value) {
+        // this.owner.skin = value == 1 ? 'desk_common_btn/img_jl2.png' : 'desk_common_btn/img_jl1.png'
+    }
+    onClick(e) {
+        game.scene.add(DeskMap)
+        game.cb.event('GET_MAP_DATA_TOSHOW')
+    }
+}
+class DeskCommonUI_Script_BigMap extends Laya.Script {
+    onClick(e) {
+        game.scene.add(DeskMap)
+        game.cb.event('GET_MAP_DATA_TOSHOW')
+    }
+}
+class DeskCommonUI_Script_battery extends Laya.Script {
+    constructor() {
+        super();
+        this.__rect = new Laya.Rectangle();
+    }
+    onEnable() {
+        this.__rect.setTo(0, 0, 0, this.owner.height)
+        this.owner.scrollRect = this.__rect;
+        game.cb.on('BatteryStatusChange', this, this.batteryHandler)
+    }
+    onDisable() {
+        this.owner.scrollRect = null
+        game.cb.off('BatteryStatusChange', this, this.batteryHandler)
+    }
+    //电池电量
+    batteryHandler(value) {
+        this.__rect.width = value.battery / 100 * this.owner.width;
+    }
+}
+class DeskCommonUI_Script_set extends Laya.Script {
+    constructor() {
+        super();
+        this.__rect = new Laya.Rectangle();
+    }
+    onClick(e) {
+        if (DeskCommonUI.scene == 1) {
+            __showScene.show_game_set();
+        } else if (DeskCommonUI.scene == 2) {
+            __showScene.show_game_set();
+        } else if (DeskCommonUI.scene == 3) {
+            __showScene.show_game_set();
+        }
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '设置界面' })
+    }
+}
+
+
+
+
+
+// 房间玩法显示和移除
+class DeskCommonUI_Script_play_show_remove extends Laya.Script {
+    onAwake() {
+        this.btn = this.owner.btn_play;
+        this.img = this.owner.play_c;
+        this.owner.play_c.addComponent(Click_Stage_Remove);
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'remove_desk_play', this, this.remove_desk_play)
+        this.btn.on('click', this, this.showUI)
+        game.utils.remove(this.img);
+        //麻将的处理有些流程不满足 所以直接写在了这里
+        if (DeskCommonUI.scene == 1 && __data.deskData.roomVo.isRecordPlaying) { this.remove_desk_play() }
+    }
+
+    onDisable() {
+        game.cb.off(__eh + 'remove_desk_play', this, this.remove_desk_play)
+        this.btn.off('click', this, this.showUI)
+    }
+
+    showUI(e) {
+        e && e.stopPropagation();
+        if (this.img.parent) this.remove_desk_play()
+        else {
+            this.img.getChildByName('txt_play').text = FriendRoomPlays.getPlaysInfo(__data.deskData.roomVo.modelId, __data.deskData.roomVo.roomPlay);
+            this.img.height = this.img.getChildByName('txt_play').y * 2 + this.img.getChildByName('txt_play').height;
+            this.owner.addChild(this.img);
+        }
+    }
+    remove_desk_play() {
+        game.utils.remove(this.img);
+    }
+
+    onStageClick(e) {
+        if (e.target == this.btn) return;
+        // this.remove_desk_play()
+    }
+}
+
+
+
+
+class CopyRoomIdComponent extends Laya.Script {
+    onRightClick() {
+        this.copy();
+    }
+
+    copy() {
+        miniApi.copy(__data.deskData.roomVo.roomID, () => {
+        });
+    }
+}
+
+
+
+class DeskCommonRule extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskCommonRule',
+            "layer": 'panel',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true
+        })
+    }
+
+    onAwake() {
+        this.panel.vScrollBarSkin = '';
+    }
+
+    added(list) {
+        this.clearPlay();
+        this.createPlay(list);
+        this.panel.scrollTo(0);
+    }
+
+
+    createPlay(playArr) {
+        if (!playArr) {
+            return
+        }
+        let __splitArr = playArr
+        let __allH = 0
+        for (let i = 0; i < __splitArr.length; i++) {
+            //该段文字是文字
+            if (typeof __splitArr[i] === 'string') {
+                let __txt = this.createPlayTxt(__splitArr[i]);
+                this.panel.addChild(__txt).y = __allH + 5
+                __allH += __txt.height;
+            } else {
+                let __img = this.createPlayImg(__splitArr[i].url)
+                this.panel.addChild(__img).y = __allH + 5
+                __allH += __splitArr[i].height;
+                // __allH += __img.height;
+            }
+        }
+    }
+
+    createPlayTxt(str) {
+        let __label = new Laya.Label();
+        __label.width = this.panel.width;
+        __label.wordWrap = true;
+        __label.fontSize = 24;
+        __label.leading = 10;
+        __label.color = '#726856'
+        __label.text = str;
+        return __label
+    }
+
+    createPlayImg(__skin) {
+        let __image = new Laya.Image();
+        __image.skin = __skin;
+        return __image
+    }
+
+    clearPlay() {
+        while (this.panel.numChildren) {
+            let __ele = this.panel.removeChildAt(0);
+            __ele = null
+        }
+    }
+}
+
+class Red_Icon extends Laya.Script {
+    onEnable() {
+        game.cb.on('update_red_icon', this, this.redDot);
+        this.redDot();
+    }
+
+    onDisable() {
+        game.cb.off('update_red_icon', this, this.redDot);
+    }
+
+    listen(func) {
+        this.func = func;
+    }
+
+    redDot() {
+        let r = this.func ? this.func() : false;
+        this.owner.getChildByName('img_red') && (this.owner.getChildByName('img_red').visible = r);
+    }
+}
+class Tehui_Timer_Comp extends Laya.Script {
+    onUpdate() {
+        this.owner.getChildByName('time').text = __data.activity.todayDiscount.getRemainingTimeToMidnight();
+    }
+
+
+}
+class DeskIcon extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskIcon',
+            module: false
+        });
+        this.kvs = { 1: 'qifu', 2: 'shouchong', 3: 'tehui', 4: 'bubuyouli', 5: 'jinbiguan', 6: 'lijin' };
+
+        // this.tehui.addComponent(Tehui_Timer_Comp);
+
+        // this.qifu.addComponent(Red_Icon).listen();
+        this.shouchong.addComponent(Red_Icon).listen();
+        this.tehui.addComponent(Red_Icon).listen();
+        this.bubuyouli.addComponent(Red_Icon).listen(() => { return !__data.activity.stepstepGift.isEnd; });
+        this.jinbiguan.addComponent(Red_Icon).listen(() => { return __data.activity.goldBox.isOpen });
+        this.lijin.addComponent(Red_Icon).listen(() => { return __data.activity.inviteRed.isOpen });
+        this.lijin.getChildByName('nw').addComponent(S_IconNextWeek);
+
+        this.qifu.on(Laya.Event.CLICK, this, this._onClick, [1]);
+        this.shouchong.on(Laya.Event.CLICK, this, this._onClick, [2]);
+        this.tehui.on(Laya.Event.CLICK, this, this._onClick, [3]);
+        this.bubuyouli.on(Laya.Event.CLICK, this, this._onClick, [4]);
+        this.jinbiguan.on(Laya.Event.CLICK, this, this._onClick, [5]);
+        this.lijin.on(Laya.Event.CLICK, this, this._onClick, [6]);
+    }
+
+    onEnable() {
+        this.default();
+    }
+
+    _onClick(type) {
+        switch (type) {
+            // case 2: game.scene.add(Icon_marketActivity); __showScene.show_gameMain_firstPay(); break;
+            // case 3: game.scene.add(Icon_marketActivity); __showScene.show_panel_todayDiscount(); break;
+            // case 4: game.scene.add(Icon_marketActivity); __showScene.show_panel_stepstepGift(); break;
+            // case 5: game.scene.add(Icon_marketActivity); __showScene.show_panel_goldBox(); break;
+            // case 6: game.scene.add(Icon_marketActivity);__showScene.show_panel_inviteRed(); break;
+            case 2: __showScene.show_gameMain_firstPay(); break;
+            case 3: __showScene.show_panel_todayDiscount(); break;
+            case 4: __showScene.show_panel_stepstepGift(); break;
+            case 5: __showScene.show_panel_goldBox(); break;
+            case 6: __showScene.show_panel_inviteRed(); miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '点击瓜分礼金图标' }); break;
+        }
+    }
+
+    default() {
+        if (this.kvs[this.name]) {
+            this.clear();
+            this.showIcon(this.kvs[this.name]);
+        }
+    }
+
+    set dataSource(value) {
+        if (value) {
+            this.clear();
+            this.showIcon(this.kvs[value]);
+        }
+    }
+
+    showIcon(name) {
+        console.log(this[name]);
+        this[name] && (this[name].visible = true);
+    }
+
+    clear() {
+        let values = Object.values(this.kvs);
+        values.forEach((value) => { this[value] && (this[value].visible = false); });
+    }
+}
+Laya.ClassUtils.regClass('ui.desk_common.DeskIconUI', DeskIcon);

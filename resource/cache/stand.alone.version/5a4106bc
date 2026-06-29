@@ -1,0 +1,67 @@
+/**
+ * 免费获取记牌器
+ */
+class GameClub extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/club',
+            layer: 'panel'
+        })
+    }
+
+    onEnable() {
+        Laya.timer.callLater(this, this._showClub, [this.btn_club]);
+    }
+
+    onDisable() {
+        this._closeClub();
+    }
+
+    _showClub(target) {
+        try {
+            let p = this.getPosition(target);
+            this.button = this.button || wx.createGameClubButton({
+                icon: '',
+                style: {
+                    left: p.xr * wx.getSystemInfoSync().screenWidth,
+                    top: p.yr * wx.getSystemInfoSync().screenHeight,
+                    width: p.wr * wx.getSystemInfoSync().screenWidth,
+                    height: p.hr * wx.getSystemInfoSync().screenHeight
+                }
+            });
+            this.button.onTap(this.playButtonSound.bind(this));
+            this.button.show();
+            console.log('开启成功.');
+        } catch (e) {
+            console.log('开启失败.');
+        }
+    }
+
+    /**
+     * 关闭社区按钮
+     */
+    _closeClub() {
+        try {
+            this.button.offTap(this.playButtonSound.bind(this));
+            this.button.hide();
+        } catch (e) {
+            console.log('关闭失败.');
+        }
+    }
+
+    getPosition(target) {
+        let _x = this.x + target.x - target.width / 2;
+        let _y = this.y + target.y - target.height / 2;
+        let _w = Laya.stage.width;
+        let _h = Laya.stage.height / game.scale;
+        let xr = _x / _w;
+        let yr = _y / _h;
+        let wr = target.width / _w;
+        let hr = target.height / _h;
+        return { xr, yr, wr, hr };
+    }
+
+    playButtonSound(){
+        __sound.button();
+    }
+}

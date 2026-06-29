@@ -1,0 +1,1866 @@
+/**
+ * ...
+ * @author 轻飘时刻
+ */
+var ___frame = ___frame || {};
+(function () {
+    ___frame.init = function () {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '初始化游戏sky.frame.js init' })
+
+        trace("初始化游戏引擎")
+
+        var u = navigator.userAgent;
+        var isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1; //android终端
+        var isIOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终端
+        // alert(isAndroid+" "+isIOS)
+        ___frame.phoneModel = (isIOS) ? "ios" : "android"
+
+        var client = navigator.userAgent.toLowerCase(); //获取判断用的对象
+        //运行环境
+        // ___frame.runScene=(client.match(/MicroMessenger/i)=="micromessenger")?'wx':(typeof MostOneJSApis=='object'||typeof MostOneJSApis=='function')?'mw':'wx';
+        if (config.is_useRetinalCanvas)
+            Laya.Config.useRetinalCanvas = true;
+
+        Config.isAntialias = true;// 防止ios花屏
+        Config.useWebGL2 = false;
+        //初始化微信小游戏
+        //初始化百度小游戏
+        // if(config.gameType == 'bd')Laya.BMiniAdapter.init()
+        // else if(config.gameType == 'tt')Laya.MiniAdpter.init();
+        // else Laya.wxMiniGame.init();
+        //激活资源版本控制
+        // Laya.ResourceVersion.enable("version.json", Handler.create(null, beginLoad), Laya.ResourceVersion.FILENAME_VERSION);
+
+        Laya3D.init(config.gameW, config.gameH);
+        LayaZip.Init();
+        LayaZip.LazyMode = true;
+        Laya["Physics"] && Laya["Physics"].enable();
+        Laya["DebugPanel"] && Laya["DebugPanel"].enable();
+
+        try {
+            //修复开放域滑动区域问题
+            Laya.WXOpenDataViewer.prototype._postMsg = function () {
+                var mat = new Laya.Matrix();
+                //修改的地方，转换成全局坐标
+                var p = this.localToGlobal(new Laya.Point());
+                mat.translate(p.x, p.y);
+                var stage = Laya.stage;
+                mat.scale(stage._canvasTransform.getScaleX() * this.globalScaleX * stage.transform.getScaleX(), stage._canvasTransform.getScaleY() * this.globalScaleY * stage.transform.getScaleY());
+                this.postMsg({ type: "changeMatrix", a: mat.a, b: mat.b, c: mat.c, d: mat.d, tx: mat.tx, ty: mat.ty, w: this.width, h: this.height });
+            };
+        } catch (e) { }
+
+        window.trace = __tool.trace;
+
+        // Laya.init(config.gameW, config.gameH, Laya["WebGL"]);
+
+        // if(isIOS){Laya.init(config.gameW, config.gameH, Laya.WebGL);config.cacheAsBitmap=true}//WebGL
+        // else if(isAndroid)Laya.init(config.gameW, config.gameH, Laya.WebGL);//WebGL
+        // else {Laya.init(config.gameW, config.gameH, Laya.WebGL);config.cacheAsBitmap=true}
+        // Laya.init(config.gameW, config.gameH, Laya.WebGL)
+        // if(config.gameType == 'wx' || config.gameType == 'web'){
+        // 设置Laya提供的worker.js的路径
+        // Laya.WorkerLoader.workerPath = "libs/workerloader.js";
+        // 开启worker线程
+        // Laya.WorkerLoader.enable = true;
+
+        window.WorkerUtils && WorkerUtils.init();
+        //     	var a = new Laya.Image('bigImage/2_1.png')
+        // 	Laya.stage.addChild(a)
+        // return
+        // }
+        // new Main();
+        // return;
+        Laya.stage.bgColor = "#000";
+        miniApi.clientType && (Laya.stage.frameRate = "slow");
+        // Laya.stage.frameRate = "sleep";
+        // Laya.stage.frameRate = "fast";
+
+        // setTimeout(() => {
+
+        // trace(Laya.stage.width, Laya.stage.height)
+        // Laya.Log.enable()
+        config.showStat && Laya.Stat.show(0, 0)
+        trace("设置游戏适配")
+        ___frame.stage = Laya.stage;
+        // ___frame.browserW = config.screenMode == "horizontal" ? Laya.Browser.clientHeight : Laya.Browser.clientWidth;
+        // ___frame.browserH = config.screenMode == "horizontal" ? Laya.Browser.clientWidth : Laya.Browser.clientHeight;
+        // ___frame.ratio_w = ___frame.browserW / Laya.stage.designWidth;
+        // ___frame.ratio_h = ___frame.browserH / Laya.stage.designHeight;
+        // ___frame.ratio_max = Math.max(___frame.ratio_w, ___frame.ratio_h);
+        // ___frame.ratio_min = Math.min(___frame.ratio_w, ___frame.ratio_h);
+        // ___frame.designWidth = Laya.stage.designWidth
+        // ___frame.designHeight = Laya.stage.designHeight
+
+        // trace('Laya.Browser.onAndriod', Laya.Browser.onAndriod)
+        // trace('Laya.Browser.onAndroid', Laya.Browser.onAndroid)
+        // trace('Laya.Browser.onIOS', Laya.Browser.onIOS)
+        if (0 || Laya.Browser.onAndroid || Laya.Browser.onIOS) {
+            // ___frame.width = ___frame.canvasWidth = ___frame.browserW / ___frame.ratio_max;
+            // ___frame.height = ___frame.canvasHeight = ___frame.browserH / ___frame.ratio_max;
+            // var bili = ___frame.height / ___frame.width
+            // trace(___frame.height/___frame.width, 960/1680)
+            // if(bili < 0.46 || bili > 0.68){
+            // 	Laya.stage.scaleMode = "showall";//fixedwidth
+            // 	Laya.stage.alignH = "center";
+            // 	Laya.stage.alignV = "middle";
+            // 	___frame.width = ___frame.canvasWidth = Laya.stage.designWidth;
+            // 	___frame.height = ___frame.canvasHeight = Laya.stage.designHeight;
+            // }else{
+            // var ratio = 0
+            // var scaleMode = ''
+            // if (___frame.ratio_w > ___frame.ratio_h) {
+            // 	ratio = ___frame.ratio_w
+            // scaleMode = 'fixedwidth'
+            // scaleMode = 'noborder'
+            // scaleMode = 'fixedauto'
+            // } else {
+            // 	ratio = ___frame.ratio_h
+            scaleMode = 'fixedheight'
+            // }
+
+            // ___frame.width = ___frame.canvasWidth = ___frame.browserW / ratio;
+            // ___frame.height = ___frame.canvasHeight = ___frame.browserH / ratio;
+            Laya.stage.scaleMode = scaleMode;
+            // }
+            Laya.stage.screenMode = config.screenMode
+            Laya.stage.alignH = "center";
+            Laya.stage.alignV = "middle";
+        } else {
+            // console.log('非 onAndriod onIOS')
+            Laya.stage.scaleMode = "fixedheight"; //fixedwidth
+            Laya.stage.alignH = "center";
+            Laya.stage.alignV = "middle";
+            // ___frame.width = ___frame.canvasWidth = Laya.stage.designWidth;
+            // ___frame.height = ___frame.canvasHeight = Laya.stage.designHeight;
+        }
+
+        // trace(Laya.stage.width, Laya.stage.height)
+
+        // ___frame.width = Math.ceil(___frame.width);
+        // ___frame.height = Math.ceil(___frame.height);
+        // ___frame.scaleW = ___frame.width / Laya.stage.width
+        // ___frame.scaleH = ___frame.height / Laya.stage.height
+        // ___frame.scale = Math.min(___frame.scaleW, ___frame.scaleH)
+
+        // trace(___frame.width, Laya.stage.width, Laya.Browser.clientWidth);
+        // trace(___frame.height, Laya.stage.height, Laya.Browser.clientHeight);
+        // trace(___frame.scale);
+        //初始化显示层
+        // ___frame.scene.init(___frame.stage);
+        // ___frame.scene.init(Laya.stage);
+        let basePath = Laya.URL._basePath;
+        Laya.ResourceVersion.addVersionPrefix = function (url) {
+            // if (Laya.AtlasInfoManager._fileLoadDic[url]) return url
+            if (cdnHead && url.includes('cdn')) {
+                url = cdnHead + url
+                Laya.URL._basePath = ''
+            } else {
+                Laya.URL._basePath = basePath
+            }
+            if (url.indexOf(__version.res) > -1) return url;
+            return url + __version.res;
+        };
+
+        Laya.URL.customFormat = Laya.ResourceVersion.addVersionPrefix;
+        //激活资源版本控制，version.json由IDE发布功能自动生成，如果没有也不影响后续流程
+        // Laya.ResourceVersion.enable("version.json", Laya.Handler.create(___frame, function(){
+        //激活大小图映射，加载小图的时候，如果发现小图在大图合集里面，则优先加载大图合集，而不是小图
+        Laya.AtlasInfoManager.enable("fileconfig.json" + __version.res, Laya.Handler.create(this, function () {
+            // offx = wx.getSystemInfoSync().statusBarHeight / (wx.getSystemInfoSync().screenWidth / Laya.stage.width)
+            // Laya.stage.x = 50 // 刘海屏偏移多少设置
+            ___frame.width = Laya.stage.width - Laya.stage.x
+            ___frame.height = Laya.stage.height
+            ___frame.scaleW = ___frame.width / config.gameW
+            ___frame.scaleH = ___frame.height / config.gameH
+            ___frame.scale = Math.min(___frame.scaleW, ___frame.scaleH)
+            ___frame.scaleMax = Math.max(___frame.scaleW, ___frame.scaleH)
+            trace(Laya.stage.width, Laya.stage.height, ___frame.scale)
+            ___frame.scene.init(___frame.stage);
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '_game_init_' })
+            _game_init_();
+        }));
+
+        // }, 1000)
+        // }), Laya.ResourceVersion.FILENAME_VERSION);
+    }
+
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    ___frame.scene = (function () {
+        function Scene() { }
+        Scene.elements = [];
+        Scene.container = null;
+        Scene.layer = [{
+            c: null,
+            name: 'bottom',
+            isMask: false
+        },
+        {
+            c: null,
+            name: 'middle',
+            isMask: false
+        },
+        {
+            c: null,
+            name: 'icon',
+            isMask: false
+        },
+        {
+            c: null,
+            name: 'panel',
+            isMask: true,
+            mask: null,
+            maskAlpha: 0.75
+        },
+        {
+            c: null,
+            name: 'panel0',
+            isMask: true,
+            mask: null,
+            maskAlpha: 0.75
+        },
+        {
+            c: null,
+            name: 'panel1',
+            isMask: true,
+            mask: null,
+            maskAlpha: 0
+        },
+        {
+            c: null,
+            name: 'tips',
+            isMask: false
+        }
+        ];
+        Scene.init = function (container_) {
+            //层级在这里new因为掉用这个方法之前才laya才刚刚init
+            Scene.container = new Laya.Sprite();
+            Scene.container.width = ___frame.width
+            Scene.container.height = ___frame.height
+            container_.addChild(Scene.container);
+
+            for (var i = 0; i < Scene.layer.length; i++) {
+                Scene.layer[Scene.layer[i].name] = Scene.layer[i]
+                Scene.layer[i].c = Scene.container.addChild(new Laya.Sprite())
+                if (Scene.layer[i].isMask) {
+                    let _mask = new Laya.Sprite()
+                    _mask.addComponent(S_game_mask__)
+                    _mask.c = Scene.layer[i].c;
+                    _mask.graphics.drawRect(0, 0, ___frame.width, ___frame.height, "#000000");
+                    _mask.size(___frame.width, ___frame.height)
+                    _mask.alpha = Scene.layer[i].maskAlpha;
+                    _mask.on("click", _mask, function (e) {
+                        let lastModule = this.c.getChildAt(this.c.numChildren - 1)
+                        if (lastModule.clickMask) lastModule.clickMask();
+                        else game.scene.remove(lastModule)
+                    })
+                    _mask.on("mousedown", _mask, function (e) { e && e.stopPropagation() })
+                    _mask.on("mouseup", _mask, function (e) { e && e.stopPropagation() })
+                    Scene.layer[i].mask = _mask
+                }
+            }
+            // if( Laya.Browser.onMobile ){
+            // 	Scene.container.rotation = 180;
+            // 	Scene.container.x = Laya.stage.width;
+            // 	Scene.container.y = Laya.stage.height;
+            // }
+            Laya.stage.on(Laya.Event.RESIZE, this, Scene.resize)
+        }
+
+        Scene.resize = function (params) {
+            // if(Laya.Browser.onMobile && Laya.Browser.clientWidth < Laya.Browser.clientHeight){
+            // 	Scene.c.rotation = 180;
+            // 	Scene.c.x = Laya.stage.width;
+            // 	Scene.c.y = Laya.stage.height;
+            // 	layer.closeAll('dialog');
+            // }else if(Laya.Browser.onMobile && Laya.Browser.clientWidth >= Laya.Browser.clientHeight){
+            // 	Scene.c.rotation = 360;
+            // 	Scene.c.x = 0;
+            // 	Scene.c.y = 0;
+            // 	layer.msg('<span style="font-size:24px">锁定屏幕旋转，获得最佳游戏体验！</span>', {area: ['100%'], time: 0, shade: 1});
+            // }
+            // if (game.init_clientWidth != Laya.Browser.clientWidth) {
+            //     _game_init_();
+            // }
+            // console.log(Laya.Browser.clientWidth, Laya.Browser.clientHeight);
+            ___frame.width = Laya.stage.width - Laya.stage.x
+            ___frame.height = Laya.stage.height
+            ___frame.scaleW = ___frame.width / config.gameW
+            ___frame.scaleH = ___frame.height / config.gameH
+            ___frame.scale = Math.min(___frame.scaleW, ___frame.scaleH)
+            ___frame.scaleMax = Math.max(___frame.scaleW, ___frame.scaleH)
+            game.cb.dispatchEvent("resize")
+        }
+
+        Scene.remove = function (Class_) {
+            if (!Class_) return;
+            var module = Scene.elements[___frame.utils.getClassName(Class_)]
+            if (!module) return null
+            ___frame.utils.remove(module)
+
+            var layer = Scene.layer[module.params.layer]
+            if (layer.isMask) {
+                layer.c.numChildren >= 2 && (layer.c.addChildAt(layer.mask, layer.c.numChildren - 2))
+                layer.c.numChildren == 1 && layer.c.removeChildAt(0)
+            }
+            module.removed && module.removed()
+            return module;
+        }
+
+        Scene.removeAll = function () {
+            for (var i = 0; i < Scene.layer.length; i++) {
+                while (Scene.layer[i].c.numChildren) Scene.layer[i].c.removeChildAt(0)
+            }
+        }
+
+        Scene.get = function (Class_) {
+            var module = Scene.elements[___frame.utils.getClassName(Class_)]
+            if (!module) return null
+            return module
+        }
+
+        Scene.registe = function (Class_) {
+            var module = Scene.elements[___frame.utils.getClassName(Class_)]
+            if (module) return module;
+            module = new Class_();
+            Scene.elements[___frame.utils.getClassName(Class_)] = module
+            return module
+        }
+
+        Scene.add = function (Class_, args_) {
+            var module = null
+            var className = ___frame.utils.getClassName(Class_)
+            if (!className) throw new Error(Class_ + " 不能获取className")
+            if (Scene.elements[className]) {
+                module = Scene.elements[className];
+            } else {
+                module = new Class_()
+                Scene.elements[className] = module
+            }
+            module.addedParams = args_
+            if (!module.params) throw new Error("模块 " + className + " 不存在属性 params")
+            var layer = Scene.layer[module.params.layer]
+            if (layer.isMask) {
+                layer.c.addChild(layer.mask)
+            }
+            layer.c.addChild(module);
+            module.added && module.added.apply(module, module.addedParams)
+            return module
+        }
+
+        return Scene
+    })();
+
+    class ModuleBase extends Laya.Scene {
+        // {map:'', layer:, offx:, offy:, scaleX: scaleY:}
+        constructor(p__) {
+            super()
+            p__ && this.__$__mb_init(p__)
+            if (!p__) this.addComponent(ModuleBase_s)
+        }
+
+        __$__mb_init(p__) {
+            var p = {
+                map: null,
+                module: true,
+                layer: 'bottom',
+                offx: 0,
+                offy: 0,
+                centerx: true,
+                centery: true,
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                scaleType: 'min',
+                scaleX: game.scale,
+                scaleY: game.scale
+            };
+            for (var name in p__) p[name] = p__[name];
+            // if(!p || !p.map){
+            // 	throw new Error('继承ModuleBase的模块必须super传入map标签')
+            // }
+
+            if (!game.uiMap[p.map]) {
+                throw new Error('ui界面不存在:' + p__.map)
+            }
+            this.createView(p.map ? game.uiMap[p.map] : {});
+            this.addedParams = null
+            // 是否是模块场景 显示在game.scene里面 默认true
+            if (p.module) {
+                // 默认最底层 中心居中配置 缩放为game.scale
+                this.params = p;
+                // if (p.scaleType == 'min') {
+                //     this.scale(game.scale, game.scale);
+                // } else {
+                //     this.scale(game.scaleMax, game.scaleMax);
+                // }
+                this.comp_addedParams_updatePosition = this.addComponent(ModuleBase_s)
+            }
+        }
+    }
+    ___frame.ModuleBase = ModuleBase
+    class ModuleBase_s extends Laya.Script {
+        onEnable() {
+            game.cb.on('resize', this, this.onResize)
+            this.onShow()
+        }
+        onDisable() {
+            game.cb.off('resize', this, this.onResize)
+            // this.owner.removed && this.owner.removed()
+        }
+        onResize() {
+            if (!this.owner.params) {
+                return
+            }
+            this.updatePosition()
+        }
+        onShow() {
+            this.updatePosition()
+            let pta = this.owner.getComponent(Panel_Tween_Add)
+            pta && pta.startTween()
+        }
+        updatePosition() {
+            if (!this.owner.params) {
+                return
+            }
+            if (this.owner.params.scaleType == 'min') {
+                this.owner.scale(game.scale, game.scale);
+            } else if (this.owner.params.scaleType == 'width') {
+                this.owner.scale(game.scaleW, game.scaleW);
+            } else {
+                this.owner.scale(game.scaleMax, game.scaleMax);
+            }
+            this.owner.x = 0;
+            this.owner.y = 0;
+            var w = this.owner.width * this.owner.scaleX
+            var h = this.owner.height * this.owner.scaleY
+            this.owner.params.centerx && (this.owner.x = (Laya.stage.width - w) / 2)
+            this.owner.params.centery && (this.owner.y = (Laya.stage.height - h) / 2)
+            this.owner.params.up && (this.owner.y = 0)
+            this.owner.params.down && (this.owner.y = Laya.stage.height - h)
+            this.owner.params.left && (this.owner.x = 0)
+            this.owner.params.right && (this.owner.x = Laya.stage.width - w)
+            // this.owner.x += (this.owner.pivotX || 0)
+            // this.owner.y += (this.owner.pivotY || 0)
+            let pta = this.owner.getComponent(Panel_Tween_Add)
+            pta && pta.updateXY()
+            this.owner.x += (typeof this.owner.params.offx == 'function' ? this.owner.params.offx() : this.owner.params.offx);
+            this.owner.y += (typeof this.owner.params.offy == 'function' ? this.owner.params.offy() : this.owner.params.offy);
+
+        }
+    }
+    ___frame.ModuleBase_s = ModuleBase_s;
+
+    class S_game_mask__ extends Laya.Script {
+        onEnable() {
+            game.cb.on('resize', this, this.onResize)
+            this.onResize()
+        }
+        onDisable() {
+            game.cb.off('resize', this, this.onResize)
+        }
+        onResize() {
+            try {
+                this.owner.graphics.clear()
+                this.owner.graphics.drawRect(0, 0, Laya.stage.width, Laya.stage.height, "#000000");
+                this.owner.size(Laya.stage.width, Laya.stage.height)
+            } catch (error) {
+                console.log(error);
+            }
+        }
+    }
+
+
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    ___frame.utils = (function () {
+        function Utils() { }
+
+        /**
+         * 获取网页参数
+         * @param  {string} value key
+         * @return {string} value
+         */
+        Utils.getWebParams = function (value) {
+            var r = new RegExp("(\\?|#|&)" + value + "=([^&#]*)(&|#|$)");
+            var m = location.href.match(r);
+            return decodeURIComponent(!m ? "" : m[2]);
+        }
+
+        /**
+         * 创建一个实例 DATA {}类型的信息 复制给new CLASS
+         */
+        Utils.newA = function (_class_, _data_) {
+            if (!_class_) throw new Error("Error " + _class_ + " 不存在")
+            var a = new _class_()
+            Utils.injectProp(a, _data_)
+            return a
+        }
+        Utils.injectProp = function (_instance_, _data_) {
+            for (var name in _data_) {
+                if (_instance_.hasOwnProperty(name)) {
+                    var value = _data_[name]
+                    _instance_[name] = (value == "true" ? true : (value == "false" ? false : value))
+                }
+            }
+            return _instance_
+        }
+        Utils.scale = function (target, scaleX, scaleY) {
+            if (scaleY == null || scaleY == undefined) scaleY = scaleX
+            target.scaleX = scaleX
+            target.scaleY = scaleY
+            target.__w = target.width * scaleX
+            target.__h = target.height * scaleY
+        }
+        Utils.cacheAtlasAndImage = function (arr, u1Arr, u2Arr, isReplace) {
+            for (var i = 0; i < arr.length; i++) {
+                var o = arr[i]
+                var url = o.url
+                if (isReplace && u1Arr && u2Arr) {
+                    for (var u_index = 0; u_index < u1Arr.length; u_index++) {
+                        url = url.replace(u1Arr[u_index], u2Arr[u_index])
+                    }
+                }
+                var all_url = o.url
+                var json = url.indexOf("json")
+                // 只按照图片解析 json music不解析
+                if (json != -1) continue
+                var mp3 = url.indexOf(".mp3")
+                var wav = url.indexOf(".wav")
+                if (mp3 >= 0 || wav >= 0) continue;
+
+                url = url.replace(config.urlHead, "")
+
+                var atlas = url.indexOf("atlas")
+                url = url.replace("res/", "")
+                url = url.replace("atlas/", "")
+                if (atlas == -1) {
+                    url = url.replace(config.verson_res, "")
+                    game.utils.cacheImage(url, all_url)
+                } else {
+                    url = url.replace(".png" + config.verson_res, "")
+                    // url = url.replace(".json"+config.verson_res, "")
+                    game.utils.cacheAtlas(url, all_url, o.jsonUrl)
+                }
+            }
+        }
+        Utils.cacheImage = function (url, all_url) {
+            laya.net.Loader.cacheRes(url, laya.net.Loader.getRes(all_url))
+        }
+        var __cache_urls = [];
+        Utils.cacheAtlas = function (JSONNAME, all_url, jsonUrl) {
+            var url_p = all_url
+            var url_j = jsonUrl || url_p.replace(".png", ".json")
+            //如果已经解析 那么返回 如果图集太多 解析消耗也大
+            var index = __cache_urls.indexOf(url_j)
+            if (index != -1) {
+                trace("已经解析过该资源", url_j)
+                trace("已经解析过该资源", url_p)
+                return
+            }
+
+            var json = Laya.loader.getRes(url_j)
+            if (!json) {
+                miniApi.alert(null, '网络错误，请重启游戏', miniApi.exit, miniApi.exit)
+                throw new Error("资源不存在 " + url_j);
+            }
+
+            __cache_urls.push(url_j)
+
+            var t = Laya.loader.getRes(url_p)
+            if (!t) {
+                miniApi.alert(null, '网络错误，请重启游戏', miniApi.exit, miniApi.exit)
+                throw new Error("资源不存在 " + url_p);
+            }
+
+            var prefix = json.meta.prefix
+            for (var key in json.frames) {
+                if (json.frames.hasOwnProperty(key)) {
+                    var element = json.frames[key];
+                    var nt = laya.resource.Texture.createFromTexture(t, element.frame.x, element.frame.y, element.frame.w, element.frame.h)
+                    laya.net.Loader.cacheRes(prefix + key, nt)
+                }
+            }
+        }
+        Utils.timeToString = function (time, sign) {
+            var d = new Date(time)
+            var year = d.getFullYear()
+            var month = (d.getMonth() + 1)
+            month = month < 10 ? '0' + month : month
+            var date = d.getDate()
+            date = date < 10 ? '0' + date : date
+            var hour = d.getHours()
+            hour = hour < 10 ? '0' + hour : hour
+            var minute = d.getMinutes()
+            minute = minute < 10 ? '0' + minute : minute
+            var second = d.getSeconds()
+            second = second < 10 ? '0' + second : second
+            return year + '-' + month + '-' + date + sign + hour + ':' + minute + ':' + second
+        }
+        Utils.RoundRect = function (___width, ___height, ___ror, ___color = '#00ffff') {
+            var __imgWidth = ___width
+            var __imgHeight = ___height
+            var __imgRor = (___ror) ? ___ror : ((___width + ___height) / 2) / 15
+            var _rect = new Laya.Sprite();
+            _rect.graphics.drawPath(0, 0, [
+                ["moveTo", __imgRor, 0],
+                ["lineTo", __imgWidth - __imgRor, 0],
+                ["arcTo", __imgWidth, 0, __imgWidth, __imgRor, __imgRor],
+                ["lineTo", __imgWidth, __imgHeight - __imgRor],
+                ["arcTo", __imgWidth, __imgHeight, __imgWidth - __imgRor, __imgHeight, __imgRor],
+                ["lineTo", __imgRor, __imgHeight],
+                ["arcTo", 0, __imgHeight, 0, __imgHeight - __imgRor, __imgRor],
+                ["lineTo", 0, __imgRor],
+                ["arcTo", 0, 0, __imgRor, 0, __imgRor],
+                ["closePath"]
+            ], {
+                fillStyle: ___color
+            })
+            return _rect
+        }
+        //删除arr中 和deleteArr所有相同的元素
+        Utils.deleteArrayFromArray = function (deleteArr, arr) {
+            var deleteArr = deleteArr.slice()
+            var arr = arr.slice()
+            var m = 0
+            while (deleteArr.length && m < 10000) {
+                for (var i = arr.length - 1; i >= 0; i--) {
+                    if (deleteArr[0] == arr[i]) {
+                        deleteArr.shift()
+                        arr.splice(i, 1)
+                        break;
+                    }
+                }
+                m++
+            }
+            if (m >= 10000) {
+                alert('deletexx while 循环次数超出范围')
+            }
+            return arr
+        }
+        Utils.getURL = function (url_) {
+            return url_ + "?v=" + config.verson_res
+        }
+        Utils.removeAll = function (a) {
+            while (a && a.numChildren) a.removeChildAt(0)
+        }
+        Utils.remove = function () {
+            if (arguments.length <= 0) throw new Error('remove can not nothing！')
+            let returnArr = []
+            let args = Array.prototype.slice.call(arguments);
+            while (args.length) {
+                if (args[0] && args[0].parent) {
+                    args[0].parent.removeChild(args[0])
+                }
+                returnArr.push(args.shift())
+            }
+            return returnArr.length > 1 ? returnArr : returnArr[0]
+            // if(a&&a.parent)a.parent.removeChild(a)
+            // return a
+        }
+        Utils.getSprite = function (sp, textureURL) {
+            sp = sp || new Laya.Sprite()
+            var t = Laya.loader.getRes(textureURL)
+            if (!t) throw new Error("资源不存在 " + textureURL)
+
+            sp.graphics.clear();
+            sp.graphics.drawTexture(t, 0, 0);
+            sp.size(t.width, t.height)
+            return sp
+        }
+        Utils.setget = function (target, property, setfunction, getfunction) {
+            Object.defineProperty(target, property, {
+                set: setfunction,
+                get: getfunction
+            })
+        }
+        Utils.deletePX = function (value) {
+            if (!value) return 0
+            var str_ = ""
+            var str = value.toString()
+            var i = str.indexOf("px")
+            if (i != -1) str_ = parseInt(str.slice(0, i))
+            else str_ = str
+            return str_
+        }
+        Utils.stage = function (value) {
+            var a = null
+            if (value) {
+                if (value.parent) {
+                    if (value.parent == ___frame.stage) a = true
+                    else {
+                        a = Utils.stage(value.parent)
+                    }
+                } else {
+                    a = false
+                }
+            } else {
+                a = false
+            }
+            return a
+        }
+        //function a(){} return a
+        //this.a = function(){} 解析不能
+        Utils.getClassName = function (value) {
+            if (typeof value === 'object') return value.constructor.name
+            else if (typeof value === 'function') return value.name
+        }
+        /*
+        *在抽奖的活动中经常会用到这个算法，不同奖项的获取概率不同，要按概率去随机生成对应的奖品
+        *
+        * // test
+        var a = ['mac', 'iphone', 'vivo', 'OPPO'];
+        var b = [0.1, 0.2, 0.3, 0.4];
+        console.log(random(a, b));
+        随机取样
+        */
+        Utils.randomSample = function (arr1, arr2) {
+            var sum = 0,
+                factor = 0,
+                random = Math.random();
+
+            for (var i = arr2.length - 1; i >= 0; i--) {
+                sum += arr2[i]; // 统计概率总和
+            };
+            random *= sum; // 生成概率随机数
+            for (var i = arr2.length - 1; i >= 0; i--) {
+                factor += arr2[i];
+                if (random <= factor)
+                    return arr1[i];
+            };
+            return null;
+        };
+
+        Utils.randomArr = function (oArr) {
+            var temp_x; //临时交换数
+            var random_x;
+            for (var i = oArr.length; i > 0; i--) {
+                random_x = Math.floor(Math.random() * i); //   取得一个随机数
+                temp_x = oArr[random_x];
+                oArr[random_x] = oArr[i - 1];
+                oArr[i - 1] = temp_x;
+            }
+            return oArr
+        }
+
+        /**
+         * 返回满足条件的元素 单个
+         * @param {} array 
+         * @param {*} where 
+         */
+        Utils.arrayWhere = function (array, where) {
+            // for (let index = 0; index < array.length; index++) {
+            for (var index in array) {
+                const element = array[index];
+                var isSame = true
+                for (const key in where) {
+                    if (element[key] != where[key]) {
+                        isSame = false;
+                        break;
+                    }
+                }
+                if (isSame) return element;
+            }
+            return null;
+        }
+        /**
+         * 返回满足条件的复数集合 数组
+         * @param {} array 
+         * @param {*} where 
+         */
+        Utils.arrayWheres = function (array, where) {
+            let result = []
+            for (let index = 0; index < array.length; index++) {
+                const element = array[index];
+                let isSame = true
+                for (const key in where) {
+                    if (element[key] != where[key]) {
+                        isSame = false;
+                        break;
+                    }
+                }
+                if (isSame) {
+                    result.push(element)
+                };
+            }
+            return result;
+        }
+        Utils.arraySpliceWhere = function (array, where) {
+            for (let index = 0; index < array.length; index++) {
+                const element = array[index];
+                var isSame = true
+                for (const key in where) {
+                    if (element[key] != where[key]) {
+                        isSame = false;
+                        break;
+                    }
+                }
+                if (isSame) {
+                    return array.splice(index, 1)
+                    break;
+                };
+            }
+            return null;
+        }
+        Utils.arraySpliceWheres = function (array, where) {
+            let result = []
+            for (let index = array.length - 1; index >= 0; index--) {
+                const element = array[index];
+                let isSame = true
+                for (const key in where) {
+                    if (element[key] != where[key]) {
+                        isSame = false;
+                        break;
+                    }
+                }
+                if (isSame) {
+                    array.splice(index, 1)
+                };
+            }
+            return result;
+        }
+        Utils.updateLabelY = (label) => {
+            if (!Laya.Browser.onPC) {
+                let oy = label.fontSize / 11
+                let uy = Math.max(oy, 3)
+                // label.y -= uy;
+            }
+            if (!label) {
+                try {
+                    let a = null;
+                    a.b = 1;
+                } catch (error) {
+                    console.error('updateLabelY label is null', error)
+                }
+            }
+        }
+
+        // Utils.polygon_g;
+        // Utils.polygon_g1;
+        /**
+         * [hitTestPolygon 多边形碰撞]
+         * @param  {[type]} polygon1_ [多边形1 数组 [0,0,100,100,100,200] 0 x坐标 1 y坐标 以此类推]
+         * @param  {[type]} polygon2_ [多边形2 数组 [0,0,100,100,100,200] 0 x坐标 1 y坐标 以此类推]
+         * @param  {[type]} offx1     [多边形1 x偏移坐标 全部x坐标 + 这个偏移值]
+         * @param  {[type]} offy1     [多边形1 y偏移坐标 全部x坐标 + 这个偏移值]
+         * @param  {[type]} offx2     [多边形2 x偏移坐标 全部x坐标 + 这个偏移值]
+         * @param  {[type]} offy2     [多边形2 y偏移坐标 全部x坐标 + 这个偏移值]
+         * @return {[type]}           [description]
+         */
+        Utils.hitTestPolygon = function (polygon1_, polygon2_, offx1, offy1, offx2, offy2) {
+            var polygon1 = polygon1_.slice()
+            var polygon2 = polygon2_.slice()
+            offx1 = offx1 ? offx1 : 0
+            offy1 = offy1 ? offy1 : 0
+            offx2 = offx2 ? offx2 : 0
+            offy2 = offy2 ? offy2 : 0
+            if (polygon1.length < 4 || polygon2.length < 4) {
+                //___frame.error("___frameUtils.hitTestPolygon 数组长度必须大于等于4")
+                return false
+            }
+            polygon1[polygon1.length] = polygon1[0];
+            polygon1[polygon1.length] = polygon1[1];
+            polygon2[polygon2.length] = polygon2[0];
+            polygon2[polygon2.length] = polygon2[1];
+            var isHit = false
+            for (var i = 0; i <= polygon1.length - 4; i += 2) {
+                for (var j = 0; j <= polygon2.length - 4; j += 2) {
+                    isHit = Utils.hitTestLine(polygon1[i] + offx1, polygon1[i + 1] + offy1, polygon1[i + 2] + offx1, polygon1[i + 3] + offy1, polygon2[j] + offx2, polygon2[j + 1] + offy2, polygon2[j + 2] + offx2, polygon2[j + 3] + offy2)
+                    // if(isHit){
+                    //     polygon_g = polygon_g || new PIXI.Graphics()
+                    //     ___frame.stage.addChild(polygon_g)
+
+                    //     polygon_g1 = polygon_g1 || new PIXI.Graphics()
+                    //     ___frame.stage.addChild(polygon_g1)
+                    //     polygon_g.clear()
+                    //     polygon_g.lineStyle(2, 0xff0000)
+                    //     polygon_g.moveTo(polygon1[i]+offx1, polygon1[i+1]+offy1)
+                    //     polygon_g.lineTo(polygon1[i+2]+offx1, polygon1[i+3]+offy1)
+                    //     polygon_g.endFill()
+
+                    //     polygon_g1.clear()
+                    //     polygon_g1.lineStyle(2, 0xff00ff)
+                    //     polygon_g.moveTo(polygon2[j]+offx2, polygon2[j+1]+offy2)
+                    //     polygon_g.lineTo(polygon2[j+2]+offx2, polygon2[j+3]+offy2)
+                    //     polygon_g1.endFill()
+                    // }
+                    if (isHit) break
+                }
+                if (isHit) break
+            }
+            return isHit
+        }
+        Utils.hitTestLine = function (x1, y1, x2, y2, x3, y3, x4, y4) {
+            if (x1 == x2 && x2 == x3 && x3 == x4) {
+                if (Math.abs((y1 + (y2 - y1) / 2) - (y3 + (y4 - y3) / 2)) <= Math.abs((y2 - y1) / 2 + (y4 - y3) / 2)) return true
+                else return false
+            } else if (y1 == y2 && y2 == y3 && y3 == y4) {
+                if (Math.abs((x1 + (x2 - x1) / 2) - (x3 + (x4 - x3) / 2)) <= Math.abs((x2 - x1) / 2 + (x4 - x3) / 2)) return true
+                else return false
+            }
+
+            var line1p1 = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1); //第一条线段的向量和（第一条线段的开始点与第二条线段的开始点组成的向量）的向量积
+            var line1p2 = (x2 - x1) * (y4 - y1) - (x4 - x1) * (y2 - y1); //第一条线段的向量和（第一条线段的开始点与第二条线段的结束点组成的向量）的向量积
+            var line2p1 = (x4 - x3) * (y1 - y3) - (x1 - x3) * (y4 - y3); //第二条线段的向量和（第二条线段的开始点与第一条线段的开始点组成的向量）的向量积
+            var line2p2 = (x4 - x3) * (y2 - y3) - (x2 - x3) * (y4 - y3); //第二条线段的向量和（第二条线段的开始点与第一条线段的结束点组成的向量）的向量积
+            if ((line1p1 * line1p2 <= 0) && (line2p1 * line2p2 <= 0)) { //判断方法在先前讲过
+                return true; //相交
+            } else {
+                return false; //否则不相交
+            }
+        }
+        Utils.numberToTime = function (time, maxTime, insertHout, insertMinute) {
+            maxTime = arguments[1] != null ? arguments[1] : 3;
+            insertHout = arguments[2] != null ? arguments[2] : ":";
+            insertMinute = arguments[3] != null ? arguments[3] : ":";
+
+            var hour = Math.floor(time / 60 / 60) >> 0;
+            var minute = Math.floor(time / 60) % 60;
+            var second = time % 60;
+            var timeTxt = "";
+            if (maxTime == 3) {
+                timeTxt += ((hour >= 100) ? hour.toString() : (100 + hour).toString().substr(1)) + insertHout;
+                timeTxt += ((minute < 10) ? ("0" + minute.toString()) : minute.toString()) + insertMinute;
+                timeTxt += (second < 10) ? ("0" + second.toString()) : second.toString();
+            } else if (maxTime == 2) {
+                timeTxt += ((minute < 10) ? ("0" + minute.toString()) : minute.toString()) + insertMinute;
+                timeTxt += (second < 10) ? ("0" + second.toString()) : second.toString();
+            } else if (maxTime == 1) {
+                timeTxt += (second < 10) ? ("0" + second.toString()) : second.toString();
+            }
+            return timeTxt;
+        }
+        Utils.labelClear = function (label) {
+            let m = Math.max(label.width, label.height)
+            let s = Math.floor(2000 / m)
+            let mul = Math.min(s, 2)
+
+            label.stroke *= mul * 1;
+            label.fontSize *= mul;
+            label.width *= mul;
+            label.height *= mul;
+            label.leading *= mul;
+            label.scaleX = 1 / mul;
+            label.scaleY = 1 / mul;
+        }
+        Utils.deletePX = function (value) {
+            if (!value) return 0
+            var str_ = ""
+            var str = value.toString()
+            var i = str.indexOf("px")
+            if (i != -1) str_ = parseInt(str.slice(0, i))
+            else str_ = str
+            return str_
+        }
+        // son在容器1里面的坐标 变成容易2是什么坐标
+        // son 可以取到 x y
+        // parent1 可以取到 x y scaleX scaleY
+        // parent2 可以取到 x y scaleX scaleY
+        // 改变精灵坐标 是显示对象
+        Utils.changeSpriteXY = function (son, parent1, parent2) {
+            if (son.parent == parent2) return {
+                x: son.x,
+                y: son.y
+            }
+            return Utils.changeDataXY(son, parent1, parent2)
+        }
+        // 改变左边 改变的是数据
+        Utils.changeDataXY = function (son, parent1, parent2) {
+            var a = son.x * parent1.scaleX + parent1.x
+            var b = a - parent2.x
+            var x = b / parent2.scaleX
+
+            var a = son.y * parent1.scaleY + parent1.y
+            var b = a - parent2.y
+            var y = b / parent2.scaleY
+
+            return {
+                x: x,
+                y: y
+            }
+        }
+        // son在容器1里面的坐标 变成容易2是什么坐标
+        // son 可以取到 x y
+        // parent1 可以取到 x y scaleX scaleY
+        // parent2 可以取到 x y scaleX scaleY
+        Utils.getXY = function (son, parent1, parent2) {
+            var a = son.x * parent1.scaleX + parent1.x
+            var b = a - parent2.x
+            var x = b / parent2.scaleX
+
+            var a = son.y * parent1.scaleY + parent1.y
+            var b = a - parent2.y
+            var y = b / parent2.scaleY
+
+            return {
+                x: x,
+                y: y
+            }
+        }
+        Utils.loadImage = function (image, loadUrl, defaultUrl) {
+            var texture = Laya.loader.getRes(loadUrl);
+            if (texture) {
+                Utils.updateImage(image, loadUrl)
+            } else {
+                Utils.updateImage(image, defaultUrl)
+                // var aa = loadUrl//[{"url":loadUrl, "type":Laya.Loader.IMAGE}]
+                Laya.loader.load(loadUrl, Laya.Handler.create(null, Utils.updateImage, [image, loadUrl]))
+            }
+        }
+        Utils.updateImage = function (image, loadUrl) {
+            // if(resArray)game.utils.cacheAtlasAndImage(resArray)
+            image.skin = loadUrl
+        }
+
+        return Utils
+    })()
+
+    String.prototype.replaceAll = function (FindText, RepText) {
+        return this.replace(new RegExp(FindText, "g"), RepText);
+    }
+
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    ___frame.Dragon = class LDragon extends Laya.Sprite {
+        static load(url) {
+            return new Promise((resolve, reject) => {
+                let prefix = ''
+                if (url.includes('cdn/')) {
+                    prefix = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : ''
+                }
+                __tool.load([{ url: prefix + url }], () => {
+                    ___frame.Dragon.mFactory = ___frame.Dragon.mFactory || {};
+                    if (___frame.Dragon.mFactory[url]) return resolve(1);
+
+                    let mFactory = new Laya.Templet();
+                    mFactory.on(Laya.Event.COMPLETE, this, () => {
+                        ___frame.Dragon.mFactory[url] = mFactory
+                        resolve(1)
+                    });
+                    mFactory.on(Laya.Event.ERROR, this, () => {
+                        reject(1)
+                    });
+                    mFactory.loadAni(url);
+                })
+            })
+        }
+        constructor(url, actMode = 0, firstActName, loop = true, isInit = true) {
+            super()
+            this.completeCallback;
+            isInit && this.init(url, actMode, firstActName, loop)
+        }
+        init(url, actMode = 0, firstActName, loop = true) {
+            this.url = url;
+            this.loop = loop;
+            this.actMode = actMode
+            this.firstActName = firstActName
+
+            game.Dragon.load(this.url).then(() => {
+                this.parseComplete()
+            }).catch((e) => { })
+        }
+        parseComplete() {
+            this.mArmature = ___frame.Dragon.mFactory[this.url].buildArmature(this.actMode);
+            this.mArmature.on(Laya.Event.STOPPED, this, this.completeHandler);
+            if (this.firstActName) this.mArmature.play(this.firstActName, this.loop)
+            else this.mArmature.play(0, this.loop)
+            this.addChild(this.mArmature)
+        }
+        completeHandler() {
+            this.completeCallback && this.completeCallback()
+        }
+        onEnable() {
+            // this.play()
+        }
+        onDisable() {
+            this.stop();
+        }
+        play(name, loop, complete) {
+            // this.addChild(this.mArmature)
+            this.completeCallback = complete;
+            this.mArmature && this.mArmature.play(name, loop)
+        }
+        stop() {
+            this.mArmature && this.mArmature.paused()
+        }
+        showSkinByName(name, freshSlotIndex = true) {
+            // this.mArmature.showSkinByName(name, freshSlotIndex)
+            // this.mArmature.play('skill', this.loop)
+        }
+        playRate(rate) {
+            this.mArmature && this.mArmature.playbackRate(rate);
+        }
+        clear() {
+            this.stop()
+            if (this.mArmature) {
+                this.mArmature.off(Laya.Event.STOPPED, this, this.completeHandler);
+                this.mArmature && this.mArmature.destroy()
+                this.mArmature = null;
+            }
+        }
+    }
+
+    /**
+     * [Clip description]
+     * @param {[type]} img             [description]
+     * @param {[type]} url             [description]
+     * @param {[type]} delay           [description]
+     * @param {[type]} repeat          [description]
+     * @param {[type]} completeHandler [description]
+     */
+    ___frame.Clip = function LClip(img, url, delay, repeat, completeHandler) {
+        img = img ? img : new Laya.Image(url[0])
+        img.__index = 0
+        img.__url = url
+        img.__playing = false;
+        img.__repeat = repeat;
+        img.index = function (value) {
+            img.__index = value
+            img.skin = img.__url[value];
+        }
+        img.play = function (value) {
+            parseInt(value) >= 0 && img.index(value)
+            img.stop()
+            img.__playing = true
+            Laya.timer.loop(delay, img, img.clip_update);
+        }
+        img.clip_update = function () {
+            img.__index++
+            if (img.__index < img.__url.length) {
+                img.skin = img.__url[img.__index];
+            } else
+                if (img.__repeat) {
+                    img.__index = 0
+                    img.skin = img.__url[img.__index];
+                } else {
+                    img.stop()
+                    completeHandler && completeHandler(img)
+                }
+        }
+        img.stop = function () {
+            img.__playing = false
+            Laya.timer.clear(img, img.clip_update);
+        }
+        return img;
+    }
+
+    /**
+     * 贴图轮播动画
+    {
+        "maxSprite":1,
+        "width":1,
+        "height":1,
+        "action":{
+            "fly":{
+                "delay":100,
+                "repeat":false,
+                "length":1,
+                "frame0":{"body":{"name":"res1/sdlr1.png","x":0,"y":0}}
+            }
+        }
+    }
+     */
+    ___frame.Animation = function LAnimation() {
+        Laya.Sprite.call(this)
+        var __that = this
+        var __json = null
+        this.width = 0;
+        this.height = 0;
+
+        function set__Json(value) {
+            if (!value) {
+                trace("Error json null")
+            }
+            __json = value;
+            __that.width = __json.width;
+            __that.height = __json.height;
+        }
+        Object.defineProperty(this, "json", {
+            set: set__Json
+        });
+
+        var index = 0;
+        var length = 0;
+        var repeat = true;
+        this.delay;
+        this.completeHandler;
+        this.actionName;
+        this.running = false;
+
+        this.play = function () {
+            Laya.timer.loop(this.delay, this, update);
+            __that.running = true;
+        }
+
+        this.stop = function () {
+            Laya.timer.clear(this, update)
+            __that.running = false;
+        }
+
+        function update() {
+            //__that.cacheAsBitmap = false
+            if (!__json) return;
+            if (index >= length) {
+                if (repeat) {
+                    index = 0;
+                } else {
+                    index = length - 1
+                    __that.stop();
+                    __that.completeHandler && __that.completeHandler(__that)
+                }
+            }
+            var ob1 = __json.action[__that.actionName]["frame" + index];
+            __that.graphics.clear();
+            for (var name1 in ob1) {
+                var t = Laya.loader.getRes(ob1[name1].name)
+                if (t) {
+                    __that.graphics.drawTexture(t, ob1[name1].x, ob1[name1].y);
+                    // trace("Error 不存在资源：", ob1[name1].name)
+                } else {
+                    if (ob1[name1].name.length > 0) {
+                        throw new Error('资源不存在 url：' + ob1[name1].name)
+                    }
+                }
+            }
+            index++;
+            //__that.cacheAsBitmap = true
+        }
+        this.skip = function (value) {
+            __that.actionName = value
+            repeat = __json.action[__that.actionName].repeat;
+            length = __json.action[__that.actionName].length;
+            index = 0
+            __that.delay = __json.action[__that.actionName].delay;
+            update()
+        }
+    }
+    ___frame.Animation.prototype = Object.create(Laya.Sprite.prototype);
+    ___frame.Animation.prototype.constructor = ___frame.Animation;
+
+    /**
+     * 数字文本 数字文本
+        var a = [];
+        for(var i=0;i<10;i++)a.push("begin/r"+i+".png")
+        var txt_giftNum = new game.NumText(a);
+     */
+    class LText extends Laya.Sprite {
+        constructor(urls__, align, dis = 0) {
+            super();
+            this.urls__ = urls__;
+            this._text = 0
+            this._id = ___frame.cache.registe(Laya.Image)
+            this._width$ = 0
+            this._height$ = 0
+            //2张图片文本间隔
+            this.dis = dis;
+            this.align = align || 'left';
+            this.container = new Laya.Sprite()
+            this.addChild(this.container)
+        }
+        set skins(value) { this.urls__ = value; }
+        get text() {
+            return this._text;
+        }
+        set text(value) {
+            this._width$ = this._height$ = 0
+            this._text = value
+            var str = String(value)
+            var l = str.length
+            //全部删除
+            ___frame.cache.recoverAll(this._id)
+            //根据str内容重新排序数字
+            for (var i = 0; i < l; i++) {
+                var a = str.charAt(i)
+                var s = ___frame.cache.get(this._id)
+                if (!this.urls__[a]) throw new Error("NumText 字符 " + a + " 没有对应URL")
+                s.skin = this.urls__[a]
+                this.container.addChild(s)
+                var d = i >= 1 ? this.dis : 0
+                s.x = this._width$ + d
+                this._width$ = this._width$ + s.width + d
+                this._height$ = Math.max(this._height$, s.height)
+            }
+            this.width = this._width$ //s.x + s.width
+            this.height = this._height$ //s.height
+
+            if (this.align == 'left') this.container.x = 0
+            else if (this.align == 'right') this.container.x = -this.width
+            else if (this.align == 'center') this.container.x = -this.width / 2
+        }
+    }
+    ___frame.NumText = LText;
+    /**
+     * [BtnSelect 2态选择按钮]
+     * @param {[type]} url_state_select   [选择图片路径]
+     * @param {[type]} url_state_noselect [非选图片路径]
+     * @param {[type]} view_image         [image视图]
+     * default_select 默认选择状态 true选择 false非选
+     * singleSelect true 选中后再点击 不变成非选状态 false 可以
+     * 例子 game.BtnSelect("createRoom/a3.png", "createRoom/a1.png", this["btn_play"+i], true, true)
+     */
+    ___frame.BtnSelect = function (url_state_select, url_state_noselect, view_image, default_select, callback, singleSelect, singleSelectCallback) {
+        var that = this
+        // view_image = view_image?view_image:new Laya.Image(url_state_select)
+        singleSelect = singleSelect ? true : false
+
+        function updateState() {
+            view_image.skin = _select ? url_state_select : url_state_noselect
+        }
+
+        var _select = null
+
+        function set_select(value) {
+            if (_select == value) return;
+            _select = value ? true : false
+            updateState()
+            // _select&&singleSelectCallback&&singleSelectCallback(view_image)
+            // callback&&callback(view_image)
+        }
+
+        function get_select() {
+            return _select
+        }
+        game.utils.setget(view_image, "select", set_select, get_select)
+
+        view_image.on("click", view_image, clickHandler)
+        view_image.on("added", view_image, function (e) {
+            view_image.on("click", view_image, clickHandler)
+        })
+
+        view_image.on("removed", view_image, function (e) {
+            view_image.off("click", view_image, clickHandler)
+        })
+
+        function clickHandler(e) {
+            if (singleSelect && view_image.select) return
+            view_image.select = !view_image.select
+            callback && callback(view_image, e)
+            _select && singleSelectCallback && singleSelectCallback(view_image, e)
+        }
+        view_image.select = default_select ? true : false
+
+        view_image.selectCallback = function (e) {
+            callback && callback(view_image, e)
+            _select && singleSelectCallback && singleSelectCallback(view_image, e)
+        }
+        return view_image
+    }
+
+    /**
+     * [BtnGroupSingleSelect description]
+     * @param {[type]} imageArr             [description]
+     * @param {[type]} url_select           [description]
+     * @param {[type]} url_no_select        [description]
+     * @param {[type]} select_callback      [description]
+     * @param {[type]} default_select_index [description]
+     * game.BtnGroupSingleSelect([this.btn_xiandai, this.btn_chuantong, this.btn_daqing],
+        ["createRoom/play3_1.png", "createRoom/play1_1.png", "createRoom/play2_1.png"],
+        ["createRoom/play3_0.png", "createRoom/play1_0.png", "createRoom/play2_0.png"],function(e){
+    
+        },0)
+    
+        game.BtnGroupSingleSelect([this.btn_roomModel_1, this.btn_roomModel_2], "createRoom/a2.png", "createRoom/a1.png", function(e){
+    
+        }, 0)
+     */
+    ___frame.BtnGroupSingleSelect = function (imageArr, url_select, url_no_select, select_callback, default_select_index) {
+        var that = this
+        var index = default_select_index
+
+        function clickHandler(target, e) {
+            for (var i = 0; i < imageArr.length; i++) {
+                if (imageArr[i] == target) { } else imageArr[i].select = false;
+            }
+            select_callback && select_callback(target, e)
+        }
+
+        for (var i = 0; i < imageArr.length; i++) {
+            var select_url = typeof url_select == "string" ? url_select : url_select[i];
+            var noselect_url = typeof url_no_select == "string" ? url_no_select : url_no_select[i];
+            ___frame.BtnSelect(select_url, noselect_url, imageArr[i], false, null, true, clickHandler)
+
+            function set_index(value) {
+                // index = value;
+                for (var i = 0; i < imageArr.length; i++) {
+                    if (i == value) imageArr[i].select = true;
+                    else imageArr[i].select = false;
+                }
+                select_callback && select_callback(imageArr[value])
+            }
+
+            function get_index() {
+                return '没有这个属性return null'
+            }
+            game.utils.setget(imageArr[i], "groupSelectIndex", set_index, get_index)
+        }
+
+        imageArr[0].groupSelectIndex = default_select_index
+    }
+
+    ___frame.Btn = function (image_, up_url, down_url, over_url) {
+        ___frame.Btn.event = ___frame.Btn.event || function (e) {
+            if (e.type == 'mouseup') e.currentTarget.skin = e.currentTarget.up_url
+            else if (e.type == 'mouseout') e.currentTarget.skin = e.currentTarget.up_url
+            else if (e.type == 'mousedown') e.currentTarget.skin = e.currentTarget.down_url
+        }
+        var image = image_ ? image_ : new Laya.Image()
+        image.up_url = up_url
+        image.down_url = down_url
+        image.over_url = over_url
+        image.on('mouseup', this, ___frame.Btn.event)
+        image.on('mouseout', this, ___frame.Btn.event)
+        image.on('mousedown', this, ___frame.Btn.event)
+        return image;
+    }
+
+    ___frame.BtnScale = function (image_, up_url, down_url, over_url) {
+        image_.scaleX1 = image_.scaleX
+        image_.scaleY1 = image_.scaleY
+        ___frame.BtnScale.event = ___frame.BtnScale.event || function (e) {
+            if (e.type == 'mouseup') {
+                e.currentTarget.scaleX = 1 * e.currentTarget.scaleX1
+                e.currentTarget.scaleY = 1 * e.currentTarget.scaleY1
+            } else if (e.type == 'mouseout') {
+                e.currentTarget.scaleX = 1 * e.currentTarget.scaleX1
+                e.currentTarget.scaleY = 1 * e.currentTarget.scaleY1
+            } else if (e.type == 'mousedown') {
+                e.currentTarget.scaleX = 0.92 * e.currentTarget.scaleX1
+                e.currentTarget.scaleY = 0.92 * e.currentTarget.scaleY1
+            }
+        }
+        var image = image_ //?image_:new Laya.Image()
+        if (image.anchorX != 0.5 && image.anchorY != 0.5) {
+            image.anchorX = 0.5
+            image.anchorY = 0.5
+            image.x += image.width / 2
+            image.y += image.height / 2
+        }
+        image.up_url = up_url
+        image.down_url = down_url
+        image.over_url = over_url
+        image.on('mouseup', this, ___frame.BtnScale.event)
+        image.on('mouseout', this, ___frame.BtnScale.event)
+        image.on('mousedown', this, ___frame.BtnScale.event)
+        return image;
+    }
+
+    // var uiView=
+    // {
+    // 	"type":"View",
+    // 	"props":{},
+    // 	"child":[{"type":"Image","props":{"y":0,"x":0,"skin":"main_scene/bt_ck1.png"},"compId":2}],
+
+    // 	"animations":
+    // 		[
+    // 			{
+    // 				"nodes":[{
+    // 					"target":2,
+    // 					"keyframes":
+    // 					{
+    // 						// "x":[
+    // 						// {"value":0,"tweenMethod":"linearNone","tween":true,"target":2,"key":"x","index":0}],
+
+    // 						"alpha":[
+    // 						{"value":1,"tweenMethod":"linearNone","tween":true,"target":2,"key":"alpha","index":0},
+    // 						{"value":0,"tweenMethod":"linearNone","tween":true,"target":2,"key":"alpha","index":25},
+    // 						{"value":1,"tweenMethod":"linearNone","tween":true,"target":2,"key":"alpha","index":50},
+    // 						{"value":1,"tweenMethod":"linearNone","tween":true,"target":2,"key":"alpha","index":60}]}}
+    // 						],
+    // 				"name":"ani1",
+    // 				"id":1,
+    // 				"frameRate":60,
+    // 				"action":0
+    // 			}
+    // 		]
+    // };
+    ___frame.Effect = class Eff {
+        // speed如果有数按照speed ms刷新动画 没有参数按照1fps刷新
+        constructor(laya_EffectAnimation, timeSpeed) {
+            this.target = null;
+            // this.data = laya_EffectAnimation.uiView;
+            this.data = laya_EffectAnimation;
+            this.animation = null
+            // this.curFrame = null
+            // this.endFrame = null
+            this.frame = 0
+            this.tolFrame = 0
+            this.ing = false
+            this.actionName = ''
+            this.timeSpeed = timeSpeed
+        }
+        play(actionName, loop, isRePlay) {
+            !actionName && (actionName = 'ani1')
+            if (!isRePlay && this.ing && actionName == this.actionName) return;
+            this.stop();
+            // this.target.visible = true;
+            this.frame = 0;
+            this.tolFrame = 0;
+            this.actionName = actionName;
+            loop == undefined && (loop = true)
+            this.loop = loop;
+            this.target.__effect_offx = this.target.__effect_offx || this.target.x
+            this.target.__effect_offy = this.target.__effect_offy || this.target.y
+            for (var i = 0; i < this.data.animations.length; i++) {
+                if (actionName == this.data.animations[i].name) {
+                    this.animation = this.data.animations[i];
+                    for (var i in this.animation.nodes[0].keyframes) {
+                        var keys = this.animation.nodes[0].keyframes[i]
+                        this.tolFrame = keys[keys.length - 1].index > this.tolFrame ? keys[keys.length - 1].index : this.tolFrame;
+                    }
+                    break;
+                }
+            }
+            // 如果不++最后一帧渲染不出来
+            this.tolFrame++;
+            if (this.timeSpeed) Laya.timer.loop(this.timeSpeed, this, this.update)
+            else Laya.timer.frameLoop(1, this, this.update)
+            this.ing = true
+        }
+        stop() {
+            this.ing = false
+            // this.target.visible = false
+            Laya.timer.clear(this, this.update)
+        }
+        update() {
+            var frame = this.frame % this.tolFrame;
+            // trace(frame, this.frame, this.tolFrame)
+            for (var i in this.animation.nodes[0].keyframes) {
+                var key = i
+                var keys = this.animation.nodes[0].keyframes[key]
+                var value = 0
+                var start_value = 0
+                var end_value = 0
+                var tolTime = 0
+                var last_time = 0
+                for (var j = keys.length - 1; j >= 0; j--) {
+                    // trace(frame, keys[j].index)
+                    if (frame >= keys[j].index) {
+                        start_value = keys[j].value;
+                        end_value = keys[j + 1] ? keys[j + 1].value : keys[0].value
+                        tolTime = keys[j + 1] ? keys[j + 1].index : keys[j].index
+                        last_time = keys[j].index;
+                        var easeFun = Laya.Ease[keys[j].tweenMethod];
+                        if (easeFun == null) {
+                            easeFun = Laya.Ease.linearNone;
+                        }
+                        // if(tolTime == 0)value = start_value
+                        if (frame == keys[j].index) value = start_value
+                        else if (end_value - start_value == 0) value = start_value
+                        else value = easeFun(frame - last_time, start_value, end_value - start_value, tolTime - last_time)
+
+                        // trace('value', value, frame-last_time, start_value, end_value-start_value, tolTime-last_time, tolTime, last_time, j, this.frame, this.tolFrame)
+                        // if(j==4)debugger;
+                        // trace(frame-keys[j].index, start_value, end_value-start_value, tolTime)
+                        break;
+                    }
+                }
+                var offValue = 0
+                if (key == 'x') offValue = this.target.__effect_offx
+                else if (key == 'y') offValue = this.target.__effect_offy
+                this.target[key] = value + offValue
+            }
+            this.frame++;
+            if (this.frame % this.tolFrame == 0 && !this.loop) this.stop();
+        }
+    }
+
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    /**
+     * 派发回调处理
+     */
+    ___frame.cb = (function () {
+        function CB() { }
+
+        CB._cbmArr = [];
+        CB._pool = [];
+        /**
+         * 添加事件
+         * @param   eventType 事件类型
+         * @param   callBack  事件回调
+         * @param   depth     事件深度 0<1 0先执行 1后执行
+         */
+        CB.addEvent = function (eventType, caller, callBack, depth) {
+            if (!callBack) throw new Error("事件回调callback null")
+            if (!eventType) throw new Error("给我把事件type天上")
+            depth = parseInt(depth) >= 0 ? depth : 100;
+
+            if (!CB._cbmArr[eventType]) CB._cbmArr[eventType] = [];
+
+            var index = CB.getIndex(eventType, caller, callBack)
+            if (index != -1) CB._cbmArr[eventType][index].depth = depth ? depth : index
+            else {
+                var handler = CB._pool.length ? CB._pool.shift() : new CBHandler()
+                handler.caller = caller
+                handler.func = callBack
+                handler.depth = depth
+                CB._cbmArr[eventType].push(handler)
+            }
+            CB._cbmArr[eventType].sort(CB.paixu)
+        }
+
+        CB.on = CB.addEvent;
+
+        CB.removeEvent = function (eventType, caller, callBack) {
+            if (!CB._cbmArr[eventType] || !CB._cbmArr[eventType].length) return
+            var index = CB.getIndex(eventType, caller, callBack)
+            if (index != -1) CB._pool.push(CB._cbmArr[eventType].splice(index, 1))
+        }
+
+        CB.off = CB.removeEvent;
+
+        /**
+         * 派发事件
+         * @param   eventType      事件类型
+         * @param   callBackParams 回调参数
+         */
+        CB.dispatchEvent = function (eventType, callBackParams) {
+            callBackParams = arguments[1] != null ? arguments[1] : null;
+            if (CB._cbmArr[eventType]) {
+                for (var i = CB._cbmArr[eventType].length - 1; i >= 0; i--) {
+                    CB._cbmArr[eventType][i] && CB._cbmArr[eventType][i].func.apply(CB._cbmArr[eventType][i].caller, callBackParams)
+                }
+            } else {
+                // trace("[Warn] CBM没有对应的回调类型 - " + eventType) 
+            }
+        }
+        CB.event = CB.dispatchEvent;
+
+        CB.paixu = function (a, b) {
+            return b.depth - a.depth
+        }
+
+        /**
+         * 获取对应回调函数的下表
+         * @param   eventType 类型
+         * @param   func      回调函数
+         * @return  没有返回 -1
+         */
+        CB.getIndex = function (eventType, caller, func) {
+            for (var i = 0, length = CB._cbmArr[eventType].length; i < length; i++) {
+                if (func == CB._cbmArr[eventType][i].func && caller == CB._cbmArr[eventType][i].caller) {
+                    return i
+                }
+            }
+            return -1
+        }
+
+        return CB
+    })();
+
+    function CBHandler() {
+        var that = this
+        /**作用域*/
+        this.caller;
+        /**回调方法*/
+        this.func;
+        /**深度*/
+        this.depth;
+    }
+
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    //★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+
+    ___frame.cache = (function () {
+        function Cache() { }
+
+        Cache.id = 1
+        Cache.poolArr = [];
+
+        /**
+         * 注册 允许重复注册 因为一个类 可能有很多个缓存池
+         * @param  {[type]} class [description]
+         * @return {[type]}       [description]
+         */
+        Cache.registe = function (class_, id_, recoverHandler) {
+            var id = id_ ? id_ : Cache.id++;
+            Cache.poolArr[id] = new CachePool();
+            Cache.poolArr[id].id = id;
+            Cache.poolArr[id].class = class_;
+            Cache.poolArr[id].recoverHandler = recoverHandler;
+            return id
+        }
+
+        /**
+         * 根据id获取一个实例
+         * @param  {[type]} id [description]
+         * @return {[type]}    [description]
+         */
+        Cache.get = function (id) {
+            return Cache.poolArr[id].get()
+        }
+
+        //return ==true回收成功 ==false回收失败
+        Cache.recover = function (instance) {
+            try {
+                if (!instance || !instance._$CachePoolID) throw new Error("_$CachePoolID 不存在" + ___frame.utils.getClassName(instance) + " " + instance)
+                return Cache.poolArr[instance._$CachePoolID].recover(instance)
+            } catch (e) {
+                console.error(e)
+            }
+            return false
+        }
+
+        Cache.recoverAll = function (id) {
+            Cache.poolArr[id].recoverAll()
+        }
+
+        return Cache
+    })()
+
+    var CachePool = (function () {
+        function CachePool() {
+            this.pool = [];
+            this.use = [];
+            this.id = null
+            this.class = null
+            this.recoverHandler = null
+        }
+        CachePool.prototype.get = function () {
+            var instance = this.pool.length ? this.pool.shift() : new this.class()
+            instance._$CachePoolID = this.id;
+            this.use.push(instance)
+            return instance
+        }
+        CachePool.prototype.recover = function (instance) {
+            var index = this.use.indexOf(instance)
+            if (index != -1) {
+                this.use.splice(index, 1)
+                this.pool.push(instance)
+                //如果instance是显示对象 就移除掉
+                ___frame.utils.remove(instance)
+                this.recoverHandler && this.recoverHandler.apply(instance, [instance])
+                return true
+            }
+            return false
+        }
+        CachePool.prototype.recoverAll = function () {
+            while (this.use.length) {
+                var instance = this.use.shift()
+                this.pool.push(instance)
+                //如果instance是显示对象 就移除掉
+                ___frame.utils.remove(instance)
+                this.recoverHandler && this.recoverHandler.apply(instance, [instance])
+            }
+        }
+        return CachePool
+    })()
+
+    window.game = ___frame
+})();
+
+
+class HashMap {
+    constructor() {
+        this.length = 0;
+        this.obj = {};
+    }
+    /** 
+     * 判断Map是否为空 
+     */
+    isEmpty() {
+        return this.length == 0;
+    }
+    /** 
+     * 判断对象中是否包含给定Key 
+     */
+    containsKey(key) {
+        return (key in this.obj);
+    }
+    /** 
+     * 判断对象中是否包含给定的Value 
+     */
+    containsValue(value) {
+        for (var key in this.obj) {
+            if (this.obj[key] == value) {
+                return true;
+            }
+        }
+        return false;
+    }
+    /** 
+     * 向map中添加数据 
+     */
+    set(key, value) {
+        if (!this.containsKey(key)) {
+            this.length++;
+        }
+        this.obj[key] = value;
+    }
+    /** 
+     * 根据给定的Key获得Value 
+     */
+    get(key) {
+        return this.containsKey(key) ? this.obj[key] : null;
+    }
+    /** 
+     * 根据给定的Key删除一个值 
+     */
+    remove(key) {
+        if (this.containsKey(key) && (delete this.obj[key])) {
+            this.length--;
+        }
+    }
+    /** 
+     * 获得Map中的所有Value 
+     */
+    values() {
+        var _values = new Array();
+        for (var key in this.obj) {
+            _values.push(this.obj[key]);
+        }
+        return _values;
+    }
+    /** 
+     * 获得Map中的所有Key 
+     */
+    keys() {
+        var _keys = new Array();
+        for (var key in this.obj) {
+            _keys.push(key);
+        }
+        return _keys;
+    }
+    /** 
+     * 获得Map的长度 
+     */
+    size() {
+        return this.length;
+    }
+    /** 
+     * 清空Map 
+     */
+    clear() {
+        this.length = 0;
+        this.obj = {};
+    }
+    static clone(v) {
+        let hm = new HashMap()
+        for (const key in hm) {
+            hm[key] = v[key]
+        }
+        return hm;
+    }
+}

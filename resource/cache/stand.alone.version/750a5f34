@@ -1,0 +1,214 @@
+class Garden_dailySelect extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_dailySelect',
+            layer: 'panel'
+        })
+        this.txt_star.addComponent(S_hall_tween_star);
+        this.btn_video.addComponent(S_garden_dailySelect_video)
+        this.txt_time.addComponent(S_garden_dailySelect_time)
+        this.x1 = this.txt_time.x;
+    }
+    onEnable() {
+        this.update()
+        game.cb.on('update_garden_dailySelect_data', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_garden_dailySelect_data', this, this.update)
+        ResUtils.clearAtlas('res/atlas/cdn/collect.atlas')
+        ResUtils.clearTextureRes(['cdn.garden_dailySelect', 'cdn.collect'])
+    }
+    update() {
+        if (__data.garden.dailySelect.videoNum) {
+            this.btn_video.disabled = true
+        } else this.btn_video.disabled = false;
+        let a = __data.garden.dailySelect.goods || [];
+        let compIdArray = a.map((e) => {
+            return e.id
+        })
+        let hgd = compIdArray.map((e) => {
+            return __data.excelConfig.hashGardenDress[e]
+        })
+        let dd123 = [];
+        let typeArr = {};
+        for (const key in hgd) {
+            let e = hgd[key];
+
+            if (e.typeId) {
+                // 有分类
+                typeArr[e.typeId] = typeArr[e.typeId] || [];
+                typeArr[e.typeId].push({
+                    typeId: e.typeId,
+                    id: e.compId,
+                    positionId: parseInt(e.positionId),
+                    isUseing: __data.garden.useCompId.includes(parseInt(e.compId)),
+                    isLock: __data.garden.isDressLock(e.compId),
+                })
+                if (!dd123.includes(typeArr[e.typeId]))
+                    dd123.push(typeArr[e.typeId])
+            } else {
+                // 没有分类
+                dd123.push([{
+                    id: e.compId,
+                    positionId: parseInt(e.positionId),
+                    isUseing: __data.garden.useCompId.includes(parseInt(e.compId)),
+                    isLock: __data.garden.isDressLock(e.compId),
+                }])
+            }
+        }
+        this.goods1.visible = false
+        this.goods2.visible = false
+        this.goods3.visible = false
+        dd123 = dd123.slice(0, 3);
+        for (let index = 0, length = dd123.length; index < length; index++) {
+            this['goods' + (index + 1)].visible = true;
+            this['goods' + (index + 1)].dataSource = dd123[index];
+        };
+    }
+}
+
+class S_garden_dailySelect_video extends Laya.Script {
+    async onClick(e) {
+        let refresh = () => {
+            // 每日精选-发送视频刷新装饰
+            game.server.send(16017)
+        }
+
+        let adunitId = 'adunit-1ebaf6a96e85f01e'
+        await miniApi.video_ready(adunitId);
+        miniApi.video_show(adunitId, refresh, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0)
+        if (miniApi.clientType == 'app') {
+            miniApi.video_show(adunitId, refresh, null, 1)
+        } else {
+            miniApi.video_show(adunitId, refresh, () => {
+                __tips('暂无广告，请稍后再试或开通VIP')
+            }, 0)
+        }
+    }
+}
+
+class S_garden_dailySelect_time extends Laya.Script {
+    onEnable(e) {
+        this.getTime11()
+        this.onSecondUpdate()
+        Laya.timer.loop(1000, this, this.onSecondUpdate);
+    }
+    onDisable() {
+        Laya.timer.clearAll(this);
+    }
+    getTime11() {
+        // 获取当前日期和时间
+        var now = new Date();
+        // 设置时间为今天的23:59:59（即24点）
+        var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+        this.midNow = midnight.getTime()
+    }
+    onSecondUpdate(e) {
+        var diff = this.midNow - Date.now();
+        if (diff < 0) {
+            this.getTime11()
+            diff = this.midNow - Date.now();
+        }
+        // 将毫秒转换为小时、分钟和秒
+        var hours = Math.floor(diff / (1000 * 60 * 60));
+        var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        hours = hours < 10 ? '0' + hours : hours;
+        minutes = minutes < 10 ? '0' + minutes : minutes;
+        seconds = seconds < 10 ? '0' + seconds : seconds;
+        let n = hours + ':' + minutes + ':' + seconds;
+        this.owner.text = '距离下次刷新 ' + n;
+    }
+}
+
+class Garden_dailySelect_item extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_dailySelect_item',
+            module: false
+        })
+        this.btn_location.addComponent(S_garden_dailyselect_item_location)
+        this.btn_buy.addComponent(S_garden_dailySelect_buy)
+    }
+    onEnable() { }
+
+    onDisable() { }
+
+    set dataSource(vos) {
+        if (!vos) return;
+        this.__vo = vos;
+        let vo = vos[0]
+        let d1 = __data.excelConfig.hashGardenDress[vo.id]
+        let propId = d1.gardenDressId
+        this.img_show_gardenDress.skin = `cdn/collect_gardenDress/${propId}.png`;
+        this.txt_show_gardenDress_name.text = d1.gardenDressName;
+        this.txt_show_gardenDress_lockDes.text = '';
+        this.txt_show_gardenDress_lockDes.visible = false;
+        let name2 = ''
+        let tn = __tool.gdp(__data, `excelConfig.hashGardenTheme[${d1.themeId || 0}].themeName`)
+        if (tn) {
+            name2 = String(tn).toArray('-')[0] + '主题皮肤'
+        }
+        this.txt_theme.text = name2
+        this.txt_theme.iy = this.txt_theme.iy || this.txt_theme.y;
+        this.txt_theme.y = this.txt_theme.iy + 20
+
+        if (d1.typeId) {
+            let a = __data.excelConfig.hashClassDress[d1.typeId]
+            this.txt_show_gardenDress_des.text = `共${a.length}处可用`
+        } else {
+            this.txt_show_gardenDress_des.text = d1.gardenDressDes;
+        }
+        this.show_vos_gardenDress = vos;
+        this.txt_buildValue.text = '+' + d1.buildValue;
+        let a1 = String(d1.lockConditions).toArray('_')
+        this.price = parseInt(a1[1] || 0)
+        this.txt_price.text = this.price;
+        __tool.labelParentCenterAndSetXY(this.sp_buildValue, this.width / 2, 5)
+        __tool.labelParentCenterAndSetXY(this.sp_star, this.btn_buy.width / 2, 0)
+        this.sp_star.x -= 8;
+
+        this.img_have.visible = !vo.isLock;
+    }
+}
+Laya.ClassUtils.regClass('ui.garden.Garden_dailySelect_itemUI', Garden_dailySelect_item);
+
+class S_garden_dailySelect_buy extends Laya.Script {
+    onClick(e) {
+        if (__data.garden.star < this.owner.parent.price) {
+            return __showScene.show_garden_starNoEnough()
+        } else {
+            // 发送购买服务 星星购买装饰
+
+            let a = __data.garden.dailySelect.goods
+
+            let id = this.owner.parent.__vo[0].id
+            let b = a.some((e) => {
+                return e.id == id && e.has;
+            })
+            if (b) {
+                __tips('已拥有装饰')
+            } else {
+                game.server.send(2404, 20000 + parseInt(id))
+            }
+        }
+    }
+}
+
+class S_garden_dailyselect_item_location extends Laya.Script {
+    onClick(e) {
+        let vos = this.owner.parent.__vo;
+        let d1 = __data.excelConfig.hashGardenDress[vos[0].id]
+        if (d1.typeId) {
+            game.scene.add(GameMainCollectDressSelect, [d1.typeId])
+        } else {
+            let compId = vos[0].id
+            // if (__data.garden.isDressLock(compId)) return;
+            S_click_collect_use_gardenDress.changeDress(compId)
+            game.scene.remove(Garden_dailySelect)
+        }
+    }
+}

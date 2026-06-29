@@ -1,0 +1,53 @@
+class FriendRoom_vipSale extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_vipSale',
+            layer: 'panel'
+        })
+        this.btn_openVip2.addComponent(S_friendRoom_openVip)
+        for (let index = 1, length = 9; index < length; index++) {
+            game.utils.remove(this[`img_l_${index}`])
+        };
+        this.sp_vip_buy.addComponent(S_vip_buy_btn)
+    }
+    added(type) {
+        this.update_vip_data()
+        game.cb.on('update_vip_data', this, this.update_vip_data)
+        this.img_light.x = -1000
+        this.img_light.x = this[`img_l_${type}`].x
+        this.img_light.y = this[`img_l_${type}`].y
+        this.addTween()
+    }
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.update_vip_data)
+
+        Laya.Tween.clearAll(this.img_light)
+        this.clearAwait && this.clearAwait();
+    }
+    update_vip_data() {
+        this.sp_vip_buy.visible = !__data.vip.isVip;
+    }
+    async addTween() {
+        let t = 500
+        this.img_light.alpha = 0;
+        Laya.Tween.clearAll(this.img_light)
+        await __tool.tweenp(this.img_light, { alpha: 1 }, t)
+        await __tool.tweenp(this.img_light, { alpha: 0 }, t)
+        this.addTween()
+    }
+}
+FriendRoom_vipSale.cal_score = 1
+FriendRoom_vipSale.save_time = 2
+FriendRoom_vipSale.replay = 3
+FriendRoom_vipSale.battleResult = 4
+FriendRoom_vipSale.location = 5
+FriendRoom_vipSale.voice = 6
+FriendRoom_vipSale.online = 7
+FriendRoom_vipSale.change_seat = 8
+class S_friendRoom_openVip extends Laya.Script {
+    onClick() {
+        game.scene.remove(FriendRoom_vipSale)
+        __showScene.show_vip('des');
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': 'VIP月卡图标' })
+    }
+}

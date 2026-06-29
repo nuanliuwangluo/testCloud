@@ -1,0 +1,129 @@
+class S_vip_buy_btn extends Laya.Script {
+    onAwake() {
+        this.btn_month = this.owner.getChildByName('btn_month')
+        this.btn_season = this.owner.getChildByName('btn_season')
+        this.btn_year = this.owner.getChildByName('btn_year')
+        this.btn_month.addComponent(S_vip_buy).init(10001);
+        this.btn_season.addComponent(S_vip_buy).init(10201);
+        this.btn_year.addComponent(S_vip_buy).init(10014);
+
+        this.btn_month1 = this.owner.getChildByName('btn_month1')
+        this.btn_season1 = this.owner.getChildByName('btn_season1')
+        this.btn_year1 = this.owner.getChildByName('btn_year1')
+        this.btn_month1.addComponent(S_vip_buy).init(10001);
+        this.btn_season1.addComponent(S_vip_buy).init(10201);
+        this.btn_year1.addComponent(S_vip_buy).init(10014);
+
+        this.btn_ios_receive = this.owner.getChildByName('img_ios_receive_vip')
+        this.btn_ios_receive.addComponent(S_hall_invite)
+    }
+    onEnable() {
+        this.btn_month.visible = false
+        this.btn_season.visible = false
+        this.btn_year.visible = false
+        this.btn_month1.visible = false
+        this.btn_season1.visible = false
+        this.btn_year1.visible = false
+        this.btn_ios_receive.visible = false
+        // IOS能支付修改
+        // if (miniApi.isIOS) {
+        //     this.btn_ios_receive.visible = true
+        // }
+        // else 
+        if (miniApi.clientType == 'app') {
+            if (window.IOSPay) {
+                let p1 = IOSPay.getPriceById(10001);
+                let p2 = IOSPay.getPriceById(10201);
+                let p3 = IOSPay.getPriceById(10014);
+                if (p1.includes('¥')) {
+                    this.btn_month.visible = true
+                    this.btn_season.visible = true
+                    this.btn_year.visible = true
+                } else {
+                    this.btn_month1.visible = true
+                    this.btn_season1.visible = true
+                    this.btn_year1.visible = true
+                    let txt_price_month = this.btn_month1.getChildByName('txt_price_month')
+                    let txt_price_season = this.btn_season1.getChildByName('txt_price_season')
+                    let txt_price_year = this.btn_year1.getChildByName('txt_price_year')
+                    txt_price_month.text = p1
+                    txt_price_season.text = p2
+                    txt_price_year.text = p3
+                }
+            } else if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                let p1 = OriginAppIap.getPriceById(10001);
+                let p2 = OriginAppIap.getPriceById(10201);
+                let p3 = OriginAppIap.getPriceById(10014);
+                if (p1.includes('¥')) {
+                    this.btn_month.visible = true
+                    this.btn_season.visible = true
+                    this.btn_year.visible = true
+                } else {
+                    this.btn_month1.visible = true
+                    this.btn_season1.visible = true
+                    this.btn_year1.visible = true
+                    let txt_price_month = this.btn_month1.getChildByName('txt_price_month')
+                    let txt_price_season = this.btn_season1.getChildByName('txt_price_season')
+                    let txt_price_year = this.btn_year1.getChildByName('txt_price_year')
+                    txt_price_month.text = p1
+                    txt_price_season.text = p2
+                    txt_price_year.text = p3
+                }
+            } else {
+                this.btn_month.visible = true
+                this.btn_season.visible = true
+                this.btn_year.visible = true
+            }
+        } else {
+            this.btn_month.visible = true
+            this.btn_season.visible = true
+            this.btn_year.visible = true
+        }
+    }
+    onDisable() {
+
+    }
+}
+
+class S_vip_buy extends Laya.Script {
+    init(id) {
+        this.buyId = id;
+        return this;
+    }
+    async onClick(e) {
+        let vo = shopConfig.vip[this.buyId];
+        if (__data.pay_curValue + vo.price > __data.pay_maxValue) {
+            __tips(__lang.pay_over_max)
+            return;
+        }
+        await game.server.send(16020);
+        if (__data.onoff_pay != 1) return __tips(__lang.nocan_pay)
+
+        if (window['wx'] || window.IOSPay || (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP)) {
+            // 获取订单信息
+            // IOS能支付修改
+            // if (miniApi.isIOS) return 1;
+            miniApi.pay({
+                goodsId: vo.goodsId,
+                successCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                },
+                failCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                }
+            })
+            if (__data.isSupportUser != 1) {
+                miniApi.trackEvent('Mj_Pay', {
+                    Mj_ADPreference: miniApi.adUserValueLevel,
+                    'Mj_PayName': vo.name,
+                    'Mj_PayPrice': vo.price,
+                    'Mj_Paytype': '点击',
+                    'Mj_UserID': String(__data.uid),
+                })
+            }
+        } else {
+            game.scene.add(LoadingAwait)
+            game.server.send(2412, vo.goodsId)
+        }
+    }
+}

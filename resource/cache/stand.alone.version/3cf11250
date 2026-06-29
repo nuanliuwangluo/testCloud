@@ -1,0 +1,3529 @@
+let __socket_msg_hall_read = {
+    88() {
+        game.isAllowOnShowReconnect = false;
+        game.server.clear();
+        __showScene.show_prompt_select('您被踢下线', async () => {
+            await clearConnect();
+            socket_connect_complete_look_room()
+        }, miniApi.exit)
+    },
+    //获取自主研发语音的配置信息
+    993() {
+        let json = this.string;
+        let config = JSON.parse(json);
+        game.voiceConfig.appKey = config.appKey;
+        game.voiceConfig.token = config.token;
+        game.voiceConfig.ip = config.serverPath;
+        game.voiceConfig.port = config.serverPort;
+        game.voiceServer = game.voiceServer || new game.VoiceNet()
+        game.voiceServer.clear();
+        game.voiceServer.registeSendList(VoiceMsgSend)
+        game.voiceServer.registeReadList(VoiceMsgRead)
+        game.voiceServer.connect(__voice.protocol, game.voiceConfig.ip, game.voiceConfig.port)
+        __voice.myUid = __data.uid;
+        trace(game.voiceConfig)
+    },
+    //此处应该是心跳
+    998() {
+        // trace('998 read')
+        // this.long;
+        __heartbeat.read();
+    },
+    async 1001() {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '1001成功' })
+
+        // miniApi.getExptInfoSync('expt_play_challenge', {
+        //     '0': () => {
+        //         miniApi.alert('实验组', 0)
+        //     },
+        //     '1': () => {
+        //         miniApi.alert('实验组', 1)
+        //     },
+        //     'fail': () => {
+        //         miniApi.alert('实验组', -1)
+        //     }
+        // })
+        // miniApi.reportEvent('expt_show_challange', 1)
+
+        __data.uid = this.int;
+        if (__data.uid > 0) {
+
+            __data.sex = this.int
+            __data.head = this.string;
+            if (!__data.head) __data.head = __data.defaultHead;
+            __data.name = this.string;
+            __data.name = decodeURIComponent(__data.name)
+            trace("黄哥给的名字头像", __data.name, __data.head);
+
+            game.isLoginSuccess = true;
+            game.isAllowOnShowReconnect = true;
+            let toto1 = async function (fn1) {
+                await game.server.send(16029); // 查询低价值低分享类型
+                game.server.send(16027);
+                let r;
+                if (miniApi.clientType == 'app') {
+                    r = { adUnitId: 'adunit-24f34675f1830a6c', pullVideo: true, isSuccess: 1 }
+                } else {
+                    r = GameMainAd.videoR || await miniApi.video_ready('adunit-24f34675f1830a6c')
+                    // 第一次可能网络慢超时 所以需要第二次
+                    r = GameMainAd.videoR || await miniApi.video_ready('adunit-24f34675f1830a6c')
+                }
+                r = r || {};
+                GameMainAd.videoR = r;
+                await game.server.send(11003, miniApi.isIOS ? 2 : 1, r.isSuccess ? 1 : 2)
+                fn1 && fn1()
+            }
+            if (game.read1001Count >= 1) {
+                toto1(() => {
+                    if (initSocket_resolve) {
+                        initSocket_resolve()
+                        initSocket_resolve = null;
+                    }
+                    __reBack_info.read(function () {
+                        game.scene.remove(LoadingSmall);
+                        let n = game.scene.get(GameMahjongMatch) && game.scene.get(GameMahjongMatch).parent
+                        let n1 = game.scene.get(Loading)
+                        let n2 = n1 && n1.parent
+                        if (n || n2) {
+                            __showScene.show_hall()
+                        }
+                        try {
+                            wx.onShow_callback()
+                        } catch (error) { }
+                    });
+                })
+                return
+            }
+            toto1()
+
+            __data.rank_list1 = {};
+            __data.rank_list3 = {};
+            __data.rank_lastLevel = 0;
+            __data.rank_lastCup = 0;
+            __data.hall_rank_levelInfo_update_count = 0;
+            // __data.hornContent = ['欢迎进入游戏'];
+            __data.myCityId = 0;
+            __data.vip.vip_overTime = 0;
+            S_update_value.last_gold_value = -1
+            S_update_value.last_stone_value = -1
+            S_update_value.last_cup_value = -1
+
+            __data.sex = Math.max(__data.sex, 1);
+            __data.mahjong_set.sexIndex = __data.sex - 1;
+            LocalUtils.sex.value = __data.mahjong_set.sexIndex;
+            __data.deskData.roomVo.clear();
+
+            __data.shareVideoRule.shareShowCount = this.int;
+            __data.shareVideoRule.clickShareCount = this.int;
+            // __data.shareVideoRule.invite_playerCount = 
+            this.int;
+            __data.shareVideoRule.allTime_groupReceiveRewardCount = this.int;
+
+            let isNewPlayer = this.int;
+            let registeDateMs = this.string;
+            __data.Mj_LoginDate = new Date(Number(registeDateMs)).dateFormat("yyyyMMdd")
+            __data.Mj_newPlayer = isNewPlayer;
+            __data.Mj_default_show_localRank = isNewPlayer;
+            __data.Mj_registeDateMs = registeDateMs;
+            __data.vip.isReceiveFreeVip = this.int;
+            __data.vip.addUpToLoginDayNum = this.int;
+            __data.province = this.string;
+            trace('后台省份', __data.province)
+            trace('isNewPlayer', isNewPlayer, 'registeDateMs', registeDateMs, __data.Mj_LoginDate)
+            if (__data.Mj_newPlayer == 1) {
+                miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '创建账号', 'Mj_LoginDate': __data.Mj_LoginDate })
+            }
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '进入游戏前 基础服务 发送' })
+            game.server.send(3321) // 离开房间 不在房间 黄哥不给返回 所以不能await
+            console.time('进入游戏~');
+            await Promise.all([
+                game.server.send(14001), // 对局次数
+                // game.server.send(3311, 1, 1),
+                game.server.send(3326, __data.domain),
+                game.server.send(2202, __data.uid),
+                // game.server.send(2405), // 商城信息 里面有支付显示 必须发送
+                // game.server.send(2211), // 救济金
+                // game.server.send(2224), // 背包
+                game.server.send(2216, -1), // 我的玩法
+                game.server.send(2005, __data.uid), // 个人信息
+
+                game.server.send(2411), // 查询VIP剩余天数
+                game.server.send(2245), // 查询新人礼包
+                // game.server.send(2252), // 赛季结算信息 只发送一次 游戏内部 不要发送 否则会覆盖数据 清空
+
+                // 这里现请求 是为了 处理 花园主界面 弹框
+                // gtool.query([15008], 0), // 货币
+
+                // 活动图标
+                game.server.send(19003),
+                game.server.send(19005),
+                game.server.send(19007),
+                game.server.send(18027),
+            ])
+            console.timeEnd('进入游戏~');
+            // return;
+            let t_newDresss = async () => {
+                __data.garden.testNewDress()
+            }
+            t_newDresss()
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '进入游戏前 基础服务 获取成功' })
+            game.server.send(17001) // 查询扶持
+            game.server.send(10002) // 查询是否可领取每日挑战奖励
+            game.server.send(15001) // 先查询一下日常任务
+            game.server.send(16005, 1) // 查询活动订阅
+            game.server.send(16005, 2) // 查询系统订阅
+            game.server.send(16013);
+            game.server.send(13004); // 查询渠道id
+
+            game.read1001Count = game.read1001Count || 0;
+            game.read1001Count++;
+            if (initSocket_resolve) {
+                initSocket_resolve()
+                initSocket_resolve = null;
+            }
+        } else if (__data.uid == -1) {
+            game.isAllowOnShowReconnect = false;
+            // __tips('账号被冻结')
+            game.scene.remove(LoadingSmall)
+            __showScene.show_prompt_single(`此账号已冻结`)
+            game.server.clear()
+        } else if (__data.uid == -2) {
+            game.isAllowOnShowReconnect = false;
+            // __tips(this.string)
+            game.scene.remove(LoadingSmall)
+            __showScene.show_prompt_single(this.string)
+            game.server.clear()
+        } else if (__data.uid == -4) {
+            // "未完成实名认证"
+            game.scene.remove(LoadingSmall)
+            __showScene.show_prompt_select('请完成实名认证', () => {
+                miniApi.setItem('appRealNameAge', '')
+                app_test_show_realName()
+            }, () => {
+                miniApi.exit()
+            })
+            game.server.clear()
+        } else if (__data.uid == -5) {
+            // "用户未成年"
+            game.scene.remove(LoadingSmall)
+            game.scene.add(AppVerifyAge)
+            game.server.clear()
+        } else if (__data.uid == -6) {
+            // 注销中
+            game.scene.remove(LoadingSmall)
+            game.scene.add(AppDeleteAccount, ['cancelDelete'])
+            // game.server.clear()
+        }
+    },
+    2217() {
+        __data.sex = this.int;
+    },
+    // 是否在房间内
+    3001() {
+        __reBack_info.mahjong.isRead = true;
+        __reBack_info.mahjong.code = this.readInt();
+        if (__reBack_info.mahjong.code == 1) {
+            __data.deleteParams();// 在房间里删除一些参数
+            __reBack_info.mahjong.roomId = this.readInt();
+            HallPlay.lastCityId = this.readInt();
+            HallPlay.curRuleId = this.readInt();
+            __reBack_info.mahjong.roomType = this.readInt(); // 1 金币  2 好友房
+        } else {
+            let desk3D = game.scene.get(Mahjong3DBG);
+            let result = game.scene.get(MahjongSmallResult);
+            // 在游戏内
+            if (desk3D && desk3D.parent) {
+                // 没有结算界面显示的情况下  踢出到主界面
+                if (!result || !result.parent) {
+                    new GameQuitScript().onClick();
+                }
+            }
+        }
+
+        trace('是否在麻将房间内：', __reBack_info.mahjong);
+        __reBack_info.back();
+    },
+
+    // 切换城市
+    1002() {
+        let cityId = this.int;
+    },
+    // 同步用户数据
+    2201() {
+        // 1-成功 0-失败
+        let code = this.byte;
+    },
+    // 查询用户数据
+    2202() {
+        __data.realName = decodeURIComponent(this.string)
+        __data.cardNo = this.string;
+        __data.phone = this.string;
+        __data.gold = this.string;
+        __data.stone = this.int;
+        // 1 - 已验证 0 - 未验证
+        __data.realNameAuthSign = this.byte;
+        // 1 - 已绑定 0 - 未绑定
+        __data.phoneSign = this.byte;
+        // 1 - 已冻结 0 - 未冻结
+        __data.isFreeze = this.byte;
+        let jsonOB = JSON.parse(this.string);
+
+        // 收货人(String)
+        // 联系电话(String)
+        // 收货地址(String)
+        __data.takeGoodsPeopleName = this.string;
+        __data.takeGoodsPeoplePhone = this.string;
+        __data.takeGoodsPeopleAddress = this.string;
+
+        // 有物品的格子数量(int)
+        let bag_prop_num = this.int;
+        for (let i = 0; i < bag_prop_num; i++) {
+            let gridId = this.int;
+            let propType = this.int;
+            let num = this.int;
+        }
+
+        game.cb.event('update_gold')
+        game.cb.event('update_stone')
+        game.cb.event('update_receive_countCard_video_time')
+
+        AdData.testAdActive()
+    },
+    // 绑定微信
+    2203() {
+        // 1-成功 0-失败
+        let code = this.byte;
+        if (code) {
+            __tips('绑定成功')
+        } else {
+            __tips('绑定失败')
+        }
+    },
+    // 实名认证
+    2204() {
+        let code = this.byte;
+        if (code == 1) {
+            __data.realNameAuthSign = 1;
+            game.cb.event('request_realName_success')
+        }
+    },
+    // 绑定收货地址(2005)
+    2205() {
+        // 1-成功 0-失败
+        let code = this.byte;
+        if (code) {
+            __tips('绑定成功')
+            game.cb.event('request_address_success');
+        } else {
+            __tips('绑定失败')
+        }
+    },
+    // 设置邀请人
+    2206() {
+        // 1-成功 0-失败
+        let code = this.byte;
+    },
+    // 领取邀请奖励
+    2207() {
+        __showScene.removeWait();
+        // 处理回馈(byte 1-成功 0-失败 如果成功则有玩家金币(int)可以读取)
+        //     if (处理回馈 == 1) {
+        //         玩家金币(int)
+        //     }
+        let code = this.int;
+        let id = this.int;
+        if (code == 1) {
+            // miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: Number(__data.getInviteGoldNumber) })
+            // __data.addMoney(1, __data.getInviteGoldNumber);
+            // game.scene.add(GameMainPropGet, [
+            //     [{
+            //         propId: 1,
+            //         propNum: __data.getInviteGoldNumber
+            //     }]
+            // ])
+
+            game.scene.add(GameMainPropGet_vip, [
+                [{
+                    propId: id,
+                    propNum: 1
+                }]
+            ])
+            game.server.send(2411);
+            game.server.send(3326, __data.domain);
+            game.server.send(2202, __data.uid);
+            game.server.send(2226);
+            // __tips(__lang.receive_success);
+        }
+    },
+    //邀请奖励列表
+    2226() {
+        // int 奖励层数
+        // for(奖励层数)
+        //         int 领奖需要人数
+        //         int 本层人数
+        //         for(本层人数)
+        //                 int id
+        //                 string name
+        //                 string 头像
+        //         int 本层奖励金币
+        //         int 本层是否领取 1:已领取 0:未领取
+        __data.inviteData = [];
+        let len = this.readInt();
+        for (let i = 0; i < len; i++) {
+            // let allFrontPlayer = __data.inviteData[i] ? __data.inviteData[i]
+            let invite = {};
+            invite.id = i + 1;
+            invite.allPlayer = this.readInt();
+            invite.invitedArr = [];
+            let invite_len = this.readInt();
+            for (let j = 0; j < invite_len; j++) {
+                let player = {};
+                player.id = this.readInt();
+                player.name = decodeURIComponent(this.readString());
+                player.headUrl = this.readString();
+                invite.invitedArr.push(player);
+            }
+            invite.reward = this.readInt();
+            invite.state = this.readInt();
+
+            __data.inviteData.push(invite);
+        }
+        trace('邀请信息：', __data.inviteData);
+        game.cb.event('update_invite_list');
+    },
+    // 查询领取记牌器CD
+    2209() {
+        // 领取免费记牌器CD(int)
+        __data.memory_cd_time = this.int;
+        TimerUtils.pushAttr(__data, 'memory_cd_time');
+        game.cb.event('update_memory_cd_time');
+        trace('记牌器cd：', __data.memory_cd_time);
+        // __data.receive_countCard_video_time = Date.now() + cd * 1000;
+    },
+    // 领取记牌器
+    2210() {
+        // 处理回馈(byte 1-成功 0-失败 如果成功则有发放的记牌器数量可以读取)
+        // if (处理回馈 == 1) {
+        //     发放的记牌器数量(int)
+        // }
+        let code = this.int;
+        if (code == 1) {
+            let add_num = this.int
+            BagData.list.find(function (item) {
+                if (item.type == 1) {
+                    item.num += add_num
+                    game.cb.event('update_bag')
+                    game.cb.event('update_tree_guide')
+                }
+                return item.type == 1;
+            })
+            game.server.send(2209)
+        }
+    },
+    2211() {
+        __data.helpGold_count = this.int;
+        __data.helpGold_num = this.int;
+        __data.helpGold_haveData = 1;
+        trace(`救济金领取次数-${__data.helpGold_count}`)
+        trace(`救济金金币数量-${__data.helpGold_num}`)
+    },
+    2212() {
+        // 领取救济金奖励 int- 1-成功 0-失败
+        let code = this.int;
+        trace(`领取救济金结果-${code}`)
+        if (code == 1) {
+            let mul = this.int;
+            if (mul == 2) {
+                __data.shareVideoRule.total_groupReceiveRewardCount()
+            }
+            __data.shareVideoRule.video_clearCallback()
+            let num = __data.helpGold_num
+            if (mul == 1 || mul == 2) num += 3000;
+            miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', Mj_CoinsAmount: Number(num) })
+            __data.addMoney(1, num)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: num
+                }]
+            ])
+            __data.helpGold_count--;
+            game.scene.remove(GameMainRelief)
+        }
+    },
+    2213() {
+        // __showScene.removeWait();
+        // int-今日剩余可抽奖次数
+        // int 奖品种类数量
+        // for 奖品种类数量
+        //         int 类型 1-金币 2-免输卡 - 8004
+        //         int 数量
+        //         int 概率 例如 15 代表 概率为 15%
+        AdData.time = this.int;
+        AdData.list = [];
+        let len = this.int;
+        for (let i = 0; i < len; i++) {
+            let data = {};
+            data.type = this.int;
+            data.number = this.int;
+            data.odds = this.int;
+            AdData.list.push(data);
+        }
+        game.cb.event('update_ad');
+        trace('广告时间：', AdData.time, AdData.list)
+    },
+    2214() {
+        __showScene.removeWait();
+        let code = this.int;
+        if (code == 1) {
+            __data.shareVideoRule.video_clearCallback()
+            let type = this.int;
+            let number = this.int;
+            game.server.send(2202, __data.uid);
+            AdData.send()
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: type,
+                    propNum: number
+                }]
+            ])
+            if (type == 1) {
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: Number(number) })
+            }
+            game.server.send(2224)
+        } else {
+
+        }
+    },
+    2215() {
+        if (S_relief_receive.type == 0) {
+            game.server.send(2212, S_relief_receive.type) //  领取救济金
+            if (!S_relief_receive.videoR.isSuccess) {
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '救济金', 'Mj_Participation': '免费领取' })
+            } else {
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '救济金', 'Mj_Participation': '免费领取' })
+            }
+        } else {
+            // 增加一个消息 让2212可以生效 否则后台拦截
+            if (!S_relief_receive.videoR.isSuccess) {
+                // __data.shareVideoRule.total_clickShareCount();
+                miniApi.share({
+                    titleId: __tool.randomRange(1, 9),
+                    shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+                    shareGroupClickCallback: () => {
+                        game.server.send(2212, 2)
+                        game.scene.remove(GameMainRedPacket_2)
+                    },
+                    shareOnShowCallback: () => {
+                        game.scene.add(GameMainRedPacket_2)
+                    },
+                    params: `uid=${__data.uid}&shareRewardType=relief&myCityId=${__data.myCityId}`,
+                    adUnitId: S_relief_receive.videoR.adUnitId
+                })
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '救济金', 'Mj_Participation': '参与分享' })
+                game.scene.remove(GameMainRelief)
+            } else {
+                let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '救济金', 'Mj_Participation': n })
+
+                let fns = async () => {
+                    let adunitId = S_relief_receive.videoR.adUnitId
+                    await miniApi.video_ready(adunitId)
+                    miniApi.video_show(adunitId, () => {
+                        game.server.send(2212, 1);
+                        game.scene.remove(GameMainRelief)
+                    }, () => {
+                        __tips('暂无广告，请稍后再试或开通VIP')
+                    }, 0);
+                }
+                fns()
+            }
+        }
+    },
+    2216() {
+        // int 玩家的“我的玩法”id，-1代表玩家尚未选择“我的玩法”
+        let cityId = this.int;
+        trace('我的城市id', cityId)
+        if (cityId == -1) __data.myCityId = 0;
+        else __data.myCityId = cityId
+        game.cb.event('update_myCityId', [cityId])
+        game.server.send(11004, __data.myCityId)
+        // game.server.send(3311, 1, 1)
+        // if (cityId) {
+        //     game.server.send(2407, cityId, 1)
+        // }
+        let shareVO = {}
+        let titleId
+        try {
+            if (!__data.myCityId) {
+                let a = null;
+                a.b = 1;
+            }
+            titleId = __tool.randomRange(1, 10)
+            cityId = __data.myCityId
+        } catch (error) {
+            titleId = 1;
+            cityId = 0
+        }
+        let imgId = titleId;
+        shareVO.title = __data.shareConfig.getTitleById(titleId, cityId)
+        let { imageUrl, imageUrlId } = __data.shareConfig.getImgUrlIdById(imgId);
+        shareVO.imageUrl = imageUrl
+        shareVO.imageUrlId = imageUrlId
+        try {
+            wx.onShareAppMessage(function () {
+                miniApi.adsdk_track('SHARE', { target: 'APP_MESSAGE' })
+                return shareVO
+            })
+        } catch (error) {
+
+        }
+        if (cityId > 0) {
+            let uidDateString = __data.uid + ':' + new Date().toDateString()
+            let todayIsLogin = miniApi.getItem(uidDateString + ':todayIsLogin')
+            if (todayIsLogin != 1) {
+                let day1 = __tool.getDayCount(Date.now())
+                let day2 = __tool.getDayCount(Number(__data.Mj_registeDateMs))
+                let dayDis = day1 - day2;
+                if (dayDis == 1) {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '次日登录', 'Mj_LoginDate': __data.Mj_LoginDate })
+                } else if (dayDis == 3) {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '3日登录', 'Mj_LoginDate': __data.Mj_LoginDate })
+                } else if (dayDis == 7) {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '7日登录', 'Mj_LoginDate': __data.Mj_LoginDate })
+                } else if (dayDis == 15) {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '15日登录', 'Mj_LoginDate': __data.Mj_LoginDate })
+                } else if (dayDis == 30) {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '30日登录', 'Mj_LoginDate': __data.Mj_LoginDate })
+                } else {
+                    miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '其他', 'Mj_LoginDate': __data.Mj_LoginDate })
+                }
+            }
+            miniApi.setItem(uidDateString + ':todayIsLogin', 1)
+        }
+    },
+    // 查询连续登录天数和各档次奖励
+    2218() {
+        // int 今日是否已领取 0 - 未领取 1 - 已领取
+        // int 连续登录天数
+        // for (int 配置数量) {
+        //         int 对应奖励的天数
+        //         int 1 - 金币 2 - 钻石 3 - 免输卡 8005 - 富贵竹 8004 - 水滴 8000 - 一碗水 8001 - 一盆水 8002 - 一桶水 8003 - 一车水
+        //         int 数量
+        // }
+        __data.dailyLogin.isReceive = this.int;
+        __data.dailyLogin.dayNum = this.int + 1;
+        __data.dailyLogin.isHaveData = true;
+        let r1 = JSON.parse(this.string);
+        let r2 = JSON.parse(this.string);
+        trace(r1)
+        trace(r2)
+        __data.dailyLogin.reward = {};
+        __data.dailyLogin.reward.lookVideo = r1;
+        __data.dailyLogin.reward.nolookVideo = r2;
+        game.cb.event('update_dailyLogin_data')
+    },
+    2219() {
+        // 领取每日登录奖励
+        let l = this.int;
+        let rs = []
+        for (let index = 0, length = l; index < length; index++) {
+            let propId = this.int;
+            let num = this.int;
+            if (propId == 1) {
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', 'Mj_CoinsAmount': num })
+            }
+            __data.addMoney(propId, num)
+            rs.push({
+                propId: propId,
+                propNum: num
+            })
+        };
+        trace('每日登录领取奖励', rs)
+        game.scene.add(GameMainPropGet, [
+            rs
+        ])
+        let receiveType = this.int;
+        if (receiveType == 2) {
+            __data.shareVideoRule.total_groupReceiveRewardCount()
+        }
+        __data.shareVideoRule.video_clearCallback()
+        __data.dailyLogin.isReceive = 1;
+        game.cb.event('update_dailyLogin_data')
+    },
+    2220() {
+        let isHasBuy = this.int;
+        __data.firstPay.isHasBuy = isHasBuy > 0; 23
+        game.cb.event('update_firstPay_data')
+        game.cb.event('update_game_icons');
+    },
+    2224() {
+        // int 道具格数量
+        // for 道具格数量
+        //         int 类型 2-免输卡
+        //         int 单格数量
+        // 有物品的格子数量(int)
+        BagData.clear();
+        let bag_prop_num = this.int;
+        for (let i = 0; i < bag_prop_num; i++) {
+            let grid = {};
+            grid.type = this.int;
+            this.int;
+            grid.number = this.int;
+            BagData.list[i] = grid;
+        }
+        trace('背包信息：', BagData.list)
+        game.cb.event('update_bag');
+        game.cb.event('update_tree_guide')
+    },
+    2005() {
+        var id = this.readInt()
+        var vo = __data.othersVO[id] ? __data.othersVO[id] : {}
+        vo.id = id
+        vo.name = decodeURIComponent(this.readString())
+        // vo.headUrl = this.readString() + `?v=${Date.now()}`;
+        vo.headUrl = this.readString();
+
+        if (!vo.headUrl) { vo.headUrl = __data.defaultHead; }
+        if (vo.headUrl != __data.defaultHead) {
+            vo.headUrl += `?v=${Date.now()}`;
+        }
+        vo.sex = this.readInt()
+        vo.soundVolume = this.readInt()
+        vo.musicVolume = this.readInt()
+        vo.gold = this.readString();
+        let len = this.readInt();
+        vo.scores = {};
+
+        for (let i = 0; i < len; i++) {
+            let cityId = this.readInt();
+            let score = this.readInt();
+            vo.scores[cityId] = score;
+        }
+        // 如果自己  且有性别   赋值为自己的性别      如果不是自己或者性别未知  且读取回来的性别已知   赋值为读取回来的性别  
+        vo.sex = vo.id == __data.uid && __data.sex > 0 ? __data.sex : vo.sex > 0 ? vo.sex : 1
+
+        vo.headFrameId = this.int;
+        vo.haveHeadFrameIds = JSON.parse(this.string)
+        vo.cupAndMedal = JSON.parse(this.string);
+        vo.area = this.int; // 
+        if (vo.id == __data.uid) {
+            __data.headFrameId = vo.headFrameId;
+        }
+
+        var __pvo = __data.deskData.roomVo.getPlayer(id)
+        if (__pvo) {
+            __pvo.name = vo.name
+            __pvo.url = vo.headUrl
+            __pvo.frameUrl = PropIcon.icon[vo.headFrameId || 301].skin; // 'cdn/headFrame/img_txk_mr.png';
+            __pvo.sex = (vo.sex == 0) ? 1 : vo.sex
+            __pvo.gold = vo.gold
+            vo.ip = (__pvo) ? __pvo.ipAddress : "" // ip
+            vo.address = (__pvo) ? __pvo.address : "" // 详细地址
+        }
+        var reg = /[\s\x85\xA0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/;
+        vo.name = vo.name.replace(reg, ' ')
+        trace(vo.name.match(reg))
+
+        // if (vo.id == __data.uid) __data.ivo.gold = vo.gold;
+        //经纬度通过3007获取
+        __data.othersVO[id] = vo;
+        trace('其他玩家信息：', vo);
+        game.cb.dispatchEvent('update_headFrame')
+        // game.cb.dispatchEvent(__eh+'update_player_score')
+        game.cb.dispatchEvent(__eh + 'recheck_distance')
+        game.cb.dispatchEvent(__eh + 'update_user_info', [__data.othersVO[id]])
+
+        game.cb.dispatchEvent(__cur_game_event_type + 'update_player_data')
+    },
+    2230() {
+        // __data.today_loseWinMaxGold = this.int;
+        // __data.today_loseWinGoldSum = parseInt(this.readString());
+        // trace(`今日输赢金币上限-${__data.today_loseWinMaxGold}`)
+        // trace(`今日输赢金币数量-${__data.today_loseWinGoldSum}`)
+    },
+    2231() {
+        let content = this.string;
+        trace('广播调内容', content)
+        // __data.hornContent.push(content)
+        // game.cb.event(`game_horn`)
+    },
+    2232() {
+        let l = this.int;
+        let emailArray = [];
+        for (let index = 0, length = l; index < length; index++) {
+            let vo = {
+                emailId: this.int,
+                title: this.string,
+                time: this.string,
+                isRead: this.int,
+                isReceive: this.int,
+            }
+            emailArray.push(vo)
+        };
+        __data.email = emailArray;
+        game.cb.event('update_email_data')
+    },
+    2233() {
+        // 删除已读邮件
+        game.server.send(2232)
+    },
+    2234() {
+        let emailId = this.int;
+        let ee = __data.email.find((e) => {
+            return e.emailId == emailId
+        })
+        if (!ee) {
+            return;
+        }
+        this.string;
+        this.string;
+        ee.des = this.string;
+        ee.isRead = 1;
+        // [{id:1,count:1000}, ...]
+        ee.reward = JSON.parse(this.string)
+        let isReceive = this.int;
+        game.scene.add(GameMainEmailContent, [ee])
+        game.cb.event('update_email_data')
+    },
+    2235() {
+        let emailId = this.int;
+        let ee = __data.email.find((e) => {
+            return e.emailId == emailId
+        })
+        if (!ee) {
+            return;
+        }
+        ee.isReceive = 1;
+
+        if (ee.reward && ee.reward.length) {
+            let rs = []
+            for (let index = 0, length = ee.reward.length; index < length; index++) {
+                let e = ee.reward[index]
+                if (e.id == 1) {
+                    miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', 'Mj_CoinsAmount': e.count })
+                }
+                __data.addMoney(e.id, e.count)
+                rs.push({
+                    propId: e.id,
+                    propNum: e.count
+                })
+            };
+            game.scene.add(GameMainPropGet, [
+                rs
+            ])
+        }
+        game.cb.event('update_email_data')
+    },
+    2236() {
+        game.server.send(2232)
+        game.scene.remove(GameMainEmailContent)
+    },
+    2238() {
+        // tree模块服务禁用
+    },
+    2239() {
+        // tree模块服务禁用
+        // 查询荣耀榜
+    },
+    2240() {
+        // tree模块服务禁用
+        // 发财树领取奖励
+    },
+    2241() {
+        // tree模块服务禁用
+        let propId = this.int;
+        let num = this.int;
+        if (num == 0) return;
+        BagData.reduceProp(propId, num)
+        game.cb.event('update_bag')
+        game.cb.event('update_tree_guide')
+        game.cb.event('use_prop_success_add_ani', [propId])
+    },
+    2242() {
+        // tree模块服务禁用
+        // 1-今日 2-昨日
+    },
+    2243() {
+        let addReward = {};
+        let ll = this.int;
+        for (let index = 0, length = ll; index < length; index++) {
+            let id = this.int;
+            let count = this.int;
+            addReward[id] = addReward[id] || { id, count: 0 }
+            addReward[id].count += count;
+        };
+        for (let index = 0, length = __data.email.length; index < length; index++) {
+            const e = __data.email[index];
+            e.isReceive = 1;
+            e.isRead = 1;
+        };
+        let a = Object.values(addReward)
+        if (a && a.length) {
+            let rs = []
+            for (let index = 0, length = a.length; index < length; index++) {
+                let e = a[index]
+                // 一键领取邮件
+                if (e.id == 1) {
+                    miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', 'Mj_CoinsAmount': e.count })
+                }
+                __data.addMoney(e.id, e.count)
+                rs.push({
+                    propId: e.id,
+                    propNum: e.count
+                })
+            };
+            game.scene.add(GameMainPropGet, [
+                rs
+            ])
+        }
+        game.cb.event('update_email_data')
+    },
+    2245() {
+        __data.newPlayerGift.isReceive = this.int;
+        let ll = this.int;
+        __data.newPlayerGift.reward = [];
+        for (let index = 0, length = ll; index < length; index++) {
+            __data.newPlayerGift.reward.push({
+                propId: this.int,
+                num: this.int
+            })
+        };
+        game.cb.event('update_newPlayerGift_data')
+    },
+    2246() {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '新人大礼包-领取成功' })
+
+        // 新人大礼包
+        let rs = []
+        for (let index = 0, length = __data.newPlayerGift.reward.length; index < length; index++) {
+            const e = __data.newPlayerGift.reward[index];
+            if (e.propId == 1) {
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', 'Mj_CoinsAmount': e.num })
+            }
+            __data.addMoney(e.propId, e.num)
+            rs.push({
+                propId: e.propId,
+                propNum: e.num
+            })
+        };
+        GameMainPropGet.type = 'newPlayer'
+        game.scene.add(GameMainPropGet, [
+            rs
+        ])
+        __data.newPlayerGift.isReceive = 1;
+        game.scene.remove(GameMainNewPlayerGift)
+    },
+    2247() {
+        __data.vip.noGoldProtectCount--;
+        // 破产返还
+        game.scene.remove(LoadingSmall);
+        __data.addMoney(1, PochanFramework.gold);
+        game.scene.add(GameMainPropGet, [
+            [{ propId: 1, propNum: PochanFramework.gold }]
+        ])
+        game.scene.remove(GameMainPochan);
+        PochanFramework.clear();
+    },
+    2404() {
+        let code = this.int;
+        trace('2404 code', code)
+        if (code > 0) {
+            let num = this.int;
+            let receiveType = this.int;
+
+            let isQuick = QuickBuyGift.isQuick(code);
+            if (isQuick) {
+                BagData.addProp(code, num);
+                QuickBuyGift.do();
+                return;
+            }
+
+            if (receiveType == 2) {
+                // 商城视频分享
+                __data.shareVideoRule.total_groupReceiveRewardCount()
+            }
+            if (shopConfig.discount[code]) {
+
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': shopConfig.discount[code].md_mj_pay_name,
+                    'Mj_PropAmount': shopConfig.discount[code].num * num,
+                    'Mj_PropPrice': shopConfig.discount[code].price * num,
+                    'Mj_UserID': String(__data.uid),
+                })
+
+                if (shopConfig.discount[code].video) {
+                    __data.shareVideoRule.video_clearCallback()
+                }
+                shopConfig.discount[code].buyNum += num;
+                // 商城购买金币
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: shopConfig.discount[code].num * num })
+                if (shopConfig.discount[code].realReward) {
+                    let r = [];
+                    shopConfig.discount[code].realReward.forEach(element => {
+                        r.push({
+                            propId: element.id,
+                            propNum: element.num * num,
+                        })
+                        if (element.id == 1) {
+                            __data.addMoney(1, element.num * num)
+                        }
+                    });
+                    game.scene.add(GameMainPropGet, [
+                        r
+                    ])
+                } else {
+                    __data.addMoney(1, shopConfig.discount[code].num * num)
+                    game.scene.add(GameMainPropGet, [
+                        [{
+                            propId: 1,
+                            propNum: shopConfig.discount[code].num * num
+                        }]
+                    ])
+                }
+                __data.addMoney(2, -shopConfig.discount[code].price * num)
+            } else if (shopConfig.gold[code]) {
+
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': shopConfig.gold[code].md_mj_pay_name,
+                    'Mj_PropAmount': shopConfig.gold[code].num * num,
+                    'Mj_PropPrice': shopConfig.gold[code].price * num,
+                    'Mj_UserID': String(__data.uid),
+                })
+
+                shopConfig.gold[code].buyNum += num;
+                // 商城购买金币
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: shopConfig.gold[code].num * num })
+                __data.addMoney(1, shopConfig.gold[code].num * num)
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: 1,
+                        propNum: shopConfig.gold[code].num * num
+                    }]
+                ])
+                __data.addMoney(2, -shopConfig.gold[code].price * num)
+                let panel_goldNoEnough = game.scene.get(GameMainGoldNoEnough)
+                if (panel_goldNoEnough && panel_goldNoEnough.parent) {
+                    game.scene.remove(LoadingSmall)
+                    game.scene.remove(GameMainGoldNoEnough)
+                }
+            } else if (shopConfig.prop[code]) {
+
+                let name = shopConfig.prop[code].name || PropIcon.icon[code].name
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': name,
+                    'Mj_PropAmount': shopConfig.prop[code].num * num,
+                    'Mj_PropPrice': shopConfig.prop[code].price * num,
+                    'Mj_UserID': String(__data.uid),
+                })
+
+                __data.addMoney(shopConfig.prop[code].buyMoneyId || 2, -shopConfig.prop[code].price * num)
+                if (shopConfig.prop[code].smallGameProp) {
+                    mm_stone_buy_callback && mm_stone_buy_callback()
+                    return
+                };
+                game.scene.remove(GameMainShop601)
+                shopConfig.prop[code].buyNum += num;
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: shopConfig.prop[code].propId,
+                        propNum: shopConfig.prop[code].num * num
+                    }]
+                ])
+                game.server.send(2224)
+            } else if (shopConfig.freeVip[code]) {
+                game.scene.add(GameMainPropGet_vip, [
+                    [{
+                        propId: shopConfig.freeVip[code].propId,
+                        propNum: shopConfig.freeVip[code].num * num
+                    }]
+                ])
+                game.server.send(2411)
+                __data.vip.isReceiveFreeVip = 1;
+            } else if (shopConfig.dailyTask[code]) {
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': shopConfig.dailyTask[code].md_mj_pay_name,
+                    'Mj_PropAmount': shopConfig.dailyTask[code].num * num,
+                    'Mj_PropPrice': shopConfig.dailyTask[code].price * num,
+                    'Mj_UserID': String(__data.uid),
+                })
+                __data.addMoney(2, -shopConfig.dailyTask[code].price * num)
+                if (code == 10125) {
+                    game.server.send(15001) // 先查询一下日常任务
+                }
+            } else if (shopConfig.garden[code]) {
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': shopConfig.garden[code].md_mj_pay_name,
+                    'Mj_PropAmount': shopConfig.garden[code].num * num,
+                    'Mj_PropPrice': shopConfig.garden[code].price * num,
+                    'Mj_UserID': String(__data.uid),
+                })
+
+                __data.addMoney(2, -shopConfig.garden[code].price * 1);
+                __data.garden.fuguiManor.buyNum = 1;
+                game.scene.remove(Garden_bombbox_fugui_manor);
+                // __tips(__lang.buy_success)
+                GameMainPropGet.type = 'fuguiManor'
+                game.scene.add(GameMainPropGet, [
+                    [
+                        {
+                            propId: 'dress' + 410,
+                            propNum: 1
+                        }, {
+                            propId: 8005,
+                            propNum: 100
+                        }
+                    ]
+                ])
+
+                gtool.query([15003], 0)
+                gtool.query([15008], 0)
+                __data.garden.unlockDressArray.push(410)
+                game.cb.event('update_garden_dailySelect_data')
+            } else if (code > 20000) {
+
+                // 花园装饰
+                let id = code - 20000;
+                let a = __data.garden.dailySelect.goods
+                let b = a.find((e) => {
+                    return e.id == id;
+                })
+                b.has = true;
+                let d1 = __data.excelConfig.hashGardenDress[id]
+                let a1 = String(d1.lockConditions).toArray('_')
+                let price = parseInt(a1[1] || 0)
+                __data.addMoney(5, -price)
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: 'dress' + id,
+                        propNum: 1
+                    }]
+                ])
+                gtool.query([15003], 0)
+                gtool.query([15008], 0)
+                __data.garden.unlockDressArray.push(id)
+                game.cb.event('update_garden_dailySelect_data')
+            }
+            game.cb.event('update_shop_data')
+        } else if (code == -1) {
+            __tips(__lang.stone_no_enough)
+        } else if (code == -2) {
+            // __tips(__lang.stone_no_enough)
+        }
+    },
+    2405() {
+        // int 今日消费
+        // int 每日消费上限
+        // int 商城消费次数记录长度
+        // for 商城消费次数记录长度
+        //         int 商城道具id
+        //         int 消费次数
+        __data.pay_curValue = this.int
+        __data.pay_maxValue = this.int
+        let len = this.int;
+        for (let index = 0, length = len; index < length; index++) {
+            let goodsId = this.int;
+            let buyNum = this.int;
+            if (shopConfig.gold[goodsId]) {
+                shopConfig.gold[goodsId].buyNum = buyNum
+            } else if (shopConfig.stone[goodsId]) {
+                shopConfig.stone[goodsId].buyNum = buyNum
+            }
+        };
+    },
+    2406() {
+        // 商城购买钻石反馈
+        // 1成功 -1 意外失败 -2 微信对账失败 -3 达到每日限额
+        let code = this.int;
+        trace('2406 code', code)
+        if (code > 0) {
+            let transacionId = this.string;
+            if (transacionId) {
+                if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) OriginAppIap.finishTransaction(transacionId);
+                else if (window.IOSPay) IOSPay.finishTransaction(transacionId);
+            }
+
+            // 后台购买vip更改首冲标志 所以需要 重新请求
+            __data.firstPay.send()
+
+            let goodsId = code;
+            if (shopConfig.vip[code]) {
+                if (__data.vip.vip_overTime <= 0) {
+                    __data.vip.vip_overTime = Date.now() + shopConfig.vip[code].vipAddDayCount * 24 * 3600 * 1000
+                } else __data.vip.vip_overTime += shopConfig.vip[code].vipAddDayCount * 24 * 3600 * 1000;
+                __data.vip.vipType = shopConfig.vip[code].vipType;
+                __data.vip.vip_todayIsHasReceive = 0;
+
+                __data.pay_curValue += shopConfig.vip[code].price;
+                game.server.send(2211) // 查询救济金次数
+                game.server.send(3326, __data.domain) // 查看破产保护
+                game.cb.event('update_vip_data')
+                game.scene.remove(FriendRoom_vipSale)
+                game.scene.remove(GameMainVipBombbox)
+                if (__data.isSupportUser != 1) {
+                    miniApi.trackEvent('Mj_Pay', {
+                        Mj_ADPreference: miniApi.adUserValueLevel,
+                        'Mj_PayName': shopConfig.vip[goodsId].name,
+                        'Mj_PayPrice': shopConfig.vip[goodsId].price,
+                        'Mj_Paytype': '购买',
+                        'Mj_UserID': String(__data.uid),
+                    })
+                }
+            }
+            else if (shopConfig.stone[goodsId]) {
+                if (__data.isSupportUser != 1) {
+                    miniApi.trackEvent('Mj_Pay', {
+                        Mj_ADPreference: miniApi.adUserValueLevel,
+                        'Mj_PayName': shopConfig.stone[goodsId].md_mj_pay_name,
+                        'Mj_PayPrice': shopConfig.stone[goodsId].price,
+                        'Mj_Paytype': '购买',
+                        'Mj_UserID': String(__data.uid),
+                    })
+                }
+
+                let num = shopConfig.stone[goodsId].num
+                // if (shopConfig.stone[goodsId].buyNum < 1) {
+                //     num = 2 * num;
+                // }
+                shopConfig.stone[goodsId].buyNum++;
+                __data.pay_curValue += shopConfig.stone[goodsId].price;
+                __data.addMoney(2, num)
+                let panel_goldNoEnough = game.scene.get(GameMainGoldNoEnough)
+                if (panel_goldNoEnough && panel_goldNoEnough.parent) {
+                    let goodsId = S_gne_buy_rmb.needBuyGold_goodsId
+                    // 购买金币
+                    game.server.send(2404, goodsId)
+                } else {
+                    game.scene.add(GameMainPropGet, [
+                        [{
+                            propId: 2,
+                            propNum: num
+                        }]
+                    ])
+                }
+                game.cb.event('update_shop_data')
+            }
+            else if (shopConfig.firstPay[goodsId]) {
+                miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '首充福利', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '参与' })
+                // 首充大礼包
+                if (__data.isSupportUser != 1) {
+                    miniApi.trackEvent('Mj_Pay', {
+                        Mj_ADPreference: miniApi.adUserValueLevel,
+                        'Mj_PayName': '首充豪礼',
+                        'Mj_PayPrice': shopConfig.firstPay[goodsId].price,
+                        'Mj_Paytype': '购买',
+                        'Mj_UserID': String(__data.uid),
+                    })
+                }
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: shopConfig.firstPay[goodsId].rewardPropId,
+                        propNum: shopConfig.firstPay[goodsId].rewardPropNum,
+                    }]
+                ])
+                if (shopConfig.firstPay[goodsId].rewardPropId == 1) {
+                    miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', 'Mj_CoinsAmount': shopConfig.firstPay[goodsId].rewardPropNum })
+                }
+                __data.addMoney(shopConfig.firstPay[goodsId].rewardPropId, shopConfig.firstPay[goodsId].rewardPropNum);
+                __data.firstPay.isHasBuy = 1;
+                if (__data.vip.vip_overTime <= 0) {
+                    __data.vip.vip_overTime = Date.now() + shopConfig.firstPay[goodsId].vipAddDayCount * 24 * 3600 * 1000
+                } else __data.vip.vip_overTime += shopConfig.firstPay[goodsId].vipAddDayCount * 24 * 3600 * 1000;
+
+                __data.pay_curValue += shopConfig.firstPay[goodsId].price;
+                game.cb.event('update_firstPay_data')
+                game.cb.event('marketActivity_panel_close')
+                game.cb.event('update_game_icons')
+                game.cb.event('update_shop_data') // 商城特惠第一个按钮需要这个判断 买了首冲就显示vip
+                game.scene.remove(GameMainFirstPay)
+                game.server.send(2411)
+                game.server.send(3326, __data.domain) // 查看破产保护
+            }
+            // else if (shopConfig.surpriseCrit.goodsId == goodsId) {
+            // 3.1.20 暂时关闭 惊喜暴击
+            // miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '惊喜暴击', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '参与' })
+            // // 首充大礼包
+            // if (__data.isSupportUser != 1) {
+            //     miniApi.trackEvent('Mj_Pay', {
+            //         Mj_ADPreference: miniApi.adUserValueLevel,
+            //         'Mj_PayName': '惊喜暴击',
+            //         'Mj_PayPrice': shopConfig.surpriseCrit.price,
+            //         'Mj_Paytype': '购买',
+            //         'Mj_UserID': String(__data.uid),
+            //     })
+            // }
+            // game.scene.add(GameMainPropGet, [
+            //     [{
+            //         propId: shopConfig.surpriseCrit.rewardPropId,
+            //         propNum: shopConfig.surpriseCrit.rewardPropNum,
+            //     }]
+            // ])
+            // if (shopConfig.surpriseCrit.rewardPropId == 1) {
+            //     miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', 'Mj_CoinsAmount': shopConfig.surpriseCrit.rewardPropNum })
+            // }
+            // __data.addMoney(shopConfig.surpriseCrit.rewardPropId, shopConfig.surpriseCrit.rewardPropNum);
+
+            // __data.pay_curValue += shopConfig.surpriseCrit.price;
+            // Panel_marketActivity_surpriseCrit.time = new Date(Date.now() - 1000)
+            // game.scene.remove(Panel_marketActivity_surpriseCrit)
+            // game.cb.event('marketActivity_panel_close')
+            // game.server.send(3326, __data.domain) // 查看破产保护
+            // }
+            else if (shopConfig.todayDiscount[goodsId]) {
+                miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '今日特惠', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '参与' })
+                // 首充大礼包
+                if (__data.isSupportUser != 1) {
+                    miniApi.trackEvent('Mj_Pay', {
+                        Mj_ADPreference: miniApi.adUserValueLevel,
+                        'Mj_PayName': '今日特惠',
+                        'Mj_PayPrice': shopConfig.todayDiscount[goodsId].price,
+                        'Mj_Paytype': '购买',
+                        'Mj_UserID': String(__data.uid),
+                    })
+                }
+                let goldNum = __data.activity.todayDiscount.deals[goodsId].gold
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: 1,
+                        propNum: goldNum,
+                    },
+                    {
+                        propId: 8005,
+                        propNum: __data.activity.todayDiscount.deals[goodsId].bamboo,
+                    }]
+                ])
+                if (goldNum) {
+                    miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', 'Mj_CoinsAmount': goldNum })
+                }
+                __data.addMoney(1, goldNum);
+
+                __data.activity.todayDiscount.purchaseCount++;
+                __data.pay_curValue += shopConfig.todayDiscount[goodsId].price;
+                game.scene.remove(Panel_marketActivity_todayDiscount)
+                game.cb.event('marketActivity_panel_close')
+                game.cb.event('update_game_icons')
+                game.server.send(3326, __data.domain) // 查看破产保护
+            }
+        } else if (code == -1) {
+            __tips(__lang.pay_over_max)
+        }
+        game.scene.remove(LoadingAwait)
+        game.scene.remove(LoadingSmall)
+        game.scene.remove(MahjongBlessPayPrompt)
+    },
+    2407() {
+        /**
+         * @param pageNum （int）数据页数
+         * @param data    [[int rank, string name, string headUrl, int score],...]
+         * @param rank    （int）用户排名
+         * @param name    （String）用户昵称
+         * @param headUrl （String）用户头像
+         * @param score   （int）用户分数
+         */
+        // int 数据页数
+        // int 数据数组长度
+        // for (数据数组长度)
+        //         int 用户排名
+        //         string 用户昵称
+        //         string 用户头像
+        //         int 用户分数
+        //     int 当前用户排名
+        //     string 当前用户昵称
+        //     string 当前用户头像
+        //     int 当前用户分数
+        let cityId = this.int;
+        let pageNum = this.int;
+        let len = this.int;
+        if (pageNum == 1) {
+            __data[`rankCity${cityId}`] = {};
+        }
+        let rankData = __data[`rankCity${cityId}`] || {};
+        let datas = [];
+        for (let index = 0, length2 = len; index < length2; index++) {
+            let vo = {
+                rank: this.int,
+                name: decodeURIComponent(this.string),
+                head: this.string,
+                score: this.int,
+                uid: this.int,
+                headFrameId: this.int,
+                cityId,
+                city: excelUtils.getCityName_mj(cityId)
+            }
+            vo.head = __data.getHeadTestDefault(vo.head)
+            datas.push(vo)
+        };
+        rankData[pageNum] = datas;
+        rankData['my'] = {
+            rank: this.int,
+            name: decodeURIComponent(this.string),
+            head: this.string,
+            score: this.int,
+            uid: this.int,
+            headFrameId: this.int,
+            cityId,
+            city: excelUtils.getCityName_mj(cityId),
+        }
+        rankData['my'].head = __data.getHeadTestDefault(rankData['my'].head)
+        __data[`rankCity${cityId}`] = rankData;
+        game.cb.event('update_city_rank_data')
+        game.cb.event('update_rank_by_type') // 因为主界面有本地帮所以这里需要派发
+    },
+    2409() {
+        let code = this.int;
+        trace('七日登录领取code：' + code)
+        if (code == -1) {
+            __tips(__lang.receive_fail)
+        } else if (code == 1 || code == 0 || code == 2) { // 1 看视频 0 没看视频
+            if (code == 2) {
+                __data.shareVideoRule.total_groupReceiveRewardCount()
+            }
+            __data.shareVideoRule.video_clearCallback()
+            __data.seven.seven_hasReceiveNum++
+            __data.seven.seven_todayIsHasReceive = 1;
+            let num = __data.seven.seven_data[__data.seven.seven_hasReceiveNum].propNum;
+            if (code == 1 || code == 2) num *= 5;
+            // 七日登录领取奖励
+            let propId = __data.seven.seven_data[__data.seven.seven_hasReceiveNum].propId
+            if (propId == 1) {
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', Mj_CoinsAmount: num })
+            }
+            __data.addMoney(propId, num)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId,
+                    propNum: num
+                }]
+            ])
+            game.cb.event('update_seven_data')
+            // game.scene.remove(GameMainSeven)
+            // __tips(__lang.receive_success)
+        }
+    },
+    2411() {
+        // int）剩余天数 0-非VIP 其他-VIP剩余天数
+        let ms = this.string;
+        let type = this.int;
+        __data.vip.count_jumpAd = this.int;
+        __data.vip.count_protectAll = this.int;
+        __data.vip.count_protectLv = this.int;
+        __data.vip.vip_overTime = Date.now() + Number(ms);
+        if (type == 1) {
+            __data.vip.vipType = 'month'
+        } else if (type == 2) {
+            __data.vip.vipType = 'year';
+        } else if (type == 3) {
+            __data.vip.vipType = 'season';
+        } else if (type == 4) {
+            __data.vip.vipType = 'new_year';
+        } else if (type == 5) {
+            __data.vip.vipType = '3.1.12_vip';
+        } else if (type == 6) {
+            __data.vip.vipType = '3.1.17_vip';
+        } else {
+            __data.vip.vipType = 'no';
+        }
+        game.cb.event('update_vip_data')
+    },
+    2412() {
+        // 开通VIP月卡反馈 弃用
+        // code（int）1成功 - 1 意外失败 - 2 微信对账失败
+    },
+    2413() {
+        // 领取VIP每日奖励反馈
+        // code（int）1成功 - 1 意外失败
+        let code = this.int;
+        trace('领取code' + code)
+        if (code == 1) {
+            __data.vip.vip_todayIsHasReceive = 1;
+            let gold = 0;
+            if (__data.vip.vipType == 'month') {
+                gold = 30000
+            } else if (__data.vip.vipType == 'year') {
+                gold = 100000
+            } else if (__data.vip.vipType == 'new_year') {
+                gold = 100000
+            } else if (__data.vip.vipType == 'season') {
+                gold = 60000
+            } else if (__data.vip.vipType == '3.1.12_vip') {
+                gold = 10000
+            } else if (__data.vip.vipType == '3.1.17_vip') {
+                gold = 10000
+            } else {
+                return;
+            }
+            miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: gold })
+            __data.addMoney(1, gold)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: gold
+                }]
+            ])
+            game.cb.event('update_vip_data')
+        }
+    },
+    2250() {
+        let data = JSON.parse(this.string);
+        trace('赛季档案列表', data);
+        __data.seasonRecord = {};
+        for (let index = 0, length = data.length; index < length; index++) {
+            const e = data[index];
+            __data.seasonRecord[e.id] = {
+                id: e.id,
+                isIng: !e.isEnd,
+                startTimeMs: e.startTime,
+                endTimeMs: e.endTime,
+                year: e.year,
+                // seasonFont: e.season,
+                season: GameMainSeasonStart.seasonFontToId[e.season.charAt(0)],
+            }
+        };
+        game.cb.event('update_hall_play_season_time')
+    },
+    2251() {
+        let data = JSON.parse(this.string);
+        trace('赛季成绩榜单', data.legendId, JSON.stringify(data));
+        data.legendId;
+        try {
+            if (data.id) {
+                let person_datas = [];
+                if (__tool.getDeepProperty(data, 'playerTop3s.top1Id')) {
+                    person_datas.push(
+                        { rank: 1, uid: data.playerTop3s.top1Id, score: data.playerTop3s.top1Score, cityId: data.playerTop3s.playerTop1city }
+                    )
+                }
+                if (__tool.getDeepProperty(data, 'playerTop3s.top2Id')) {
+                    person_datas.push(
+                        { rank: 2, uid: data.playerTop3s.top2Id, score: data.playerTop3s.top2Score, cityId: data.playerTop3s.playerTop2city }
+                    )
+                }
+                if (__tool.getDeepProperty(data, 'playerTop3s.top3Id')) {
+                    person_datas.push(
+                        { rank: 3, uid: data.playerTop3s.top3Id, score: data.playerTop3s.top3Score, cityId: data.playerTop3s.playerTop2city }
+                    )
+                }
+                data.legendId = -1;
+                if (person_datas[0] && person_datas[0].uid) {
+                    let rd = RankUtils.getRankLvDataByScore(person_datas[0].score);
+                    if (rd.toNextLevelNeedCup == 0 && person_datas[0].score - rd.minCup >= __data.rank.rank_exceed_queshen_score) {
+                        data.legendId = person_datas[0].uid;
+                    }
+                }
+
+                let local_datas = [];
+                if (__tool.getDeepProperty(data, 'myCityData.top3s.top1Id')) {
+                    local_datas.push(
+                        { rank: 1, uid: data.myCityData.top3s.top1Id, score: data.myCityData.top3s.top1Score, cityId: data.myCityData.c }
+                    )
+                }
+                if (__tool.getDeepProperty(data, 'myCityData.top3s.top2Id')) {
+                    local_datas.push(
+                        { rank: 2, uid: data.myCityData.top3s.top2Id, score: data.myCityData.top3s.top2Score, cityId: data.myCityData.c }
+                    )
+                }
+                if (__tool.getDeepProperty(data, 'myCityData.top3s.top3Id')) {
+                    local_datas.push(
+                        { rank: 3, uid: data.myCityData.top3s.top3Id, score: data.myCityData.top3s.top3Score, cityId: data.myCityData.c }
+                    )
+                }
+
+                let person_data_me = null;
+                if ('myIndex' in data) {
+                    person_data_me = { rank: data.myIndex, uid: __data.uid, cityId: data.myCity, score: data.myScore, isMe: true }
+                }
+
+                let local_data_me = null;
+                let rn1 = __tool.getDeepProperty(data, 'myCityPlayerData')
+                if (rn1 != undefined) {
+                    local_data_me = { rank: data.myCityPlayerData.i, uid: __data.uid, cityId: data.myCityPlayerData.c, score: data.myCityPlayerData.s, isMe: true }
+                }
+
+                __data.seasonRecord[data.id].rankData = {
+                    legendId: data.legendId || 0,
+                    person_datas,
+                    person_data_me,
+                    local_datas,
+                    local_data_me,
+                };
+
+                game.cb.event('update_season_record_item_data_by_id', [data.id])
+            }
+        } catch (error) {
+            miniApi.uploadError(__data.uid + ' - 2251 - ' + JSON.stringify(error))
+            console.error(error);
+        }
+    },
+    2252() {
+        let d = JSON.parse(this.string)
+        trace('赛季结算数据', d)
+        // d = {
+        //     "goldCup": 1,
+        //     "silverCup": 0,
+        //     "copperCup": 0,
+        //     "goldMedal": 1,
+        //     "silverMedal": 0,
+        //     "copperMedal": 0,
+        //     "avatarBorder": [],
+        //     "maxCid": 8,
+        //     "maxScore": 10,
+        //     "maxLevel": 10,
+        //     "maxRank": 1,
+        //     "newScore": 20,
+        //     "newLevel": 20,
+        //     "newRank": 1,
+        //     "index": 3123123,
+        //     "maxIndex": 312313,
+        //     "year": 2023,
+        //     "season": "冬季",
+        //     "newYear": 2023,
+        //     "newSeason": "冬季",
+        // }
+        __data.seasonEndData = d;
+        __data.seasonEndData.isHaveData = true;
+    },
+    2253() {
+        let headFrameId = this.int;
+        trace('更换头像框id', headFrameId)
+        if (headFrameId > 0) {
+            if (__data.othersVO[__data.uid]) {
+                __data.othersVO[__data.uid].headFrameId = headFrameId;
+            }
+            __data.headFrameId = headFrameId
+        }
+    },
+    // 可以双倍
+    3330() {
+        let gold = this.int;
+        ResultGoldVideoHandle.gold = gold;
+        LookVideoProxy.type = LookVideoProxy.TYPE_WIN;
+        LookVideoProxy.proxy(ResultGoldVideoHandle);
+    },
+    // 结算双倍领取金币
+    3331() {
+        let code = this.int;
+        trace('双倍金币领取结果：', code);
+        // 成功
+        if (code > 0) {
+            let receiveType = this.int;
+            if (receiveType == 2) {
+                __data.shareVideoRule.total_groupReceiveRewardCount()
+            }
+            __data.shareVideoRule.video_clearCallback()
+            miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: Number(code) })
+            __data.addMoney(1, code)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: code
+                }]
+            ])
+            LookVideoProxy.destroy();
+            // __tips('领取成功');
+        } else {
+            __tips('领取失败');
+        }
+    },
+    // 可以返还
+    3332() {
+        let gold = this.int;
+        ResultGoldVideoHandle.gold = gold;
+        LookVideoProxy.type = LookVideoProxy.TYPE_LOSE;
+        LookVideoProxy.proxy(ResultGoldVideoHandle);
+    },
+    // 返回结算金币
+    3333() {
+        let code = this.int;
+        trace('金币返还结果：', code);
+        // 成功
+        if (code > 0) {
+            let receiveType = this.int;
+            if (receiveType == 2) {
+                __data.shareVideoRule.total_groupReceiveRewardCount()
+            }
+            __data.shareVideoRule.video_clearCallback()
+            miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '付费', Mj_CoinsAmount: Number(code) })
+            __data.addMoney(1, code)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: code
+                }]
+            ])
+            LookVideoProxy.destroy();
+            // __tips('返还成功');
+        } else {
+            __tips('返还失败');
+        }
+    },
+    16011() { },
+    16015() { },
+    5002() {
+        var id = this.readInt()
+        var content = this.readString()
+        trace('id ' + id)
+        trace('收到聊天信息：' + content)
+        if (content.indexOf('umrumr') == 0) {
+            var contentID = parseInt(content.replace('umrumr', ''))
+            if (contentID >= Chat.wordConfig[0].id && contentID <= Chat.wordConfig[Chat.wordConfig.length - 1].id) {
+                trace('接收到 常用语')
+                game.cb.dispatchEvent('mahjong_' + "add_chat_content", ['word', id, contentID])
+            } else if (contentID >= 1 && contentID <= 18) {
+                trace('接收到 表情')
+                game.cb.dispatchEvent('mahjong_' + "add_chat_content", ['face', id, contentID])
+            }
+        }
+    },
+    5003() {
+        var sendPlayerID = this.readInt();
+        var receivePlayerID = this.readInt();
+        var giftID = this.readInt();
+        if (BagData.getPropNumber(giftID) > 0) BagData.reduceProp(giftID, 1);
+        else if (BagData.getPropNumber(601) > 0) BagData.reduceProp(601, 1);
+        // 自己接收礼物处于关闭状态
+        if (receivePlayerID == __data.uid && LocalUtils.gift.value == 1) return;
+        trace('发送者：', sendPlayerID, '接收者：', receivePlayerID, '礼物：', giftID)
+        game.cb.dispatchEvent(__eh + 'add_a_gift', [sendPlayerID, receivePlayerID, giftID])
+    },
+    // 奖杯加成
+    10001() {
+        let oldCup = this.readInt();
+        let newCup = this.readInt();
+        let oldLevel = this.readInt();
+        let newLevel = this.readInt();
+        let type = this.readInt();
+        ResultPanelManager.isJoinCupEvent = true;
+        if (type == 2) __data.shareVideoRule.total_groupReceiveRewardCount();
+        __data.shareVideoRule.video_clearCallback()
+        __data.hashCityLevelCup[HallPlay.lastCityId].cup = newCup;
+
+        game.cb.event(MahjongResultRankComponent.EXTRA_CUP, [newCup - oldCup, oldCup, newCup]);
+    },
+    // 返还
+    10004() {
+        let oldCup = this.readInt();
+        let newCup = this.readInt();
+        let oldLevel = this.readInt();
+        let newLevel = this.readInt();
+        let type = this.readInt();
+        ResultPanelManager.isJoinCupEvent = true;
+        if (type == 2) __data.shareVideoRule.total_groupReceiveRewardCount();
+        __data.shareVideoRule.video_clearCallback()
+        __data.hashCityLevelCup[HallPlay.lastCityId].cup = newCup;
+
+        game.cb.event(MahjongResultRankComponent.PROTECT_CUP, [newCup - oldCup, oldCup, newCup]);
+    },
+    10006() {
+        let todayNum = this.readInt();
+        let allNum = this.readInt();
+        MahjongSmallResult.extraData = { todayNum, allNum };
+    },
+
+    10008() {
+        __data.deskData.roomVo.additionals = [];
+        let len = this.int; //int 数量
+        for (let i = 0; i < len; i++) {
+            let info = {};
+            info.id = this.int; // int userId
+            info.realScore = this.string; // String 应用封顶和全额补偿之前的输赢金币数量
+            info.initScore = this.string; // 应收应付
+            info.originScore = this.string;
+            info.isVip = this.int; // int 是否vip 1 是 0 否
+            info.isMaxMatch = this.int; // int 是否封顶限制匹配 1 是 0 否
+            __data.deskData.roomVo.additionals.push(info);
+        }
+        trace('结算附加数据：', __data.deskData.roomVo.additionals);
+    },
+    // 全额保障返还
+    10009() {
+        let gold = this.readInt();
+        let type = this.readInt();
+        if (gold > 0) {
+            __data.addMoney(1, gold)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: gold
+                }]
+            ])
+            game.scene.remove(MahjongResultAllWin);
+        }
+    },
+    3334() {
+        if (!S_click_gameMain_lookVideo_win_video.videoR.isSuccess) {
+            let useCityId = HallPlay.lastCityId || __data.myCityId
+            // __data.shareVideoRule.total_clickShareCount()
+            miniApi.share({
+                titleId: __tool.randomRange(1, 9),
+                cityId: useCityId,
+                shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+                params: `uid=${__data.uid}&shareRewardType=${S_click_gameMain_lookVideo_win_video.type}&myCityId=${useCityId}`,
+                adUnitId: S_click_gameMain_lookVideo_win_video.videoR.adUnitId,
+                shareGroupClickCallback: () => {
+                    if (S_click_gameMain_lookVideo_win_video.type == 'winShare') {
+                        game.server.send(3331, 2)
+                    } else {
+                        game.server.send(3333, 2)
+                    }
+                    game.scene.remove(GameMainLookVideoWin);
+                    game.scene.remove(GameMainLookVideoLose);
+                    game.scene.remove(GameMainRedPacket_2)
+                },
+                shareOnShowCallback: () => {
+                    game.scene.add(GameMainRedPacket_2)
+                }
+            })
+            if (S_click_gameMain_lookVideo_win_video.type == 'winShare') {
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '胜利激励', 'Mj_Participation': '参与分享' })
+            } else if (S_click_gameMain_lookVideo_win_video.type == 'loseShare') {
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '失败激励', 'Mj_Participation': '参与分享' })
+            }
+        } else {
+            if (S_click_gameMain_lookVideo_win_video.type == 'winVideo') {
+                let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '胜利激励', 'Mj_Participation': n })
+            } else if (S_click_gameMain_lookVideo_win_video.type == 'loseVideo') {
+                let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '失败激励', 'Mj_Participation': n })
+            }
+            trace('播放广告类型：', S_click_gameMain_lookVideo_win_video.videoR.adUnitId == 'adunit-32db74247314cde6' ? '胜利' : '失败')
+            let fn = async () => {
+                let adunitId = S_click_gameMain_lookVideo_win_video.videoR.adUnitId
+                await miniApi.video_ready(adunitId)
+                miniApi.video_show(adunitId, () => {
+                    game.scene.remove(GameMainLookVideoWin);
+                    game.scene.remove(GameMainLookVideoLose);
+                    LookVideoProxy.lookVideoSuccess();
+                }, () => {
+                    __tips('暂无广告，请稍后再试或开通VIP')
+                }, 0);
+            }
+            fn()
+        }
+    },
+    // 登录后信息回馈
+    3326() {
+        // * int-队伍数量
+        // * for(队伍数量){
+        // *   int-队伍ID
+        // *   string-队伍名称
+        // * }
+
+        // * int-匹配模式数量
+        // * for(匹配模式数量){
+        // *   int-匹配模式ID
+        // *   int-匹配模式类型 1-普通 2-精英 3-土豪
+        // *   int-底分
+        // *   int-封顶
+        // *   int-桌费
+        // *   int-入场金币下限
+        // *   int-入场金币上限
+        // *   int-奖杯倍率
+        // * }
+        let teamNum = this.int;
+        for (let index = 0, length = teamNum; index < length; index++) {
+            this.int;
+            this.string;
+        };
+
+        __data.matchData = [];
+        __data.hashCityIdRuleIdToModel = {};
+        let len = this.readInt();
+        for (let i = 0; i < len; i++) {
+            let model = {};
+            model.matchId = this.readInt();
+            model.cityId = this.readInt();
+            model.ruleId = this.readInt();
+            model.matchModelType = this.readInt();
+            model.bottomScore = this.readInt();
+            model.maxScore = this.readInt();
+            model.cost = this.readInt();
+            model.minGold = this.readInt();
+            model.maxGold = parseInt(this.readString());
+            model.cupMultipty = this.readInt();
+            model.cupAdd = Math.floor(this.readInt() / 100) + '%';
+
+            __data.matchData.push(model);
+
+            __data.hashCityIdRuleIdToModel[`${model.cityId}-${model.ruleId}`] = __data.hashCityIdRuleIdToModel[`${model.cityId}-${model.ruleId}`] || [];
+            __data.hashCityIdRuleIdToModel[`${model.cityId}-${model.ruleId}`].push(model)
+        }
+
+        trace('匹配信息：', __data.matchData);
+        // * int-段位数据数量
+        // * for(段位数据数量){
+        // *   int-段位等级
+        // *   int-段位基本奖杯数 比如 菜鸟I是0 菜鸟II是20 用 玩家奖杯数 - 段位基本奖杯数 = 当前段位奖杯数
+        // *   int-升级需要奖杯数 比如 菜鸟I是20 菜鸟II是30 雀神是0
+        // *   string-段位名称
+        // * }
+        __data.rankLvData = [];
+        __data.queShenRoad.rewardArray = [];
+        len = this.readInt();
+        for (let i = 0; i < len; i++) {
+            let rank = {};
+            rank.level = this.readInt();
+            rank.minCup = this.readInt();
+            rank.toNextLevelNeedCup = this.readInt();
+            rank.name = this.readString();
+            rank.iconIndex = this.readString();
+            rank.rewards = JSON.parse(this.readString())
+            __data.rankLvData.push(rank);
+
+            __data.queShenRoad.rewardArray.push({
+                level: rank.level,
+                score: rank.minCup,
+                rewards: rank.rewards
+            })
+        }
+        trace('排位信息：', __data.rankLvData);
+        // * int-玩家队伍ID -1 代表没有队伍 需要加入队伍
+        this.readInt();
+        // * int-玩家金币数
+        __data.gold = this.readString();
+        // * int-玩家钻石数
+        __data.stone = this.readInt();
+
+        // 设置初始默认城市分数等级
+        for (const cityId in __data.excelConfig.hashCityIdVO) {
+            __data.hashCityLevelCup[cityId] = {
+                cup: 0,
+                level: 1,
+            }
+        }
+        let l1 = this.readInt();
+        for (let index = 0, length = l1; index < length; index++) {
+            let cityId = this.readInt();
+            __data.hashCityLevelCup[cityId] = {
+                cup: this.readInt(),
+                level: this.readInt()
+            }
+        };
+
+        // 七日信息
+        __data.seven.seven_hasReceiveNum = this.int // 领取了多少次
+        __data.seven.seven_todayIsHasReceive = this.int // 当天是否领取 0没有 1已经领取
+
+        __data.vip.vip_todayIsHasReceive = this.int
+        __data.matchCount = this.int; // 玩家匹配次数
+        __data.vip.noGoldProtectCount = this.int;
+        game.cb.event(`updateLvInfo`)
+        game.cb.event(`update_seven_data`)
+        game.cb.event('update_vip_data')
+    },
+
+    // 查询房间总人数
+    3329() {
+        let ruleId = this.int;
+        let len = this.int;
+        let d = []
+        for (let index = 0, length = len; index < length; index++) {
+            d.push({
+                type: this.int,
+                playerNum: this.int
+            })
+        };
+        game.cb.event('updatePlayerNum', [d])
+    },
+
+    // 投诉通知
+    3336() {
+        // 返回 int 1 成功 0 失败
+        let code = this.int;
+        __tips(code == 1 ? __lang.complaint_success : __lang.complaint_fail)
+    },
+    10002() {
+        this.int;
+        __data.dailyMatch.curCount = this.int
+        __data.dailyMatch.maxCount = this.int
+        if (__data.dailyMatch.curCount == -1) {
+            __data.dailyMatch.curCount = __data.dailyMatch.maxCount
+            __data.dailyMatch.isHasReceive = 1;
+        } else {
+            __data.dailyMatch.isHasReceive = 0;
+        }
+        if (__data.dailyMatch.curCount > __data.dailyMatch.maxCount) {
+            __data.dailyMatch.curCount = __data.dailyMatch.maxCount
+        }
+        __data.dailyMatch.reward = JSON.parse(this.string);
+        game.cb.event('update_daliyMatch_data')
+    },
+    10003() {
+        let code = this.int;
+        if (code == 1) {
+            let a = []
+            for (let index = 0, length = __data.dailyMatch.reward.length; index < length; index++) {
+                const e = __data.dailyMatch.reward[index];
+                a.push({
+                    propId: e.id,
+                    propNum: e.count
+                })
+                __data.addMoney(e.id, e.count)
+            };
+            game.scene.add(GameMainPropGet, [
+                a
+            ])
+            __data.dailyMatch.isHasReceive = 1;
+            game.server.send(15001)
+            game.cb.event('update_daliyMatch_data')
+        }
+    },
+    10005() {
+        // let cardIds = this.string;
+        // let a = JSON.parse(cardIds)
+        // for (const key in PropIcon.icon) {
+        //     if (PropIcon.icon[key].isCollect) {
+        //         __data.collect[key] = { cardId: key, num: 0 }
+        //     }
+        // }
+        // a.forEach(e => {
+        //     __data.collect[e].num = 1;
+        // });
+        // game.cb.event('udpate_collect_data')
+        // trace('卡牌收集：', cardIds)
+    },
+    10007() {
+        __data.dailyMatch.curCount = __data.dailyMatch.maxCount
+        game.cb.event('update_daliyMatch_data')
+    },
+    11002() {
+        trace('接受分享策略上报数据回调11002')
+    },
+    11003() {
+        trace('接受通知后台类型是否能看视频，机型数据回调11003')
+    },
+    11004() {
+        let rank = this.int;
+        let cityId = this.int;
+        __data.hashCityIdRank[cityId] = rank;
+        if (cityId != __data.myCityId) {
+            HallPlayLeft.lookExtraRank = {
+                rank,
+                cityId,
+                score: 0
+            }
+        }
+        game.cb.event('update_cityId_rank')
+    },
+    11005() {
+        __data.is11005 = true
+        let a = game.scene.get(Hall)
+        let b = game.scene.get(HallPlay)
+        let c = game.scene.get(Garden_groud)
+        __data.callback11005 = () => {
+            if (!__data.is11005) return false
+            game.isAllowOnShowReconnect = false;
+            game.server.clear();
+            let n = async () => {
+                clearConnect()
+                __data.is11005 = false;
+            }
+            n()
+            return true;
+        }
+
+        if (a && a.parent) {
+            __data.callback11005 && __data.callback11005()
+            return
+        }
+        if (b && b.parent) {
+            __data.callback11005 && __data.callback11005()
+            return
+        }
+        if (c && c.parent) {
+            __data.callback11005 && __data.callback11005()
+            return
+        }
+    },
+    11006() {
+        // 申请注销
+        let code = this.int
+        if (code == 1) {
+            game.scene.add(AppDeleteAccount, ['cancelDelete'])
+        }
+    },
+    11007() {
+        // 撤销注销
+        let code = this.int;
+        if (code == 1) {
+            if (__data.uid == -6) {
+                game.scene.remove(AppDeleteAccount)
+                verify_version()
+            } else {
+                game.scene.remove(AppDeleteAccount)
+            }
+        }
+    },
+    11008() {
+        // 撤销注销
+        let code = this.string;
+        let ob = JSON.parse(code)
+        __data.vip.receiveRecord = ob;
+        game.cb.event('update_vip_receive_record')
+    },
+    12001() {
+        let goodsId = this.int;
+        let buyNum = this.int;
+        let limit_count = this.int;
+
+        shopConfig.discount[goodsId].buyNum = buyNum
+        shopConfig.discount[goodsId].limit_count = limit_count
+        game.cb.event('update_shop_data')
+    },
+    13002() {
+        let l = this.int;
+        __data.queShenRoad.isHaveReceiveLvData = true
+        __data.queShenRoad.hasReceiveLvArray = [];
+        for (let index = 0, length = l; index < length; index++) {
+            __data.queShenRoad.hasReceiveLvArray.push(this.int)
+        };
+        trace('雀神之路领取记录：', __data.queShenRoad.hasReceiveLvArray)
+        game.cb.event('update_queShenRoad_data')
+    },
+    13003() {
+        let level = this.int;
+        let code = this.int;
+        if (code == 1) {
+            let l = this.int;
+            let r1 = [];
+            for (let index = 0, length = l; index < length; index++) {
+                let id = this.int;
+                let num = this.int;
+                r1.push({
+                    propId: id,
+                    propNum: num,
+                })
+                if (id == 1) {
+                    __data.addMoney(1, num)
+                } else if (id == 5) {
+                    __data.addMoney(5, num)
+                }
+                // 自动使用高级头像 
+                // 如果我是默认头像
+                // 或者我使用的是雀神之路头像，如果领取的头像id大于我的头像id 那么使用
+                if (PropIcon.icon[id] && PropIcon.icon[id].isQueShenRoad) {
+                    let useHeadFrame
+                    if (__data.headFrameId == 301) {
+                        useHeadFrame = 1
+                    } else if (PropIcon.icon[__data.headFrameId].isQueShenRoad) {
+                        if (id > __data.headFrameId) {
+                            useHeadFrame = 1
+                        }
+                    }
+                    if (useHeadFrame == 1) {
+                        game.server.send(2253, id)
+                    }
+                }
+            };
+
+            game.scene.add(GameMainPropGet, [
+                r1, 0
+            ])
+            __data.queShenRoad.hasReceiveLvArray.push(level)
+            game.cb.event('update_queShenRoad_data')
+            // 转移到uplv界面
+            // level == 2 && miniApi.adsdk_track('TUTORIAL_FINISH')
+
+            let isHaveCanReceive = __data.queShenRoad.rewardArray.some((e) => {
+                return GameMainQueShenRoad.maxCityCup >= e.score && !__data.queShenRoad.hasReceiveLvArray.includes(e.level) && e.rewards[0]
+            })
+            if (!isHaveCanReceive) {
+                game.scene.remove(GameMainQueShenRoad)
+            }
+        }
+    },
+    13004() {
+        __data.channel_server = this.string;
+        trace('后台给的渠道', __data.channel_server)
+    },
+    13005() {
+        let code = this.int;
+        trace('设置渠道结果', code)
+        if (code == 0) {
+
+        } else {
+
+        }
+    },
+    13006() {
+        let code = this.int;
+        let json__ = this.string;
+        trace('兑换码结果', json__)
+        if (code == 0) {
+            game.scene.remove(GameMainExchangeCode)
+            let a;
+            try {
+                a = JSON.parse(json__)
+            } catch (error) {
+                return __tips('功能异常');
+            }
+            if (a.type == 998) {
+                let exchangeCode = a.sn
+                game.scene.add(GameMainPropGet_vip, [
+                    [{
+                        propId: 704,
+                        propNum: 1
+                    }]
+                ])
+                game.server.send(2411);
+                game.server.send(13005, exchangeCode)
+                __data.channel_server = exchangeCode
+                __data.channel_client = exchangeCode
+            } else if (a.type == 2) {
+                game.scene.add(GameMainPropGet, [
+                    [{
+                        propId: 2,
+                        propNum: a.count
+                    }]
+                ])
+                __data.addMoney(2, a.count)
+            }
+        } else if (code == 1) {
+            __tips('您之前已兑换过福利')
+        } else if (code == 2) {
+            __tips('兑换码错误或已失效')
+        } else if (code == 3) {
+            __tips('请先消耗现有钻石')
+        } else if (code == 4) {
+            __tips('扶持资源已达上限')
+        } else if (code == 5) {
+            __tips('兑换码错误或已失效')
+        }
+    },
+    // 12002() {
+    //     let goodsId = this.int;
+    //     let limit_count = this.int;
+    //     trace('商品显示购买次数', goodsId, limit_count)
+    //     shopConfig.discount[goodsId].limit_count = limit_count
+    //     game.cb.event('update_shop_data')
+    // },
+    // 查询进行过的比赛次数 无参数 返回 14001消息 消息结构  int 总比赛次数
+    14001() {
+        __data.playNumbers = this.int;
+        trace('玩家对局次数：' + __data.playNumbers);
+    },
+    14003() {
+        let id = this.int;
+        let areaRank = this.int;
+        var vo = __data.othersVO[id] ? __data.othersVO[id] : {}
+        vo.id = id;
+        vo.areaRank = areaRank;
+        __data.othersVO[id] = vo;
+        trace('地区排名：', id, areaRank);
+    },
+    14004() {
+        __data.surpassCup = this.int;
+    },
+    14013() {
+        let r = this.string;
+        let o = JSON.parse(r);
+        trace(o)
+        __data.friendRoom.gameRecord[o.preDateCount] = __data.friendRoom.gameRecord[o.preDateCount] || {};
+        let a = __data.friendRoom.gameRecord[o.preDateCount];
+        a.allScore = o.allScore;
+        a[o.page] = o && o.data || [];
+        game.cb.event('update_friendRoom_game_record_data')
+    },
+    14014() {
+        let r = this.string;
+        let o = JSON.parse(r);
+        trace(o);
+        __data.friendRoom.infoMain
+        game.cb.event('update_friendRoom_info_main_data', [o])
+    },
+    14020() {
+        let r = this.string;
+        let o = JSON.parse(r);
+        trace(o);
+        __data.friendRoom.battleResult.winRate1 = o.td1 > 0 ? parseInt(Number(o.td2 / o.td1) * 10000) / 100 + '%' : '0%';
+        __data.friendRoom.battleResult.winRate2 = o.yd1 > 0 ? parseInt(Number(o.yd2 / o.yd1) * 10000) / 100 + '%' : '0%';
+        __data.friendRoom.battleResult.winRate3 = o.d31 > 0 ? parseInt(Number(o.d32 / o.d31) * 10000) / 100 + '%' : '0%';
+        __data.friendRoom.battleResult.winRate4 = o.d61 > 0 ? parseInt(Number(o.d62 / o.d61) * 10000) / 100 + '%' : '0%';
+        __data.friendRoom.battleResult.gameNum1 = o.td1;
+        __data.friendRoom.battleResult.gameNum2 = o.yd1;
+        __data.friendRoom.battleResult.gameNum3 = o.d31;
+        __data.friendRoom.battleResult.gameNum4 = o.d61;
+        __data.friendRoom.battleResult.score1 = o.td3;
+        __data.friendRoom.battleResult.score2 = o.yd3;
+        __data.friendRoom.battleResult.score3 = o.d33;
+        __data.friendRoom.battleResult.score4 = o.d63;
+        game.cb.event('update_friendRoom_battle_result_data')
+    },
+    // 设置自动状态 参数 int 状态 1-开启 0-关闭
+    14022() { },
+    14023() {
+        // 查询自动状态 无参数 返回 1-开启中 0-未开启
+        let status = this.readInt();
+        let vo = __data.deskData.roomVo.getPlayerBySeat(0);
+        if (vo) vo.tingAutoStatus = status;
+        trace('自动摸打状态：', status);
+        game.cb.event('update_ting_auto_status');
+    },
+    15001() {
+        __data.dailyTask.des = this.string;
+        __data.dailyTask.pro = this.int;
+        __data.dailyTask.need = this.int;
+        let reward = this.string;
+        __data.dailyTask.reward = JSON.parse(reward)
+        __data.dailyTask.refreshStone = this.int;
+        __data.dailyTask.today_comNum = this.int;
+        __data.dailyTask.today_limitNum = this.int;
+        game.cb.event('update_dailyTask_data')
+        trace('日常任务数据', __data.dailyTask)
+    },
+    15002() {
+        let code = this.int;
+        trace('15002 code', code)
+        if (code == 1) {
+            let rs = []
+            let reward = __data.dailyTask.reward;
+            for (let index = 0, length = reward.length; index < length; index++) {
+                let e = reward[index]
+                __data.addMoney(e.id, e.count)
+                rs.push({
+                    propId: e.id,
+                    propNum: e.count
+                })
+            };
+            game.scene.add(GameMainPropGet, [
+                rs
+            ])
+            game.server.send(15001)
+            game.cb.event('update_dailyTask_data')
+        } else if (!config.useVersionIP) {
+            game.server.send(15001)
+        }
+    },
+    15003() {
+        let le = this.int;
+        __data.garden.unlockDressArray = []
+        for (let index = 0, length = le; index < length; index++) {
+            const element = this.int;
+            __data.garden.unlockDressArray.push(element)
+        };
+        game.cb.event('update_garden_unlockDressList')
+    },
+    15004() {
+        let code = this.int;
+        trace('更换装饰结果', code)
+        if (code == 1) {
+            trace('S_garden_build_sure.compId', S_garden_build_sure.compId);
+            let positionId = __data.excelConfig.hashGardenDress[S_garden_build_sure.compId].positionId;
+            __data.garden.hashUsePositionIdCompId[positionId] = S_garden_build_sure.compId;
+            game.cb.event('garden_groud_change_map_compId', [S_garden_build_sure.compId]);
+            game.server.send(15006)
+            gtool.query([15008], 0)
+        } else {
+            game.cb.event('garden_build_cancel_select_comp')
+        }
+    },
+    15005() {
+        let code = this.int;
+        trace('花园建设任务结果', code)
+        if (code == 1) {
+            let buildValue = __data.garden.task.buildValue;
+
+            miniApi.trackEvent('Mj_Stages', {
+                Mj_VIP: __data.vip.isVip ? '是' : '否',
+                Mj_StagesType: '花园',
+                Mj_StagesNum: __data.garden.task.branchTaskId,
+                Mj_StagesResult: '成功',
+            })
+
+            __data.garden.task.branchTaskId++;
+            game.cb.event('update_dailySelect_icon')
+            let positionId = __data.excelConfig.hashGardenDress[S_garden_build_sure.compId].positionId;
+            __data.garden.hashUsePositionIdCompId[positionId] = S_garden_build_sure.compId
+            game.cb.event('garden_build', [__data.garden.task.branchTaskId - 1])
+            // let addBuildValue = parseInt(__data.excelConfig.hashGardenDress[S_garden_build_sure.compId].buildValue)
+            gardenEffect.buildValueEffect_setAddv = buildValue
+            // gardenEffect.addBuildValueEffect = async function (x, y) {
+            //     __data.garden.buildValue += gardenEffect.buildValueEffect_setAddv
+            //     await gardenEffect.taskBuildValue(x || game.stage.width / 2, y || game.stage.height / 2)
+            //     game.cb.event('update_buildValue');
+            // }
+            // setTimeout(async () => {
+            //     gardenEffect.addBuildValueEffect()
+            // }, 10000);
+
+            // await gardenEffect.taskBuildValue(game.stage.width / 2, game.stage.height / 2)
+            // game.cb.event('update_buildValue')
+            // game.cb.event('garden_lookAt', [__data.garden.task.branchTaskId - 1, () => {
+            //     game.cb.event('garden_build', [__data.garden.task.branchTaskId - 1])
+            // }, 500])
+            // game.server.send(15006)//花园组件使用信息
+            // gtool.query([15008], 0) //花园货币
+            gtool.query([15012], 0) //章节奖励
+        }
+    },
+    15006() {
+        let len = this.int;
+        __data.garden.hashUsePositionIdCompId = {}
+        for (let index = 0, length = len; index < length; index++) {
+            let positionId = this.int;
+            let compId = this.int;
+            __data.garden.hashUsePositionIdCompId[positionId] = compId
+        };
+        trace('花园使用组件', __data.garden.hashUsePositionIdCompId)
+        game.cb.event('update_gardenDress')
+    },
+    15007() {
+        let code = this.int;
+        trace('刷新结果', code)
+        if (code == 1) {
+            let stone = this.int;
+            if (stone > 0) {
+                miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '日常钻石刷新' });
+                __data.addMoney(2, -stone)
+            }
+            game.server.send(15001)
+        }
+    },
+    15008() {
+        __data.garden.star = this.int;
+        __data.garden.buildValue = this.int;
+        trace('星星', __data.garden.star)
+        trace('繁荣度', __data.garden.buildValue)
+        game.cb.event('update_star')
+        game.cb.event('update_buildValue')
+    },
+    15009() {
+        // 0 没有 
+        let taskId = this.int;
+        trace('当前完成的花园建设任务id', taskId)
+        __data.garden.task.branchTaskId = taskId + 1;
+        game.cb.event('update_garden_task_data')
+        game.cb.event('update_dailySelect_icon')
+        game.cb.event('update_fuguiManor_data')
+    },
+    15010() {
+        let code = this.int;
+        trace('领取花园章节奖励结果', code);
+        if (code == 1) {
+            let reward = __data.garden.task.getChapterReward()
+            let rs = []
+            for (let index = 0, length = reward.length; index < length; index++) {
+                let e = reward[index]
+                __data.addMoney(e.propId, e.num)
+                rs.push({
+                    propId: e.propId,
+                    propNum: e.num
+                })
+            };
+            game.scene.add(GameMainPropGet, [
+                rs
+            ])
+            __data.garden.task.rewardType_chapter = 0;
+            game.cb.event('update_garden_task_data');
+            game.cb.event('update_garden_build_question');
+        }
+    },
+    15011() {
+        let page = this.int;
+        if (page == 1) {
+            __data.garden.rank = {}
+        }
+        // { uid: 1, rank: 1, name: 1, cityId: 13, score: 2 },
+        let len = this.int;
+        __data.garden.rank[page] = __data.garden.rank[page] || []
+        for (let index = 0, length = len; index < length; index++) {
+            let vo = {
+                uid: this.int,
+                name: this.string,
+                head: this.string,
+                cityId: this.int,
+                score: this.int,
+                rank: this.int,
+            }
+            __data.garden.rank[page].push(vo)
+        };
+        trace(__data.garden.rank)
+        __data.garden.rank.my = { uid: __data.uid, rank: this.int, head: __data.head, name: __data.name, cityId: __data.myCityId, score: __data.garden.buildValue }
+        game.cb.event('update_garden_rank_data');
+    },
+    15012() {
+        __data.garden.task.rewardType_chapter = this.int;
+        game.cb.event('update_garden_task_data');
+        game.cb.event('update_garden_build_question');
+    },
+    15013() {
+        let len = this.int;
+        S_garden_rank_look.hashUsePositionIdCompId = {}
+        for (let index = 0, length = len; index < length; index++) {
+            let positionId = this.int;
+            let compId = this.int;
+            S_garden_rank_look.hashUsePositionIdCompId[positionId] = compId
+        };
+        S_garden_rank_look.taskId = this.int;
+    },
+    15014() {
+        let s = this.int;
+        if (!s) {
+            trace('存后台信息错误')
+        }
+    },
+    15015() {
+        let s = this.string;
+        try {
+            __data.serverRecord = JSON.parse(s)
+        } catch (error) {
+            __data.serverRecord = {};
+        }
+    },
+    15017() {
+        S_playerinfo_goGarden.buildv = this.int;
+        S_playerinfo_goGarden.rank = this.int;
+    },
+    16001() {
+        __data.redPacket.gold = this.int;
+        game.cb.event('update_redPacket_data')
+    },
+    16002() {
+        let code = this.int;
+        if (code == 1) {
+            __data.addMoney(1, GameMainRedPacket_1.goldNum)
+            game.scene.add(GameMainPropGet, [
+                [{
+                    propId: 1,
+                    propNum: GameMainRedPacket_1.goldNum
+                }]
+            ])
+            __data.redPacket.gold = -1;
+            game.cb.event('update_redPacket_data')
+        }
+    },
+    16003() {
+        __data.returnPlayerGift.isHaveData = 1;
+        __data.returnPlayerGift.isHaveGift = this.int;
+        let ll = this.int;
+        __data.returnPlayerGift.reward = [];
+        for (let index = 0, length = ll; index < length; index++) {
+            __data.returnPlayerGift.reward.push({
+                propId: this.int,
+                num: this.int
+            })
+        };
+        trace('是否有回归礼包', __data.returnPlayerGift.isHaveGift)
+        trace('回归礼包奖励', __data.returnPlayerGift.reward)
+        game.cb.event('update_returnPlayerGift_data')
+    },
+    16004() {
+        let code = this.int;
+        if (code != 1) return;
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '回归大礼包-领取成功' })
+
+        // 新人大礼包
+        let rs = []
+        for (let index = 0, length = __data.returnPlayerGift.reward.length; index < length; index++) {
+            const e = __data.returnPlayerGift.reward[index];
+            if (e.propId == 1) {
+                miniApi.trackEvent('Mj_GetCoins', { 'Mj_GetType': '免费', 'Mj_CoinsAmount': e.num })
+            }
+            __data.addMoney(e.propId, e.num)
+            rs.push({
+                propId: e.propId,
+                propNum: e.num
+            })
+        };
+        GameMainPropGet.type = 'returnPlayer'
+        game.scene.add(GameMainPropGet, [
+            rs
+        ])
+        __data.returnPlayerGift.isHaveGift = 0;
+        game.scene.remove(GameMainNewPlayerGift)
+    },
+    16005() {
+        let type = this.int;
+        let code = this.int;
+        if (type == 1) {
+            if (code == 1) {
+                __data.sub.isSubActivity = 1
+            } else __data.sub.isSubActivity = 0
+        } else if (type == 2) {
+            if (code == 1) {
+                __data.sub.isSubSystemUpdate = 1
+            } else __data.sub.isSubSystemUpdate = 0
+        }
+        game.cb.event('update_sub_data')
+    },
+    16006() {
+        let type = this.int;
+        let code = this.int;
+        if (type == 1) {
+            if (code == 1) {
+                __data.sub.isSubActivity = 1
+            } else __data.sub.isSubActivity = 0
+        } else if (type == 2) {
+            if (code == 1) {
+                __data.sub.isSubSystemUpdate = 1
+            } else __data.sub.isSubSystemUpdate = 0
+        }
+        game.cb.event('update_sub_data')
+    },
+    16007() {
+        __data.pay_rmb_total = this.int;
+        __data.game_count_total = this.int;
+        __data.lookFinishAd_count_total = this.int;
+        game.cb.event('16007__')
+        trace("所有支付累计数值", __data.pay_rmb_total)
+    },
+    16008() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        if (o.page == 1) {
+            __data.personage.data = {};
+        }
+        __data.personage.data[o.page] = o.data;
+        game.cb.event('update_personage_data')
+    },
+    16009() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        __data.chuanqi.reward.receiveStatus = o.s;
+        __data.chuanqi.reward.gold = o.gold;
+        __data.chuanqi.reward.silver = o.silver;
+        __data.chuanqi.reward.isHaveData = true;
+        game.cb.event('update_chuanqi_data')
+    },
+    16010() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        if (o.s == 1) {
+            let rs = []
+            let reward = [];
+            if (o.t == 1) {
+                reward = __data.chuanqi.reward.gold
+            } else if (o.t == 2) {
+                reward = __data.chuanqi.reward.silver;
+            }
+            for (let index = 0, length = reward.length; index < length; index++) {
+                let e = reward[index]
+                __data.addMoney(e.id, e.count)
+                rs.push({
+                    propId: e.id,
+                    propNum: e.count
+                })
+            };
+            GameMainPropGet.type = 'chuanqiReward'
+            rs.length &&
+                game.scene.add(GameMainPropGet, [
+                    rs
+                ]);
+            game.scene.remove(GameMainChuanqiReward)
+            __data.chuanqi.reward.receiveStatus = 3;
+            game.cb.event('update_chuanqi_data')
+        }
+    },
+    16012() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        // o.cityId = excelUtils.getCityIdByMjName_mj(o.city + '麻将')
+        // game.server.send(3311, 1, 1)
+        // game.server.send(2407, __data.myCityId, 1)
+        if (o.uid == -1) {
+            __data.chuanqi.player = {};
+        } else {
+            __data.chuanqi.player = o;
+            __showScene.show_horn({
+                type: 'chuanqi',
+                cityId: o.cityId,
+                name: o.name,
+            })
+        }
+        game.cb.event('update_chuanqi_data')
+
+    },
+    16013() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        o.cityId = excelUtils.getCityIdByMjName_mj(o.city + '麻将')
+        __data.chuanqi.player = o;
+        game.cb.event('update_chuanqi_data')
+    },
+    16016() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        __data.garden.dailySelect.goods = o.data;
+        __data.garden.dailySelect.videoNum = o.ref ? 1 : 0;
+        game.cb.event('update_garden_dailySelect_data')
+    },
+    16017() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        if ('err' in o) {
+
+        } else {
+            __data.garden.dailySelect.goods = o.data;
+            __data.garden.dailySelect.videoNum = 1
+            game.cb.event('update_garden_dailySelect_data')
+        }
+    },
+    16018() {
+        let j = this.string;
+        let o = JSON.parse(j)
+        trace(o)
+        __data.garden.fuguiManor.buyNum = o.buy;
+        __data.garden.fuguiManor.isHaveData = true;
+        game.cb.event('update_fuguiManor_data')
+    },
+    16019() {
+        let uid = this.int;
+        let action = this.string;
+        miniApi.trackEvent('Mj_Behavior', {
+            'Mj_UserID': String(uid),
+            'Mj_BehaviorType': action
+        });
+    },
+    16020() {
+        let code = this.int;
+        __data.onoff_pay = code;
+        trace('支付开关', code);
+    },
+    16021() {
+        let code = this.int;
+        __data.onoff_cooperate = code;
+        trace('招商开关', code)
+    },
+
+    16022() {
+        let free = this.int;
+        let value = this.int;
+        MahjongBless.data.firstFree_isBuy = free;
+        MahjongBless.data.luckValue = value;
+        game.cb.event('update_bless_data')
+    },
+    16023() {
+        let type = this.int;
+        let rate = this.int;
+        let result = this.int;
+        trace(type, rate, result)
+        if (result == 1) {
+
+            game.scene.remove(MahjongBless)
+            game.scene.remove(MahjongBless_leftUp)
+            game.scene.remove(MahjongBless_rightDown)
+            if (type == 1 && MahjongBless.data.firstFree_isBuy == 1) {
+                // 首次免费.
+                MahjongBless.data.firstFree_isBuy = 2;
+
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': MahjongBless.data['d' + type].name,
+                    'Mj_PropAmount': rate,
+                    'Mj_PropPrice': 0,
+                    'Mj_UserID': String(__data.uid),
+                })
+            } else {
+                let reduceStone = MahjongBless.data['d' + type].baseStoneCost * rate
+                // let addGold = MahjongBless.data['d' + type].giveGold * rate
+                __data.addMoney(2, -reduceStone)
+                // __data.addMoney(1, addGold)
+
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': MahjongBless.data['d' + type].name,
+                    'Mj_PropAmount': rate,
+                    'Mj_PropPrice': reduceStone,
+                    'Mj_UserID': String(__data.uid),
+                })
+            }
+
+            if (MahjongBless.data.isQuick) {
+                miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': MahjongBless.data.quickInfo.type, 'Mj_MarketingType': '快速祈福', 'Mj_MarketingStatus': '参与' })
+            }
+            let addLuck = MahjongBless.data['d' + type].baseLuckMul * rate
+            MahjongBless.data.luckValue += addLuck;
+            game.cb.event('update_bless_data')
+            game.cb.event('show_pray_dragon', [type, MahjongBless.data.luckValue]);
+        }
+    },
+    16024() {
+        let uid = this.int;
+        let type = this.int;
+        let rate = this.int;
+        let vo = __data.deskData.roomVo.getPlayer(uid);
+        if (uid != __data.uid && vo) {
+            trace('广播祈福.');
+            DeskRadioUIManager.play(vo, { type: DeskRadioUIManager.PRAY, index: type });
+        }
+    },
+    16025() {
+        let j = this.string;
+        let o = JSON.parse(j);
+        __data.userType = String(o.user_type);
+        __data.retention();
+    },
+    16026() {
+        let j = this.string;
+        let o = JSON.parse(j);
+        let opengid = o.opengid;
+        trace('16026', j, o.opengid);
+        __data.shareVideoRule.shareGroupCallback(opengid)
+    },
+    16027() {
+        let pn = this.int;
+        __data.shareVideoRule.invite_playerCount = pn;
+        __data.shareVideoRule.test_clear_lowValueUser()
+    },
+    16028() { },
+    16029() {
+        let j = this.string;
+        let o = JSON.parse(j);
+        // 低分享意愿检测
+        let a = miniApi.getItem(__data.uid + ':show_shareBtnNumber');
+        if (a == null || a == undefined) {
+            if (o.isLowShareWishUser == 1) {
+                miniApi.setItem(__data.uid + ':show_shareBtnNumber', 10);
+            }
+        }
+        // 低分享价值检测
+        let b = __data.shareVideoRule.shareGroupItem;
+        if (b.lowValueGnum == 0) {
+            if (o.isLowShareValueUser == 1) {
+                b.lowValueGnum = 3
+                miniApi.setItem(__data.uid + ':groupShareOB', JSON.stringify(b));
+            }
+        }
+    },
+    16030() { },
+    17001() {
+        // 查询用户是否为扶持用户
+        __data.isSupportUser = this.int;
+        trace('17001 扶持状态', __data.isSupportUser)
+    },
+    17002() {
+        // 扶持用户购买钻石
+        let code = this.int;
+        trace('17002 code-' + code)
+        if (code == -1) {
+            __tips('请先消耗现有钻石')
+        } else if (code == -2) {
+            __tips('扶持资源已达上限')
+        } else if (code == -3) {
+            __tips('扶持等级未达到此商品领取条件')
+        } else if (code == -4) {
+            __tips('欲购买的商品不是钻石')
+        }
+        game.scene.remove(LoadingAwait)
+        game.scene.remove(LoadingSmall)
+    },
+    17003() {
+        let a = this.int;
+        trace(17003, a);
+        if (a == 1) {
+            game.scene.add(GameMainPropGet, [
+                [{ propId: 1, propNum: 2888 }]
+            ])
+            __data.addMoney(1, 2888)
+        }
+    },
+    17004() {
+        __data.recommend.isData = true;
+        let a = this.int;
+        __data.recommend.isRecommend = a == 1;
+    },
+    18001() {
+        // 新人红包挑战
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18001', j1)
+        // *  jd: n //阶段 0 未开始 1 已完成任务1 。。。 5 已完成任务5 6 已完成任务6
+        __data.newPlayerRedChallenge.isHaveData = true;
+        __data.newPlayerRedChallenge.taskIndex = j1.jd;
+        if (j1.t == 3600) j1.t -= 1
+        __data.newPlayerRedChallenge.endTime = Date.now() + j1.t * 1000;
+        __data.newPlayerRedChallenge.taskStatus = Number(j1.s)
+        __data.newPlayerRedChallenge.rewards.forEach(element => {
+            element.hasGet = 0;
+        });
+        j1.ylq.forEach(e => {
+            if (__data.newPlayerRedChallenge.rewards[e - 1])
+                __data.newPlayerRedChallenge.rewards[e - 1].hasGet = 1;
+        });
+        __data.newPlayerRedChallenge.pro = j1.rw_jd;
+        // __data.newPlayerRedChallenge.server18001Num++;
+        // if (__data.newPlayerRedChallenge.isRemove()) {
+        //     __data.newPlayerRedChallenge.lastActivityStatus = 3;
+        // } else if (__data.newPlayerRedChallenge.isEnd()) {
+        //     __data.newPlayerRedChallenge.lastActivityStatus = 2;
+        // } else {
+        //     __data.newPlayerRedChallenge.lastActivityStatus = 1;
+        // }
+        game.cb.event('update_newPlayerRedChallenge_data')
+    },
+    18002() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18002', j1)
+        if (j1.code === 1) {
+            let r1 = j1.info.index
+            game.cb.event('newPlayerRedChallenge_raffle', [r1])
+        } else if (j1.code == 2) {
+            let redId = j1.info.hong_bao_id;
+            __data.redPacket.redVO.redId = redId;
+            __data.redPacket.redVO.redType = 'newPlayerRed';
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.num = j1.info.v;
+            game.server.send(20001, redId)
+            game.scene.add(LoadingSmall);
+            // __showScene.show_redPacket_openPanel('newPlayerRed', { type: 3, num: j1.info.v, package_info: j1.info.package_info })
+            game.scene.get(GameMainNewPlayerRedChallenge).stopLightAni()
+            game.server.send(18001)
+        }
+    },
+    18003() {
+        let code = this.int;
+        trace('18003', code)
+        if (code === 1) {
+            game.server.send(18001)
+            miniApi.setItem(__data.uid + ':red_fail_bomb_box', '0')
+
+            let k = __data.uid + ':newPlayerRedPacketVideoNum'
+            let a = miniApi.getItem(k)
+            if (a == '2') {
+                miniApi.setItem(k, '1')
+            } else {
+                miniApi.setItem(k, '2')
+            }
+            // 因为新人视频需要 视频分享轮用 所以这里 看完视频 再次 视频准备一下
+            // 界面移除了 不需要了
+            // miniApi.video_ready('adunit-21b4a4918cdbf39b')
+        }
+        game.scene.remove(GameMainRedChallengeFail)
+    },
+    18004() {
+        let code = this.int;
+        trace('18004', code)
+        if (code === 1)
+            game.server.send(18001)
+    },
+    18005() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18005', j1)
+        if (j1.code === 1) {
+            __data.allPlayerRed.isSub = true
+            game.cb.event('update_newPlayerRedChallenge_data')
+            game.cb.event('update_allPlayerRed_data')
+        }
+    },
+    18006() {
+        let jsonStr = this.string;
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        let j1 = JSON.parse(jsonStr);
+
+        trace('18006', j1)
+        let rankData = { 1: [], my: {} }
+        for (let index = 0, length2 = j1.top_list.length; index < length2; index++) {
+            let e = j1.top_list[index];
+            let vo = {
+                rank: e.index,
+                name: decodeURIComponent(e.name),
+                head: e.avatar,
+                score: e.v,
+                // uid: e.uid,
+                // headFrameId: this.int,
+                cityId: e.game,
+                mjName: excelUtils.getCityName_mj(e.game)
+            }
+            if (!vo.head) vo.head = __data.defaultHead
+            rankData[1].push(vo)
+        };
+        rankData.my = {
+            isMy: true,
+            rank: j1.u.index,
+            name: decodeURIComponent(__data.name),
+            head: __data.head,
+            score: j1.u.v,
+            // uid: this.int,
+            // headFrameId: this.int,
+            cityId: __data.myCityId,
+            mjName: excelUtils.getCityName_mj(__data.myCityId),
+        }
+        if (!rankData['my'].head) rankData['my'].head = __data.defaultHead;
+        // 7类型是好友红包 其他是全名红包
+        if (j1.type == 7) {
+            game.cb.event('update_friendRed_rank_data', [rankData])
+        } else {
+            game.cb.event('update_allPlayerRed_rank_data', [rankData])
+        }
+    },
+    18007() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18007', json1)
+        __data.allPlayerRed.isHaveData = true;
+        __data.allPlayerRed.isSub = j1.dy == 1;
+        __data.allPlayerRed.taskData[0].pro = j1.jd1;
+        __data.allPlayerRed.taskData[2].pro = j1.jd2;
+        __data.allPlayerRed.taskData[4].pro = j1.jd3;
+
+        __data.allPlayerRed.taskData[1].pro = j1.jd4;
+        __data.allPlayerRed.taskData[3].pro = j1.jd5;
+        __data.allPlayerRed.taskData[5].pro = j1.jd6;
+
+        __data.allPlayerRed.taskData[0].isHasReceive = j1.lq1 === 1;
+        __data.allPlayerRed.taskData[2].isHasReceive = j1.lq2 === 1;
+        __data.allPlayerRed.taskData[4].isHasReceive = j1.lq3 === 1;
+
+        __data.allPlayerRed.taskData[1].isHasReceive = j1.lq4 === 1;
+        __data.allPlayerRed.taskData[3].isHasReceive = j1.lq5 === 1;
+        __data.allPlayerRed.taskData[5].isHasReceive = j1.lq6 === 1;
+
+        __data.allPlayerRed.taskData[0].taskStatus = j1.s1;
+        __data.allPlayerRed.taskData[2].taskStatus = j1.s2;
+        __data.allPlayerRed.taskData[4].taskStatus = j1.s3;
+
+        __data.allPlayerRed.taskData[1].taskStatus = j1.s4;
+        __data.allPlayerRed.taskData[3].taskStatus = j1.s5;
+        __data.allPlayerRed.taskData[5].taskStatus = j1.s6;
+
+        __data.allPlayerRed.redNum[0] = j1.hbCount1;
+        __data.allPlayerRed.redNum[2] = j1.hbCount2;
+        __data.allPlayerRed.redNum[4] = j1.hbCount3;
+
+        __data.allPlayerRed.redNum[1] = j1.hbCount4;
+        __data.allPlayerRed.redNum[3] = j1.hbCount5;
+        __data.allPlayerRed.redNum[5] = j1.hbCount6;
+
+        __data.allPlayerRed.luck = j1.luck
+        // if (!j1.includes('luck') || j1.luck == -1) {
+        //     // 没资格
+        // } else if (j1.luck == -2) {
+        //     // 今天领过激励金了
+        // } else if (j1.luck >= 10) {
+        //     // 就代表可以领取了
+        // } else if (j1.luck >= 0) {
+        //     // 有资格 并且 已经完成了 n次  
+        // }
+        game.cb.event('update_allPlayerRed_data')
+    },
+    18008() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18008', j1)
+        if (j1.code === 1) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '接受全民红包任务' });
+            game.server.send(18007)
+            miniApi.setItem(__data.uid + ':red_fail_bomb_box', '0')
+        }
+    },
+    18009() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18009', j1)
+        if (j1.err_msg) {
+            __tips(j1.err_msg)
+            game.server.send(18007)
+            return
+        }
+        if (j1.code === 1) {
+            let redId = j1.info.hong_bao_id;
+            __data.redPacket.redVO.redId = redId;
+            __data.redPacket.redVO.redType = 'allPlayerRed';
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.num = j1.info.v;
+            game.server.send(20001, redId)
+            game.server.send(18007)
+        }
+    },
+    18010() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18010', j1)
+        if (j1.code === 1) {
+            game.server.send(18007)
+            miniApi.setItem(__data.uid + ':red_fail_bomb_box', '0')
+        }
+        game.scene.remove(GameMainRedChallengeFail)
+    },
+    18011() {
+        let code = this.int;
+        if (code === 1) game.server.send(18001)
+        if (code === 1) game.server.send(18007)
+    },
+    18012() {
+        let code = this.int;
+        if (code === 1) game.server.send(18001)
+        if (code === 1) game.server.send(18007)
+    },
+    18013() {
+        let code = this.int;
+        if (code === 1) game.server.send(18001)
+        if (code === 1) game.server.send(18007)
+    },
+    18014() {
+        let code = this.int;
+        if (code === 1) game.server.send(18001)
+        if (code === 1) game.server.send(18007)
+    },
+    18015() {
+        let jsonStr = this.string;
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        let j1 = JSON.parse(jsonStr);
+        j1 = j1 || {};
+        __data.allPlayerRed.robRedRecordList = j1.list || [];
+        trace('18015', j1)
+    },
+    18016() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18016', j1)
+        if (j1.err_msg) {
+            __tips(j1.err_msg)
+            game.server.send(18007)
+            return
+        }
+        if (j1.code === 2) {
+            let redId = j1.info.hong_bao_id;
+            __data.redPacket.redVO.redId = redId;
+            __data.redPacket.redVO.redType = 'luckRed';
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.num = j1.info.v;
+            game.server.send(20001, redId)
+            // __showScene.show_redPacket_openPanel('luckRed', { type: 3, num: j1.info.v, package_info: j1.info.package_info })
+            game.server.send(18007)
+        }
+    },
+    18019() {
+        // 如果能显示红包图标
+        if (!__data.redPacket.canShowFriendRedIcon()) return;
+        __data.friendRoom.red.isHaveData = true;
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        // j1.t; t == 0 后台推送 1主动查询
+        trace('18019', j1)
+        // 判断是否是自己的红包
+
+        __data.friendRoom.red.surplusRedNum = j1.c;
+        if (j1.uid == __data.uid) {
+            __data.friendRoom.red.status = j1.s;
+            __data.friendRoom.red.redV = j1.v;
+        }
+        // 小结算界面查询的
+        if (j1.t == 3) {
+            if (j1.s == 4) {
+                __data.friendRoom.red.friendRoomShowRedPanelFailBombBox()
+            }
+        }
+        if (j1.t == 0) {
+            // 主动推送 房间用户用
+            __data.friendRoom.red.hashUidRed_room[j1.uid] = j1;
+        }
+        game.cb.event('update_friend_red_data');
+        game.cb.event('update_friendRed_otherOpen_status')
+    },
+    // 开红包 18020 无参数 返回 {s:s, v:v} s：-1活动未开始或已结束 0失败 1成功 v：红包金额
+    // 为了避免因为红包数量不足导致的开红包失败，逻辑是在好友房结束且大赢家符合领取红包条件时，抽取红包，如果成功则直接锁定红包，然后才推送相关消息
+    // 所以理论上不应该存在开红包失败的情况
+    // 如果对方没有即时领取红包，导致活动结束或跨日期，红包就消失了
+    // 只存在一种情况，即用户打开抽红包界面却没有抽，然后放着直到跨日期，然后才抽取
+    18020() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18020', j1)
+        if (j1.err_msg) {
+            __tips(j1.err_msg)
+            return
+        }
+        if (j1.code === 1) {
+            __data.friendRoom.red.status = 2;
+            __data.friendRoom.red.redV = j1.info.v;
+            game.cb.event('update_friend_red_data');
+
+            let redId = j1.info.hong_bao_id;
+            __data.redPacket.redVO.redId = redId;
+            __data.redPacket.redVO.redType = 'friendRed';
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.num = j1.info.v;
+            game.server.send(20001, redId)
+            // __showScene.show_redPacket_openPanel('friendRed', { type: 3, num: j1.info.v, package_info: j1.info.package_info })
+        }
+    },
+    // 模拟完成16局好友房 18021 参数：玩法id，大赢家id，接受推送消息的id
+    // 用来模拟完成了16局好友房之后，大赢家id和接受推送消息的id都会收到18019的推送
+    // 注意：大赢家id必须是真实存在的，不然会有问题
+    18021() {
+        // 这里不需要特殊处理，因为服务器会自动向大赢家id和接受推送消息的id发送18019消息
+        // 18019消息的处理逻辑已经在前面实现
+    },
+    // 领取任务 18022 参数：int t 返回与18019一致
+    18022() {
+        if (!__data.redPacket.canShowFriendRedIcon()) return;
+
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18022', j1)
+
+        __data.friendRoom.red.surplusRedNum = j1.c;
+        if (j1.uid == __data.uid) {
+            __data.friendRoom.red.status = j1.s;
+            __data.friendRoom.red.redV = j1.v;
+        }
+        if (j1.t == 0) {
+            __data.friendRoom.red.hashUidRed_room[j1.uid] = j1;
+        }
+        game.cb.event('update_friend_red_data');
+    },
+    // 复活 18023 参数：int t 返回与18019一致
+    18023() {
+        if (!__data.redPacket.canShowFriendRedIcon()) return;
+
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('18023', j1)
+
+        __data.friendRoom.red.surplusRedNum = j1.c;
+        if (j1.uid == __data.uid) {
+            __data.friendRoom.red.status = j1.s;
+            __data.friendRoom.red.redV = j1.v;
+        }
+        if (j1.t == 0) {
+            __data.friendRoom.red.hashUidRed_room[j1.uid] = j1;
+        }
+        game.scene.remove(GameMainRedChallengeFail)
+        game.cb.event('update_friend_red_data');
+    },
+
+    // 查询邀请红包排行榜
+    18026() {
+        let jsonStr = this.string;
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        let info = JSON.parse(jsonStr);
+
+        __data.activity.inviteRed.rankData = info;
+        trace('18026', info);
+        game.cb.event('update_inviteRed_rank_data');
+    },
+    // 查询邀请红包任务状态
+    18027() {
+        let jsonStr = this.string;
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        let info = JSON.parse(jsonStr);
+        __data.activity.inviteRed.taskData = info;
+        __data.activity.inviteRed.taskStatus = info.state;
+        trace('18027', info);
+        game.cb.event('update_red_icon');
+        game.cb.event('update_inviteRed_taskStatus');
+    },
+    //  领取邀请红包任务
+    18028() {
+        // {"code": int} 1成功 -1失败
+        let result = JSON.parse(this.string);
+        trace('18028', result);
+        if (result.code == 1) {
+            // 增加本地记录
+            __data.activity.inviteRed.addMissionCount();
+            // 领取成功 请求刷新一下任务数据
+            game.server.send(18027);
+        } else {
+            __tips('任务领取失败')
+        }
+    },
+    // 领取邀请红包
+    18029() {
+        // {"code": int, "package_info": package_info}
+        let result = JSON.parse(this.string);
+        trace('18029', result);
+        // 领取失败
+        if (result.code == -1) {
+            __tips('领取失败');
+            game.scene.remove(Panel_marketActivity_inviteRed);
+        } else {
+            // 邀请红包待完成(领取成功后干啥?)
+            // 领取成功 请求刷新一下任务数据
+            let redId = result.hong_bao_id;
+            __data.redPacket.redVO.redId = redId;
+            __data.redPacket.redVO.redType = 'inviteRed';
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.num = result.v;
+            game.server.send(20001, redId)
+            // __showScene.show_redPacket_openPanel('inviteRed', { type: 3, num: result.v, package_info: result.package_info })
+        }
+    },
+    // 申请额外红包
+    18030() {
+        let result = JSON.parse(this.string);
+        trace('18030', result);
+        if (result.code == 1) {
+            // 申请成功 请求刷新一下任务数据
+            __tips('申请成功');
+            game.server.send(18027);
+        } else {
+            game.scene.add(Panel_marketActivity_inviteRed_subscribe);
+        }
+    },
+    // 重置任务
+    18031() {
+        let result = JSON.parse(this.string);
+        trace('18031', result);
+        if (result.code == 1) {// 重置成功 请求刷新一下任务数据
+            game.server.send(18027);
+        }
+    },
+    70001() {
+        let json1 = this.string;
+        let j1 = JSON.parse(json1)
+        trace('70001', j1)
+        if (j1.page == 1) {
+            __data.mjSmallGame.rankData = {};
+        }
+        __data.mjSmallGame.rankData[j1.page] = j1.list;
+        __data.mjSmallGame.rankData['my'] = {
+            isMy: true,
+            rank: j1.my_rank,
+            nickname: __data.name,
+            head_url: __data.head,
+            avatar_border: __data.headFrameId,
+            city_id: __data.myCityId,
+            level: j1.my_level,
+        }
+        // for (let index = 0, length2 = j1.top_list.length; index < length2; index++) {
+        //     let e = j1.top_list[index];
+        //     let vo = {
+        //         rank: e.index,
+        //         name: decodeURIComponent(e.name),
+        //         head: e.avatar,
+        //         score: e.v,
+        //         // uid: e.uid,
+        //         // headFrameId: this.int,
+        //         cityId: e.game,
+        //         mjName: excelUtils.getCityName_mj(e.game)
+        //     }
+        //     if (!vo.head) vo.head = __data.defaultHead
+        //     rankData[1].push(vo)
+        // };
+        // rankData.my = {
+        //     isMy: true,
+        //     rank: j1.u.index,
+        //     name: decodeURIComponent(__data.name),
+        //     head: __data.head,
+        //     score: j1.u.v,
+        //     // uid: this.int,
+        //     // headFrameId: this.int,
+        //     cityId: __data.myCityId,
+        //     mjName: excelUtils.getCityName_mj(__data.myCityId),
+        // }
+        // if (!rankData['my'].head) rankData['my'].head = __data.defaultHead;
+        game.cb.event('update_mm_rank_data')
+    },
+    70002() {
+        let a = this.int;
+        if (a == 1) {
+            __data.mjSmallGame.winLevel = __data.mjSmallGame.level
+            __data.mjSmallGame.nextLevel = __data.mjSmallGame.level + 1;
+            mm_start_game_callback()
+        } else if (a == -1) {
+            game.scene.add(MM_noLevel)
+        } else if (a == -2) {
+            game.scene.add(MM_cheat)
+            miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `消消乐作弊`, 'Mj_ErrorInfo': `开局作弊`, 'Mj_UserID': String(__data.uid) })
+        }
+    },
+    70003() {
+        let a = this.int;
+        if (a == 1) {
+            game.scene.add(MM_win)
+        } else if (a == -1) {
+            game.scene.add(MM_noLevel)
+        } else if (a == -2) {
+            game.scene.add(MM_cheat)
+            miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `消消乐作弊`, 'Mj_ErrorInfo': `结算作弊2`, 'Mj_UserID': String(__data.uid) })
+        } else if (a == -3) {
+            game.scene.add(MM_cheat)
+            miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `消消乐作弊`, 'Mj_ErrorInfo': `结算作弊3`, 'Mj_UserID': String(__data.uid) })
+        } else if (a == -4) {
+            game.scene.add(MM_cheat)
+            miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `消消乐作弊`, 'Mj_ErrorInfo': `结算作弊4`, 'Mj_UserID': String(__data.uid) })
+        }
+    },
+    70005() {
+        let a = this.int;
+        __data.mjSmallGame.level = a + 1;
+        trace('当前关卡：' + __data.mjSmallGame.level);
+    },
+
+    19003() {// 步步有礼
+        let str = this.string;
+        let json = JSON.parse(str);
+        __data.activity.stepstepGift.stepGiftProgress = json.stepGiftProgress;
+        game.cb.event('update_red_icon');
+        game.cb.event('update_game_icons')
+        // game.cb.event('update_activity_stepstepGift');
+    },
+
+    19004() {
+        let str = this.string;
+        let json = JSON.parse(str);
+        if (json.success) {
+            __data.activity.stepstepGift.isGeted = true;
+            let rewards = __data.activity.stepstepGift.getRewardByStep(__data.activity.stepstepGift.stepGiftProgress);
+            let props = [];
+            rewards.forEach(reward => { props.push({ propId: reward.id, propNum: reward.number }); });
+            game.scene.add(GameMainPropGet, [props]);
+
+            let info = __data.activity.stepstepGift.rewards[__data.activity.stepstepGift.stepGiftProgress];
+            if (info && info.stone) {
+                __data.addMoney(2, -info.stone)
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': '步步有礼',
+                    'Mj_PropAmount': 1,
+                    'Mj_PropPrice': info.stone,
+                    'Mj_UserID': String(__data.uid),
+                })
+                miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '步步有礼', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '参与' })
+            }
+            game.server.send(2202, __data.uid);// 重新查询一下自己的金币
+            game.server.send(19003);// 领取完步步有礼 直接查询一下
+        }
+    },
+
+    19005() {// 金币罐
+        let str = this.string;
+        let json = JSON.parse(str);
+        __data.activity.goldBox.gold = json.goldPotSavings;
+        __data.activity.goldBox.level = json.goldPotLevel;
+        game.cb.event('update_red_icon');
+        game.cb.event('update_activity_goldBox');
+    },
+
+    19006() {
+        let str = this.string;
+        let json = JSON.parse(str);
+        if (json.success) {
+            game.scene.add(GameMainPropGet, [
+                [{ propId: 1, propNum: __data.activity.goldBox.gold }]
+            ]);
+
+            if (__data.activity.goldBox.openNeedStone) {
+                __data.addMoney(2, -__data.activity.goldBox.openNeedStone)
+                miniApi.trackEvent('Mj_PropPay', {
+                    'Mj_PropName': '金币罐',
+                    'Mj_PropAmount': 1,
+                    'Mj_PropPrice': __data.activity.goldBox.openNeedStone,
+                    'Mj_UserID': String(__data.uid),
+                })
+                miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '金币罐', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '参与' })
+            }
+            game.server.send(2202, __data.uid);// 重新查询一下自己的金币
+            game.server.send(19005);// 领取完金币罐 直接查询一下
+        }
+    },
+
+    19007() {// 今日特惠
+        let str = this.string;
+        let json = JSON.parse(str);
+        __data.activity.todayDiscount.dailyDealId = json.dailyDealId;
+        __data.activity.todayDiscount.purchaseCount = json.purchaseCount;
+        game.cb.event('update_red_icon');
+        game.cb.event('update_activity_todayDiscount');
+    },
+
+    19009() {
+        let str = this.string;
+        game.cb.event('panel_imageShare_draw', [str]);
+        // Panel_imageShare.instance.draw(str);
+    },
+    20001() {
+        let code = this.int;
+        trace('领取红包结果', code)
+    },
+    20002() {
+        let j = this.string;
+        let json = JSON.parse(j);
+        trace('20002', json)
+        if (json && json.list && json.list.length > 0) {
+            __data.redPacket.redVO.package_info = ''
+            __data.redPacket.redVO.redId = json.list[0].id
+            __data.redPacket.redVO.num = json.list[0].value
+            __data.redPacket.redVO.titleType = 3;
+            __data.redPacket.redVO.redType = '';
+            game.server.send(20001, __data.redPacket.redVO.redId)
+        }
+    },
+    20003() {
+        let package_info = this.string;
+        trace('20003', package_info)
+        __data.redPacket.redVO.package_info = package_info;
+        __showScene.show_redPacket_openPanel()
+    },
+    20004() {
+        let j = this.string;
+        let json = JSON.parse(j);
+        if (json.status != 'SUCCESS') {
+            __tips('领取红包失败')
+        } else {
+            __tips('领取红包成功')
+            game.scene.remove(GameMainNewPlayerRedChallengeReceive)
+            game.scene.remove(LoadingSmall)
+            game.server.send(20002)
+        }
+        trace('20004', j)
+    },
+}
+
+
+// 重回房间逻辑
+let __reBack_info = {
+    mahjong: {
+        code: -1,
+        roomId: 0,
+        roomType: 1,
+        isRead: false
+    },
+    call: null,
+    // 退出房间的时候是否回到主界面
+    backMain: false,
+    read(_call) {
+        this.call = _call;
+        this.mahjong.isRead = false;
+        game.server.send(3001);
+        // game.server.send(13001);
+    },
+    async back() {
+        // 消息读取完毕
+        if (this.mahjong.isRead) {
+            // 在麻将房间里
+            if (this.mahjong.code == 1) {
+                __data.firstPay.send() // 首充礼包 影响布局 这里不干掉 因为返回房间 继续匹配可能会用
+                game.server.send(2405) // 商城信息 里面有支付显示 必须发送
+                game.server.send(2211) // 救济金
+                this.in(__data.gameId.curId, this.mahjong.roomId);
+            }
+            // 都没有在2种房间内
+            else {
+                let r = false;
+                try {
+                    r = __data.analysisParams(wx.onshow_res.query);
+                } catch (e) {
+                    r = __showScene.handleRoomParams();
+                    __data.deleteParams();
+                }
+                if (!r && this.call instanceof Function) {
+                    this.call();
+                    this.call = null;
+                }
+            }
+        }
+    },
+    // 加入房间
+    async in(gameId, roomId) {
+        game.server.send(16022);
+        if (this.mahjong.roomType == 2) {
+            game.server.send(14016);
+        } else if (__data.gameId.isMahjong(gameId)) {
+            await __showScene.load_game_mahjong()
+            __showScene.show_game_mahjong(true);
+            game.server.send(3000, roomId);
+            game.server.send(3002, roomId);
+        }
+        this.mahjong.code = 0;
+        this.mahjong.roomId = 0;
+        this.mahjong.roomType = 1;
+    }
+};

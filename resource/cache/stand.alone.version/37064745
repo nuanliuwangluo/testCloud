@@ -1,0 +1,183 @@
+/**
+ * 邀请界面
+ */
+class GameMainInvite extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_invite',
+            layer: 'panel'
+        })
+    }
+
+    onAwake() {
+        this.addComponent(GameMainInviteScript)
+    }
+
+    clickMask() { }
+}
+
+class GameMainInviteScript extends Laya.Script {
+    onAwake() {
+        this.owner.list.vScrollBarSkin = '';
+        // this.owner.list.elasticEnabled = true;
+    }
+
+    onEnable() {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_invite', 1)
+        game.cb.on('update_invite_list', this, this.update);
+        game.cb.on('request_invite_reward_success', this, this.update);
+        this.init();
+    }
+
+    onDisable() {
+        game.cb.off('update_invite_list', this, this.update);
+        game.cb.off('request_invite_reward_success', this, this.update);
+        hallTestShowPanel()
+    }
+
+    init() {
+        this.queryInfo();
+        this.update();
+    }
+
+    /**
+     * 请求邀请信息
+     */
+    queryInfo() {
+        game.server.send(2226);
+    }
+
+    /**
+     * 刷新list
+     */
+    update() {
+        this.owner.list.array = __data.inviteData;
+    }
+}
+
+
+
+
+
+class GameMainInviteItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_inviteItem',
+            module: false
+        })
+    }
+
+    onEnable() {
+        this.btn_get.on('click', this, this.requestGetInvite);
+        this.btn_invite.on('click', this, this.invitePlayer);
+    }
+
+    onDisable() {
+        this.btn_get.off('click', this, this.requestGetInvite);
+        this.btn_invite.off('click', this, this.invitePlayer);
+    }
+
+    // 领取奖励
+    requestGetInvite() {
+        __showScene.wait();
+        // __data.getInviteGoldNumber = this.__value.reward;
+        game.server.send(2207, this.__value.id);
+    }
+
+    // 邀请用户
+    invitePlayer() {
+        try {
+            if (!__data.myCityId) {
+                let a = null;
+                a.b = 1;
+            }
+            miniApi.share({
+                titleId: __tool.randomRange(1, 9),
+                params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+            });
+        } catch (error) {
+            miniApi.share({
+                titleId: 1,
+                params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+            });
+        }
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '邀请有礼', 'Mj_Participation': '参与分享' })
+    }
+
+    set dataSource(value) {
+        if (!value) {
+            return
+        }
+        //
+        else {
+            this.__value = value;
+            this.__updateHeadUI();
+            this.__updateUI();
+        }
+    }
+
+    __updateHeadUI() {
+        // 邀请人的位置都隐藏
+        this.p0.visible = this.p1.visible = this.p2.visible = this.p3.visible = this.p4.visible = false;
+
+        // 显示该奖励需要邀请的所有人数
+        for (let i = 0; i < this.__value.allPlayer; i++) {
+            let __view = this['p' + i];
+            SkinUtils.setSkin(__view.getChildByName('head'), '');
+            __view.visible = true;
+        }
+
+        // 根据已邀请的人进行显示
+        for (let i = 0; i < this.__value.invitedArr.length; i++) {
+            let __view = this['p' + i];
+            let __data = this.__value.invitedArr[i];
+            // 位置有邀请的人  设置头像
+            if (__data && (__data.headUrl || __data.url)) {
+                SkinUtils.setSkin(__view.getChildByName('head'), __data.url || __data.headUrl);
+            } else {
+                // 没有设置空头像
+                SkinUtils.setSkin(__view.getChildByName('head'), '');
+            }
+        }
+    }
+
+
+    __updateUI() {
+        // 受邀人数文本 邀请x人
+        this.txt_require.text = '邀请' + this.__value.allPlayer + '人';
+        // 受邀进度文本 (0/0)
+        this.txt_progress.text = '(' + this.__value.invitedArr.length + '/' + this.__value.allPlayer + ')';
+        // 奖励描述文本
+        // this.txt_des.text = '奖励' + Number(this.__value.reward) / 10000 + '万' + '金币';
+
+        // if (this.__value.reward == 701) SkinUtils.setSkin(this.rs, 'cdn/invite/img_czyk.png');
+        // else if (this.__value.reward == 702) SkinUtils.setSkin(this.rs, 'cdn/invite/img_thjk.png');
+        // else if (this.__value.reward == 703) SkinUtils.setSkin(this.rs, 'cdn/invite/img_zznk.png');
+        SkinUtils.setSkin(this.rs, 'cdn/invite/img_viptqty.png');
+
+        // 按钮状态
+        this.btn_invite.visible = false;
+        this.btn_get.visible = false;
+        // 领奖状态
+        let state = this.__value.state; //1:已领取 0:未领取
+        if (state == 1) { // 已经领取  不显示邀请按钮  领取按钮变灰
+            this.btn_get.visible = true;
+            SkinUtils.gray(this.btn_get);
+            this.btn_get.getChildByName('txt').text = '已领取';
+        } else if (state == 0 && this.__value.allPlayer == this.__value.invitedArr.length) { // 可以领取   不显示邀请按钮   按钮可以点击
+            this.btn_get.visible = true;
+            SkinUtils.gray(this.btn_get, false);
+            this.btn_get.getChildByName('txt').text = '领取';
+        } else { // 其他任何情况都显示邀请按钮
+            this.btn_invite.visible = true;
+        }
+    }
+
+    get shareDes() {
+        // 分享文案
+        // 3、 邀请有礼分享： XX麻将大赛！ YYY队告急！
+        // XX代表地区， 暂时只有富锦， YYY队代表玩家所在团队， 比如： 富锦麻将大赛！ 城东队告急！
+        return `xxx 富锦麻将大赛！yyy告急！`;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_inviteItemUI', GameMainInviteItem);

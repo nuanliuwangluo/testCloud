@@ -1,0 +1,232 @@
+let url_mm_sm_game = {};
+for (let index = 0, length = 10; index < length; index++)
+    url_mm_sm_game[index] = 'cdn/mjSmallGame/' + index + '.png';
+url_mm_sm_game['第'] = 'cdn/mjSmallGame/img_d.png'
+url_mm_sm_game['关'] = 'cdn/mjSmallGame/img_g.png'
+class MM_main_scene extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_main_scene',
+        })
+        this.btn_start.addComponent(S_mm_start)
+        this.btn_start.addComponent(S_mm_show_gameCount)
+
+        this.txt_level = new game.NumText(url_mm_sm_game)
+        this.txt_level.x = this.img_level_bg.width / 2
+        this.txt_level.y = 25
+        this.txt_level.align = 'center'
+        this.img_level_bg.addChild(this.txt_level)
+    }
+    added() {
+        mm_verify_starting = false;
+        this.updateData()
+        game.cb.on('update_mm_todayFreeCount', this, this.updateData)
+    }
+    onDisable() {
+        game.cb.off('update_mm_todayFreeCount', this, this.updateData)
+    }
+    updateData() {
+        this.txt_level.text = `第${__data.mjSmallGame.level}关`
+        this.txt_freeCount.text = `今日免费${__data.mjSmallGame.todayFreeCount}/${__data.mjSmallGame.maxFreeCount}次`;
+    }
+    onDisable() {
+    }
+}
+
+class MM_main_scene_return extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_main_scene_return',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_return.addComponent(S_mm_main_scene_return)
+    }
+}
+
+class MM_main_scene_rank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_main_scene_rank',
+            left: true,
+            down: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_rank.addComponent(S_mm_show_rank)
+    }
+}
+
+class MM_main_scene_garden extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_main_scene_garden',
+            right: true,
+            down: true,
+            offx: () => {
+                return -miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_garden.addComponent(S_show_garden).init(this.img_tips1);
+    }
+}
+
+class S_mm_show_rank extends Laya.Script {
+    onClick(e) {
+        game.server.send(70001, 1)
+        game.scene.add(MM_rank)
+    }
+}
+class S_mm_main_scene_return extends Laya.Script {
+    onClick(e) {
+        // S_3D_mjMatch.scene.destroy();
+        game.utils.remove(S_3D_mjMatch.scene)
+        let a = __data.lastSceneQueue.pop()
+        a && a();
+    }
+}
+class S_mm_show_gameCount extends Laya.Script {
+    onAwake() {
+        this.img_video = this.owner.getChildByName('img_video')
+        this.img_stone = this.owner.getChildByName('img_stone')
+    }
+    onEnable() {
+        this.update()
+        game.cb.on('update_mm_todayFreeCount', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_mm_todayFreeCount', this, this.update)
+    }
+    update() {
+        this.img_video.visible = false
+        this.img_stone.visible = false
+        if (__data.mjSmallGame.todayFreeCount <= 0) {
+            if (__data.mjSmallGame.canVideoAddCount) {
+                this.img_video.visible = true;
+            } else {
+                // IOS能支付修改
+                // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+                // } else {
+                // 消耗钻石增加次数
+                this.img_stone.visible = true;
+                // }
+            }
+        }
+    }
+}
+
+class S_mm_start extends Laya.Script {
+    async onClick(e) {
+        e.stopPropagation()
+        s_mm_gameCount_verify_to_start(s_mm_start_game)
+    }
+}
+let mm_stone_buy_callback;
+let mm_verify_starting = false
+let s_mm_gameCount_verify_to_start = async (fn) => {
+    let allLevelDataArray = Object.values(__data.excelConfig.hashLevelMjSmallGameData)
+    if (parseInt(__data.mjSmallGame.level) >= parseInt(allLevelDataArray.at(-1).level)) {
+        // if (parseInt(__data.mjSmallGame.level) >= parseInt(allLevelDataArray[allLevelDataArray.length - 1].level)) {
+        // 提示新关卡通知
+        game.scene.add(MM_noLevel)
+        return;
+    }
+
+    if (mm_verify_starting) return;
+    mm_verify_starting = true
+    mm_stone_buy_callback = fn
+    if (__data.mjSmallGame.todayFreeCount <= 0) {
+        if (__data.mjSmallGame.canVideoAddCount) {
+            let adunitId = 'adunit-smallGame_addCount';
+            await miniApi.video_ready(adunitId);
+            // let a23 = game.scene.get(MjMatch_ui_left)
+            // a23 && a23.removeTimer()
+            miniApi.video_show(adunitId, () => {
+                // a23 && a23.resumeTimer()
+                __data.mjSmallGame.canVideoAddCount = 0
+                game.cb.event('update_mm_todayFreeCount')
+                fn()
+            }, () => {
+                // a23 && a23.resumeTimer()
+                mm_verify_starting = false;
+                __tips('暂无广告，请稍后再试或开通VIP')
+            }, 0, () => {
+                // a23 && a23.resumeTimer()
+                mm_verify_starting = false;
+            });
+            let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+            miniApi.trackEvent('Mj_ADClick', {
+                Mj_ADPreference: miniApi.adUserValueLevel,
+                'Mj_ADScene': '消消乐加次数',
+                'Mj_Participation': n,
+                'Mj_ADNotes': __data.mjSmallGame.level,
+            })
+        } else {
+            // IOS能支付修改
+            // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+            //     return __tips('今日挑战次数已用完')
+            // } else {
+            // 消耗钻石增加次数
+            if (__data.stone >= __data.mjSmallGame.start_game_need_stone) {
+                game.server.send(2404, 10130)
+            } else {
+                mm_verify_starting = false;
+                __tips(__lang.stone_no_enough)
+            }
+            // }
+        }
+        return
+    } else {
+        __data.mjSmallGame.todayFreeCount--;
+        game.cb.event('update_mm_todayFreeCount')
+        fn()
+    }
+}
+let mm_start_game_callback;
+let s_mm_start_game = async (showStarFlyAni) => {
+    let fns = async () => {
+        s_mm_sendCardGroup.clearAwait && s_mm_sendCardGroup.clearAwait()
+
+        __data.mjSmallGame.curUsePropCount_stone = 0;
+        __data.mjSmallGame.curUsePropCount_video = 0;
+        __data.mjSmallGame.maxPlaceCardCount = 6;
+        __data.mjSmallGame.comebacklife_stone = 1;
+        __data.mjSmallGame.comebacklife_video = 1;
+
+        let data = __data.excelConfig.hashLevelMjSmallGameData[__data.mjSmallGame.level]
+        if (!data || !data.groupNum) {
+            let allLevelDataArray = Object.values(__data.excelConfig.hashLevelMjSmallGameData)
+            data = allLevelDataArray.at(-2);
+            // data = allLevelDataArray[allLevelDataArray.length - 2];
+        }
+        __data.mjSmallGame.initTime = data.time;
+        __data.mjSmallGame.starRewardNum = data.reward;
+        __data.mjSmallGame.cardGroupNum = parseInt(data.groupNum);
+        __data.mjSmallGame.cardGroupTypeNum = parseInt(data.typeNum);
+        __data.mjSmallGame.chiPro = data.chiPro;
+        __data.mjSmallGame.pengPro = data.pengPro;
+        __data.mjSmallGame.gangPro = data.gangPro;
+        game.scene.remove(MM_main_scene)
+        game.scene.remove(MM_main_scene_return)
+        game.scene.remove(MM_main_scene_rank)
+        game.scene.remove(MM_main_scene_garden)
+        game.scene.add(MjMatch_ui)
+        game.scene.add(MjMatch_ui_left)
+        game.scene.add(MjMatch_ui_right)
+        game.scene.add(MM_ui_res, [showStarFlyAni])
+        await __tool.await(10)
+        S_3D_mjMatch.$this.gameScene(data.groupNum)
+    }
+    console.log(1);
+    mm_start_game_callback = fns
+
+    console.log(2);
+    await game.server.send(70002, __data.mjSmallGame.level)
+
+    console.log(3);
+    mm_verify_starting = false;
+}

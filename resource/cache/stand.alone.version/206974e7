@@ -1,0 +1,67 @@
+class AppDeleteAccount extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/AppDeleteAccount',
+            layer: 'panel'
+        })
+        this.__panel.vScrollBarSkin = ''
+        this.btn_submit.addComponent(S_delete_account_submit)
+        this.btn_cancel.addComponent(S_delete_account_cancel)
+        this.btn_close.addComponent(S_delete_account_close)
+        this.btn_select.addComponent(S_login_select)
+        this.btn_select.select = function () {
+            return this.skin == 'common/bt_g2.png'
+        }
+    }
+    added(type = 'deleteAccount') {
+        AppDeleteAccount.type = type;
+        this.__panel.visible = false;
+        this.sp_select.visible = false;
+        this.btn_submit.visible = false
+        this.sp_cancelDeleteTxt.visible = false;
+        this.btn_cancel.visible = false;
+        if (type == 'deleteAccount') {
+            this.__panel.visible = true;
+            this.__panel.scrollTo(0, 0)
+            this.sp_select.visible = true;
+            this.btn_submit.visible = true
+        } else if (type == 'cancelDelete') {
+            this.sp_cancelDeleteTxt.visible = true;
+            this.btn_cancel.visible = true;
+        }
+    }
+    clickMask() { }
+}
+class S_delete_account_close extends Laya.Script {
+    onClick(e) {
+        if (AppDeleteAccount.type == 'cancelDelete') {
+            miniApi.exit()
+        } else {
+            game.scene.remove(AppDeleteAccount)
+        }
+    }
+}
+class S_delete_account_submit extends Laya.Script {
+    onClick(e) {
+        if (this.owner.parent.btn_select.select()) {
+            game.server.send(11006)
+        } else {
+            __tips('请同意须知')
+        }
+    }
+}
+class S_delete_account_cancel extends Laya.Script {
+    onClick(e) {
+        game.server.send(11007)
+    }
+}
+class S_delete_account_select extends Laya.Script {
+    onClick(e) {
+        this.owner.skin = this.owner.skin == 'common/bt_g2.png' ? 'common/bt_g1.png' : 'common/bt_g2.png'
+    }
+}
+class S_login_select extends Laya.Script {
+    onClick(e) {
+        this.owner.skin = this.owner.skin == 'common/bt_g2.png' ? 'common/bt_g1.png' : 'common/bt_g2.png'
+    }
+}

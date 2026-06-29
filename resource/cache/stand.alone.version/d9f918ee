@@ -1,0 +1,491 @@
+class GameMainSeasonRecord extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_seasonRecord',
+            layer: 'panel'
+        })
+        this.__panel.hScrollBarSkin = ``
+        this.__panel.hScrollBar.elasticBackTime = 200
+        this.item1Array = [this.__item11, this.__item12]
+        this.disx = 0
+        this.btn_seasonRule.addComponent(S_season_record_rule)
+        // this.btn_introduce.addComponent(S_hall_lvInfo)
+        this.btn_introduce.visible = false;
+    }
+    async onEnable() {
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '赛季档案界面' })
+        // 设置一个当前已经选择的选项 为了和所有当前item索引不一样
+        this.selectIndex = 99999
+        this.item1Array[0].visible = false
+        this.item1Array[1].visible = false
+        let data_x1 = Object.values(__data.seasonRecord)
+        if (!data_x1.length) return;
+        data_x1.sort((a, b) => {
+            return b.startTimeMs - a.startTimeMs
+        })
+        data_x1[0].isCur = true;
+        // 初始化
+        let defaultIndex = 0
+        this.itemArray = [];
+        this.item_container.width = 0
+        // data_x1 = data_x1.filter((e) => {
+        //     return e.rankData;
+        // })
+        for (let index = 0, length = data_x1.length; index < length; index++) {
+            let e = new GameMainSeasonRecordItem()
+            e.curIndex = index;
+            e.x = (e.width + this.disx) * index;
+            e.y = this.__panel.height / 2 - e.height / 2
+            e.dataSource = data_x1[index];
+            this.itemArray.push(e)
+            this.item_container.addChild(e)
+            this.item_container.width = Math.max(this.item_container.width, e.x + e.width)
+            if (data_x1[index].isCur) {
+                defaultIndex = index;
+            }
+        };
+        this.item_container.width += this.disx + this.item1Array[0].width;
+        this.__panel.refresh()
+        this.item1Array[0].visible = false;
+        this.item1Array[1].visible = false;
+        await __tool.await(100, this) // 不延迟 this.__panel.scrollTo 不好用 这逼玩意 有bug
+        this.__panel.scrollTo((this.disx + this.itemArray[0].width) * defaultIndex, 0)
+        this.select(defaultIndex, data_x1[defaultIndex])
+    }
+    onDisable() {
+        this.itemArray && this.itemArray.forEach(e => {
+            game.utils.remove(e)
+        });
+        this.itemArray = null;
+        this.clearAwait && this.clearAwait();
+
+        ResUtils.clearTextureRes(['cdn.seasonRecord'])
+    }
+    async select(curIndex, selectVO) {
+        if (this.tweening) return;
+        if (curIndex == this.selectIndex) return;
+
+        game.cb.event('season_record_select', [selectVO])
+
+        let w_info = this.item1Array[0].width;
+        let w_item = this.itemArray[0].width;
+
+        this.tweenVo = this.tweenVo || {}
+        Laya.Tween.clearAll(this.tweenVo)
+        this.tweenVo.v = this.__panel.hScrollBar.value
+        let t = Laya.Tween.to(this.tweenVo, {
+            v: (this.disx + w_item) * curIndex - 100
+        }, GameMainSeasonRecord.tweenTime)
+        __tool.tweenUpdate(t, () => {
+            this.__panel.hScrollBar.value = this.tweenVo.v
+        }, this)
+
+        for (let index = 0, length = this.itemArray.length; index < length; index++) {
+            let e = this.itemArray[index]
+            let tox = (e.width + this.disx) * index;
+            if (index > curIndex) {
+                tox += w_info
+            }
+            Laya.Tween.to(e, {
+                x: tox
+            }, GameMainSeasonRecord.tweenTime)
+        };
+
+        if (curIndex < this.selectIndex) {
+            let e = this.item1Array[0];
+            e.tweenRemove()
+            this.item1Array.push(this.item1Array.shift())
+            let e1 = this.item1Array[0];
+            e1.visible = true;
+            e1.x = (w_item + this.disx) * (curIndex + 1)
+            e1.tweenAdd(selectVO);
+        } else {
+            let e = this.item1Array[0];
+            e.tweenRemove_retreat()
+            this.item1Array.push(this.item1Array.shift())
+            let e1 = this.item1Array[0];
+            e1.visible = true;
+            e1.x = (w_item + this.disx) * (curIndex + 1)
+            e1.tweenAdd_retreat(selectVO);
+        }
+        this.selectIndex = curIndex;
+        this.tweening = true
+        await __tool.await(GameMainSeasonRecord.tweenTime, this)
+        this.tweening = false
+    }
+}
+class S_click_GameMainSeasonRecord_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainSeasonRecord)
+    }
+}
+
+GameMainSeasonRecord.tweenTime = 200
+class GameMainSeasonRecordItem extends game.ModuleBase {
+    static getTime(startTime, endTime) {
+        let s = new Date(startTime)
+        let e = new Date(endTime)
+        let ms = s.getMonth() + 1;
+        let es = e.getMonth() + 1;
+        let md = s.getDate();
+        let ed = e.getDate();
+        return ms + '月' + md + '日-' + es + '月' + ed + '日';
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_seasonRecordItem',
+            module: false
+        })
+        this.vo = null
+        this.addComponent(S_click_seasonRecord_item)
+    }
+    onEnable() {
+        game.cb.on('season_record_select', this, this.season_record_select)
+    }
+    onDisable() {
+        game.cb.off('season_record_select', this, this.season_record_select)
+    }
+    season_record_select(vo) {
+        if (vo == this.vo)
+            this.img_select.visible = true;
+        else this.img_select.visible = false;
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo
+
+        let isIng = vo.isIng ? true : false;
+        this.img_ing.visible = isIng;
+        this.img_end.visible = !isIng;
+        this.img_bg.skin = isIng ? 'cdn/seasonRecord/img_sjbox1.png' : 'cdn/seasonRecord/img_sjbox2.png';
+        this.txt_time.text = GameMainSeasonRecordItem.getTime(vo.startTimeMs, vo.endTimeMs)
+        this.img_season.skin = `cdn/seasonRecord/img_season${vo.season}${isIng ? 1 : 2}.png`
+        this.img_year.skin = `cdn/seasonRecord/img_${vo.year <= 2023 ? 2024 : vo.year}_${isIng ? 1 : 2}.png`
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_seasonRecordItemUI', GameMainSeasonRecordItem);
+
+class S_click_seasonRecord_item extends Laya.Script {
+    onClick(e) {
+        game.scene.get(GameMainSeasonRecord).select(this.owner.curIndex, this.owner.vo)
+    }
+}
+class GameMainSeasonRecordItem1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_seasonRecordItem1',
+            module: false
+        })
+        this.rect = new Laya.Rectangle()
+        this.rect.width = this.width;
+        this.rect.height = this.height;
+        this.scrollRect = this.rect;
+        // 里面只放入前三  自己的item 没有放入
+        ['person', 'local'].forEach((e) => {
+            this['items_' + e] = [
+                this[`${e}_scene_1`],
+                this[`${e}_scene_2`],
+                this[`${e}_scene_3`],
+            ]
+        });
+    }
+    onEnable() {
+        game.cb.on('update_season_record_item_data_by_id', this, this.updateData)
+    }
+    onDisable() {
+        game.cb.off('update_season_record_item_data_by_id', this, this.updateData)
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo
+    }
+    tweenAdd(selectVO) {
+        this.seasonId = selectVO.id
+        !selectVO.isIng && game.server.send(2251, this.seasonId, HallPlay.lastCityId)
+        this.rect.x = 0;
+        this.rect.width = 0;
+        Laya.Tween.to(this.rect, {
+            width: this.width
+        }, GameMainSeasonRecord.tweenTime)
+        this.showInfo(selectVO)
+    }
+    tweenRemove() {
+        this.rect.width = this.width;
+        this.rect.x = 0
+        Laya.Tween.to(this.rect, {
+            x: -this.width - 1
+        }, GameMainSeasonRecord.tweenTime)
+    }
+    tweenAdd_retreat(selectVO) {
+        this.seasonId = selectVO.id
+        !selectVO.isIng && game.server.send(2251, this.seasonId, HallPlay.lastCityId)
+        this.rect.width = this.width;
+        this.rect.x = -this.width
+        Laya.Tween.to(this.rect, {
+            x: 0
+        }, GameMainSeasonRecord.tweenTime)
+        this.showInfo(selectVO)
+    }
+    tweenRemove_retreat() {
+        this.rect.x = 0
+        this.rect.width = this.width
+        Laya.Tween.to(this.rect, {
+            width: 0
+        }, GameMainSeasonRecord.tweenTime)
+    }
+    updateData(seasonId) {
+        if (this.seasonId == seasonId) {
+            this.showInfo(__data.seasonRecord[seasonId])
+        }
+    }
+    showInfo(selectVO) {
+        if (selectVO.isIng) {
+            let e = selectVO;
+            // 进行中赛季重新生成
+            trace('录入进行中赛季排名')
+            // 1 个人榜；2 城市榜；
+            let person_datas111 = __data[`rank_list${1}`]
+            let local_datas111 = __data[`rankCity${HallPlay.lastCityId}`]
+
+            let getCityIdByMjName = excelUtils.getCityIdByMjName_mj
+            let getKey11 = (data0, index1, index2, key, defaultValue) => {
+                try {
+                    return data0[index1][index2][key] || defaultValue
+                } catch (error) {
+                    return defaultValue
+                }
+            }
+            let person_datas = [
+                { rank: 1, uid: getKey11(person_datas111, 1, 0, 'uid', 0), score: getKey11(person_datas111, 1, 0, 'score', 0), cityId: getCityIdByMjName(getKey11(person_datas111, 1, 0, 'city', '')) },
+                { rank: 2, uid: getKey11(person_datas111, 1, 1, 'uid', 0), score: getKey11(person_datas111, 1, 1, 'score', 0), cityId: getCityIdByMjName(getKey11(person_datas111, 1, 1, 'city', '')) },
+                { rank: 3, uid: getKey11(person_datas111, 1, 2, 'uid', 0), score: getKey11(person_datas111, 1, 2, 'score', 0), cityId: getCityIdByMjName(getKey11(person_datas111, 1, 2, 'city', '')) },
+            ];
+            let local_datas = [
+                { rank: 1, uid: getKey11(local_datas111, 1, 0, 'uid', 0), score: getKey11(local_datas111, 1, 0, 'score', 0), cityId: HallPlay.lastCityId },
+                { rank: 2, uid: getKey11(local_datas111, 1, 1, 'uid', 0), score: getKey11(local_datas111, 1, 1, 'score', 0), cityId: HallPlay.lastCityId },
+                { rank: 3, uid: getKey11(local_datas111, 1, 2, 'uid', 0), score: getKey11(local_datas111, 1, 2, 'score', 0), cityId: HallPlay.lastCityId },
+            ];
+            let myCityId = __data.myCityId
+            let person_data_me = { rank: person_datas111['my'].rank, uid: __data.uid, cityId: getCityIdByMjName(person_datas111['my'].city), score: person_datas111['my'].score, isMe: true }
+            let local_data_me = { rank: local_datas111['my'].rank, uid: __data.uid, cityId: HallPlay.lastCityId, score: local_datas111['my'].score, isMe: true }
+
+            __data.seasonRecord[e.id].rankData = {
+                person_datas,
+                person_data_me,
+                local_datas,
+                local_data_me,
+            };
+        }
+        if (selectVO.rankData) {
+            ['person', 'local'].forEach((e) => {
+                let arr = this['items_' + e]
+                arr.forEach((e_item, index) => {
+                    e_item.isIng = selectVO.isIng;
+                    e_item.chuanqiId = selectVO.rankData.legendId;
+                    let data001 = selectVO.rankData[e + '_datas'][index]
+                    if (data001) {
+                        e_item.dataSource = data001
+                        e_item.visible = true;
+                    } else {
+                        e_item.visible = false;
+                    }
+                });
+                this[e + '_scene_me'].isIng = selectVO.isIng;
+                this[e + '_scene_me'].chuanqiId = selectVO.rankData.legendId
+                let data002 = selectVO.rankData[e + '_data_me'];
+                if (data002) {
+                    this[e + '_scene_me'].dataSource = data002;
+                    this[e + '_scene_me'].visible = true;
+                } else {
+                    this[e + '_scene_me'].visible = false;
+                }
+            });
+        } else {
+            ['person', 'local'].forEach((e) => {
+                let arr = this['items_' + e]
+                arr.forEach((e_item, index) => {
+                    e_item.visible = false;
+                });
+                this[e + '_scene_me'].visible = false;
+            });
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_seasonRecordItem1UI', GameMainSeasonRecordItem1);
+
+class GameMainSeasonRecordItem3 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_seasonRecordItem3',
+            module: false
+        })
+        this.vo = null
+        this.img_head.skin = ''
+        this.txt_name.text = ''
+    }
+    onEnable() {
+
+    }
+    onDisable() {
+        game.cb.off('update_headFrame', this, this.update_headFrame)
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+
+        this.txt_name.visible = vo.uid != 0
+        this.img_head.visible = vo.uid != 0
+        this.txt_mjName.visible = vo.uid != 0
+        this.img_rank_bg.visible = vo.uid != 0
+        this.img_me.visible = vo.uid != 0
+        this.img_lv.visible = vo.uid != 0
+        this.img_lv1.visible = vo.uid != 0
+        this.txt_noRank.visible = vo.uid != 0
+
+        if (vo.uid == 0) {
+            return
+        }
+        vo.uid && game.server.send(2005, vo.uid);
+        game.cb.on('update_headFrame', this, this.update_headFrame)
+        // this.update_headFrame()
+        // this.txt_score.text = bigNumberToCH(vo.score, 2);
+        // this.txt_score.text = vo.score;
+
+        let rd = RankUtils.getRankLvDataByScore(vo.score)
+        if (this.isIng) {
+
+            if (vo.uid == __data.uid) {
+                if (vo.score < 60) {
+                    vo.rank = -1
+                }
+            }
+        }
+
+        this.img_lv.visible = false
+        this.img_lv1.visible = false
+        if (rd.toNextLevelNeedCup == 0) {
+            this.img_lv1.visible = true
+            if (this.isIng) {
+                if (vo.uid == __data.chuanqi.player.uid && vo.cityId == __data.chuanqi.player.cityId) {
+                    rd = __data.rank.chuanqiQueshen;
+                }
+            } else {
+                if (vo.rank == 1 && vo.uid == this.chuanqiId) {
+                    rd = __data.rank.chuanqiQueshen;
+                }
+            }
+            this.img_lv1.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}1.png`
+            this.txt_lv1.text = rd.name;
+            this.txt_score.text = vo.score - rd.minCup//bigNumberToCH(vo.score, 2);
+        } else {
+            this.img_lv.visible = true
+            this.txt_lv.text = rd.name;
+            this.txt_lv_num.text = rd.level;
+            this.img_lv.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}.png`;
+        }
+
+        // this.txt_lvName.text = rd.name;
+        // this.img_lv.skin = `local/lvNameBg/1/rank_${rd.iconIndex}.png`;
+
+        this.txt_mjName.text = excelUtils.getCityName_mj(vo.cityId) || '';
+        this.img_me.visible = vo.isMe ? true : false;
+        this.txt_rank.text = vo.rank >= 1000 ? '999+' : vo.rank;
+        this.img_rank_bg.skin = vo.rank == -1 ? '' : `cdn/seasonRecord/img_mcbox${vo.rank > 3 ? 4 : vo.rank}.png`
+        this.txt_noRank.visible = false;
+        this.img_rank_bg.visible = true;
+        // this.img_lv.visible = true
+        // this.txt_lvName.visible = true
+        if (vo.rank == -1) {
+            this.img_rank_bg.visible = false
+            this.txt_noRank.visible = true;
+            this.img_lv.visible = false
+            this.img_lv1.visible = false
+            // this.txt_lvName.visible = false
+        } else if (vo.rank == 1) {
+            this.txt_rank.strokeColor = '#c97f00'
+        } else if (vo.rank == 2) {
+            this.txt_rank.strokeColor = '#627da7'
+        } else if (vo.rank == 3) {
+            this.txt_rank.strokeColor = '#936f41'
+        } else {
+            this.txt_rank.strokeColor = '#656565'
+        }
+    }
+    update_headFrame() {
+        let curData = __data.othersVO[this.vo.uid]
+        if (!curData) {
+            return;
+        }
+
+        // this.txt_name.text = curData.name;
+        LabelHiddenUtils.getAdapterContent(this.txt_name, curData.name)
+        let nk = curData.headUrl.split('?')
+        if (nk[0]) {
+            this.img_head.skin = __data.getHeadTestDefault(curData.headUrl);
+        } else {
+            this.img_head.skin = ''
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_seasonRecordItem3UI', GameMainSeasonRecordItem3);
+
+class S_season_record_rule extends Laya.Script {
+    onClick(e) {
+        game.scene.add(GameMainSeasonRecordRule)
+    }
+}
+class GameMainSeasonRecordRule extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_seasonRecord_Rule',
+            layer: 'panel'
+        })
+        for (let index = 0, length = this.img_reward.numChildren; index < length; index++) {
+            let c = this.img_reward.getChildAt(index);
+            if (PropIcon.icon[c.name] && PropIcon.icon[c.name].des1) {
+                c.vo = PropIcon.icon[c.name]
+                c.alpha = 0;
+                c.addComponent(S_prop_show_des_seasonRule)
+            }
+        };
+        this.__tab.selectHandler = new Laya.Handler(this, this.onSelect);
+        this.__panel.vScrollBarSkin = '';
+    }
+    onEnable() {
+        this.nop = true
+        this.__tab.selectedIndex = -1;
+        this.__tab.selectedIndex = 0;
+        this.nop = 0;
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '赛季规则界面' })
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['cdn.seasonRecord'])
+    }
+    onSelect(index) {
+        !this.nop && __sound.playGameYx('button')
+        this.onS(index)
+    }
+    async onS(index) {
+        let bs = this.__tab.items
+        this.origin_tab_labelColors = this.origin_tab_labelColors || this.__tab.labelColors;
+        for (let index = 0, length = bs.length; index < length; index++) {
+            const e = bs[index];
+            e.labelColors = this.origin_tab_labelColors;
+            e.labelStroke = 0;
+        };
+        await __tool.await(50)
+        if (bs[index]) {
+            bs[index].labelStroke = 4;
+            bs[index].labelColors = '#fff,#fff,#fff';
+        }
+
+        this.img_reward.visible = false;
+        this.__panel.visible = false;
+        if (index == 0) {
+            this.__panel.visible = true;
+        }
+        else if (index == 1) {
+            this.img_reward.visible = true;
+        }
+    }
+}

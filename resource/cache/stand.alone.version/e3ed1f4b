@@ -1,0 +1,55 @@
+class S_mm_prop_magnet extends Laya.Script {
+    onClick(e) {
+        trace('使用磁铁道具')
+        let a;
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+        // } else {
+        a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+            && __data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone
+        // }
+        if (a) {
+            return __tips('本局道具使用次数已达上限')
+        }
+
+        if (!MjMatch_ui.isGameing) return
+        if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+        if (S_3D_mjMatch.selectCard.length == 0) {
+            return __tips('当前放置栏中没有牌')
+        }
+
+        let magnet_cardGroup = null
+        for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+            const e = S_3D_mjMatch.selectCard[index];
+
+            for (let i2 = 0, length2 = S_3D_mjMatch.deskCard.length; i2 < length2; i2++) {
+                const e2 = S_3D_mjMatch.deskCard[i2];
+
+                let isCorrectCardGroup = s_mm_test_cardGroup_flower_correct(e, e2)
+                if (isCorrectCardGroup) {
+                    // 检测卡牌栏位
+                    let allowAddCardNum = s_mm_get_allowCardNum()
+                    if (e2.cardNum <= allowAddCardNum) {
+                        magnet_cardGroup = e2;
+                        break;
+                    }
+                }
+            };
+            if (magnet_cardGroup) {
+                break;
+            }
+        };
+
+        if (!magnet_cardGroup) {
+            return __tips('放置栏已满')
+        }
+
+        game.scene.add(MM_useProp, ['磁铁', 'adunit-smallGame_magnet', '自动凑齐1个放置栏内的牌',
+            () => {
+                // 调用选中卡牌算法
+                s_mm_selectCardGroup(magnet_cardGroup)
+            }
+        ])
+    }
+}

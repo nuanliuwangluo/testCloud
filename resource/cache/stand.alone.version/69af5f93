@@ -1,0 +1,62 @@
+/*
+ * @Author: 轻飘时刻
+ * @Date:   2017-01-05 09:49:03
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2026-06-01 16:06:17
+ */
+window.config = window.config || {};
+
+config.urlHead = '';
+
+/**
+ * 线上需要修改成 存储音频的cdn服务器 以/结尾 cdn
+ * 线上正式地址：https://cdn.snyngame.com/mahjong/
+ */
+config.soundHead = ''; // 
+// config.urlHead = 'http://127.0.0.1:5501/bin/'
+//游戏设计宽高
+config.gameW = 1920;
+config.gameH = 1080;
+
+// config.isCoreMaxJS = true;
+config.isCoreMaxJS = false;
+config.isCoreMinJS = false;
+
+config.cacheAsBitmap = false;
+//是否开启输出
+config.log = true;
+config.showStat = 0;
+config.teStat = 1;
+config.is_useRetinalCanvas = 1;
+
+config.isMusic = true;
+config.isSound = true;
+//"none" ：不更改屏幕
+//"horizontal" ：自动横屏
+//"vertical" ：自动竖屏
+//pc端没有处理
+config.screenMode = "horizontal";
+
+config.useVersionIP = 1; // reqip根据黄哥返回ip port链接socket 版本号服务根据审核变更https ip
+config.protocol = 'wss://';
+// config.protocol = 'ws://';
+// config.ip = '192.168.21.16';
+// config.ip = 'mjxcc.snyngame.com';
+// config.ip = '192.168.20.232';
+config.ip = 'testgame.snyngame.com';
+// config.ip = 'test2025.snyngame.com';
+// config.port = '8111';
+config.port = '18051';
+// 请求socketip port的https的url
+config.reqIpUrl = 'testgame.snyngame.com'
+// config.reqIpUrl = 'mjxcc.snyngame.com'
+config.resFolderVersion = '3.1.20.02';
+config.serverVersion = "3.1.20";
+config.clientVersion = '3.1.20';
+config.versionK = '.1'
+config.version_suffix = '003'
+// 用于是否弹出花园更新弹框
+config.gardenVersion = '3.1.18.1'
+config.labelOffY = 2
+config.key_prefix = 'appletMJ'
+config.key_suffix = '0.0.3'

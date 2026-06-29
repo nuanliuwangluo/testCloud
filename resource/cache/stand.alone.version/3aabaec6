@@ -1,0 +1,49 @@
+class FriendRoomRedOtherOpen extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_red_otherOpen',
+            layer: 'panel'
+        })
+        this.btn_refresh.addComponent(S_friendRed_refreshOrClose)
+    }
+    added(uid) {
+        this.uid = uid;
+        let name = __data.othersVO[uid].name
+        function truncateString(str) {
+            if (!str) return '';
+            return str.length > 8 ? str.substring(0, 8) + '...' : str;
+        }
+        this.txt_name.text = truncateString(name);
+
+        this.update()
+        game.cb.on('update_friendRed_otherOpen_status', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_friendRed_otherOpen_status', this, this.update)
+    }
+    update() {
+        let status = __data.friendRoom.red.getRedStatus_room(this.uid)
+        // 0开启中 1有结果
+        this.img_red.visible = status == 2;
+        this.img_opening.visible = status == 1;
+        if (status == 1) {
+            this.img_opening.clipPlay(0)
+            this.txt_btn.text = '刷新'
+        } else {
+            this.txt_red.text = __data.friendRoom.red.getRedNum_room(this.uid) + '元'
+            this.img_opening.clipStop()
+            this.txt_btn.text = '关闭'
+        }
+    }
+}
+class S_friendRed_refreshOrClose extends Laya.Script {
+    onClick(e) {
+        let a = this.owner.parent.txt_btn.text
+        if (a == '刷新') {
+            // game.cb.event('update_friendRed_otherOpen_status', [1])
+        } else if (a == '关闭') {
+            game.scene.remove(FriendRoomRedOtherOpen)
+            game.scene.remove(FriendRoomRedSuccess)
+        }
+    }
+}

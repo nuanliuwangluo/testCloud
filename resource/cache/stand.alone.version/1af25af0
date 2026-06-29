@@ -1,0 +1,94 @@
+class MM_rank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_rank',
+            layer: 'panel1'
+        })
+        this.__list.vScrollBarSkin = ''
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+    }
+    added() {
+        this.update_rank()
+        game.cb.on('update_mm_rank_data', this, this.update_mm_rank_data)
+    }
+
+    onDisable() {
+        game.cb.off('update_mm_rank_data', this, this.update_mm_rank_data)
+    }
+
+    updateItem(cell, index) {
+        let useData = __data.mjSmallGame.rankData;
+        let array = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            array.push(...useData[page])
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !useData[nextPage]) {
+            game.server.send(70001, nextPage)
+        }
+    }
+    update_rank() {
+        this.update_mm_rank_data()
+        this.__list.scrollTo(0, 0)
+    }
+    update_mm_rank_data() {
+        let useData = __data.mjSmallGame.rankData;
+        let data = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            data.push(...useData[page])
+        }
+        useData[`my`] && (useData[`my`].isMy = true);
+        this.item_me.dataSource = useData[`my`]
+        // this.item_me.img_line.visible = false;
+        this.__list.array = data;
+    }
+}
+
+class MM_rankItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_rankItem',
+            module: false
+        })
+    }
+    onEnable() { }
+
+    onDisable() { }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        LabelHiddenUtils.getAdapterContent(this.txt_rank_name, vo.nickname)
+        this.img_head.skin = __data.defaultHead;
+        this.img_head.skin = __data.getHeadTestDefault(vo.head_url);
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.rank == 0 || vo.rank == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.rank <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.rank > 999 ? '999+' : vo.rank;
+        }
+        this.txt_mjName.text = excelUtils.getCityName_mj(vo.city_id);
+        // if (vo.isMy) {
+        //     this.img_line.visible = false;
+        // }
+        this.img_head_frame.skin = PropIcon.icon[vo.avatar_border || 301].skin
+
+        if (vo.level <= 0) {
+            this.txt_level.text = `未上榜`
+        } else {
+            this.txt_level.text = `第${vo.level}关`
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_mjMatch.MM_rankItemUI', MM_rankItem);

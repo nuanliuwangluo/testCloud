@@ -1,0 +1,781 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2018-08-31 10:20:17
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2020-07-09 14:09:10
+ */
+var Platform = { APP: 'app', WX: 'wx', WEB: 'web' };
+var miniApi = {
+    clientType: Platform.WEB, // app wx web
+    videoAd: null,
+    bannerAd: null,
+    isAuthorize: null,
+    isHide: false,
+    isInitCustomAdSuccess: true,
+    adUserValueLevel: '-1',
+    init: function () {
+
+    },
+    setSharedCanvasWH: function () {
+
+    },
+    getLocation: function () {
+
+    },
+    /**
+     * [screenshot 截图]
+     * @param  {[type]} _x [description]
+     * @param  {[type]} _y [description]
+     * @param  {[type]} _w [description]
+     * @param  {[type]} _h [description]
+     * @return {[type]}    [description]
+     */
+    alert: function (title, content, sureCallback, cancelCallback) {
+        __showScene.show_prompt_single(content, '确定')
+    },
+    spriteRank: null,
+    showRank: function () {
+
+    },
+    pageUp: function () {
+
+    },
+    pageDown: function () {
+
+    },
+    closeRank: function () {
+
+    },
+    auth: () => {
+        return new Promise((resolve, reject) => {
+            resolve(1)
+        })
+    },
+    authFriend: () => {
+        return new Promise((resolve, reject) => {
+            resolve(1)
+        })
+    },
+    app_login_wx(callBack) {
+        callBack = callBack || app_test_show_realName;
+        if (miniApi.clientType == 'app') {
+            if (window.AppLogin && AppLogin.wx) {
+                AppLogin.wx((e) => {
+                    let uuid = e.unionid;
+                    __data.openid = uuid || __data.openid;
+                    __data.name = e.nickname;
+                    __data.head = e.headimgurl;
+                    __data.sex = e.sex;
+                    miniApi.setItem('appLoginId', __data.openid)
+                    miniApi.setItem('loginType', 'wx')
+                    callBack()
+                }, (e) => {
+                    __tips(e)
+                })
+            } else if (window.OriginAppLogin && OriginAppLogin.wx) {
+                OriginAppLogin.wx((e) => {
+                    let uuid = e.unionid;
+                    __data.openid = uuid || __data.openid;
+                    __data.name = e.nickname;
+                    __data.head = e.headimgurl;
+                    __data.sex = e.sex;
+                    miniApi.setItem('appLoginId', __data.openid)
+                    miniApi.setItem('loginType', 'wx')
+                    callBack()
+                }, (e) => {
+                    __tips(e)
+                })
+            } else {
+                __data.openid = __data.openid;
+                miniApi.setItem('appLoginId', __data.openid)
+                miniApi.setItem('loginType', 'wx')
+                callBack()
+            }
+        }
+    },
+    app_login_apple() {
+        if (miniApi.clientType == 'app') {
+            if (window.AppLogin && AppLogin.apple) {
+                AppLogin.apple((e) => {
+                    let appleOpenId = e.user;
+                    __data.openid = appleOpenId || __data.openid;
+                    __data.name = '匿名' + (Math.floor(Math.random() * 6000000) + 1000000);
+                    trace('ios 登录 name', __data.name)
+                    __data.head = __data.defaultHead;
+                    miniApi.setItem('appLoginId', __data.openid)
+                    miniApi.setItem('loginType', 'ios')
+                    app_test_show_realName()
+                }, (e) => {
+                    __tips(e)
+                })
+            } else if (window.OriginAppLogin && OriginAppLogin.apple) {
+                OriginAppLogin.apple((e) => {
+                    let appleOpenId = e.userId;
+                    __data.openid = appleOpenId || __data.openid;
+                    __data.name = '匿名' + (Math.floor(Math.random() * 6000000) + 1000000);
+                    trace('ios 登录 name', __data.name)
+                    __data.head = __data.defaultHead;
+                    miniApi.setItem('appLoginId', __data.openid)
+                    miniApi.setItem('loginType', 'ios')
+                    app_test_show_realName()
+                }, (e) => {
+                    __tips(e)
+                })
+            } else {
+                __data.openid = __data.openid;
+                miniApi.setItem('appLoginId', __data.openid)
+                miniApi.setItem('loginType', 'ios')
+                app_test_show_realName()
+            }
+        }
+    },
+    getLoginCode: function () {
+        return 0
+    },
+    reqIp(loginType1, account1, password1) {
+        return new Promise(async (resolve, reject) => {
+            if (miniApi.clientType == 'web') {
+                url = `https://${config.reqIpUrl}:8111/server/reqIpNoCode/` + config.serverVersion + '/' + __data.openid
+                let a = await miniApi.axios({
+                    url,
+                    method: 'get',
+                }).catch((e) => { })
+                return resolve(a)
+            }
+            if (miniApi.clientType == 'wx') {
+                url = `https://${config.reqIpUrl}:8111/server/reqIpNoCode/` + config.serverVersion + '/' + __data.openid
+                let a = await miniApi.axios({
+                    url,
+                    method: 'get',
+                }).catch((e) => { })
+                return resolve(a)
+            }
+            if (miniApi.clientType == 'app') {
+                let type = loginType1 || miniApi.getItem('loginType')
+                let id = account1 || miniApi.getItem('appLoginId')
+                let password = password1 || miniApi.getItem('appLoginPassword')
+                console.log(type, id, password);
+                let url;
+                if (type == 'password') {
+                    url = `https://${config.reqIpUrl}:8111/server/reqIpPassword/` + config.serverVersion + '/' + id + '/' + password
+                }
+                else if (type == 'wx') {
+                    url = `https://${config.reqIpUrl}:8111/server/reqIpNoCode/` + config.serverVersion + '/' + id
+                }
+                else if (type == 'ios') {
+                    url = `https://${config.reqIpUrl}:8111/server/reqIpApple/` + config.serverVersion + '/' + id
+                }
+
+                let a = await miniApi.axios({
+                    url,
+                    method: 'get',
+                }).catch((e) => { })
+
+                return resolve(a)
+            }
+        })
+    },
+    login: function () {
+        if (__data.name == '昵称_1') {
+            if (!__data.params_openid) {
+                __data.name = '匿名' + (Math.floor(Math.random() * 6000000) + 1000000);
+            }
+        }
+        trace('1001 name', __data.name)
+        game.server.send(1001, __data.openid, __data.name, __data.head, __data.sex)
+        return 1;
+    },
+    getUserProfile: function (callback) {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_auth', 1)
+        callback && callback()
+    },
+    // btnUserInfo: null,
+    // createUserInfoBtn: function (callBack) {
+    //     callBack && callBack(1)
+    // },
+    btnSetting: null,
+    /**
+     * [openSetting 打开权限设置]
+     * @return {[type]} [description]
+     */
+    openSetting: function () {
+
+    },
+    shareParamsInfo: null,
+    /**
+     * [share 分享]
+     * @param  {object} info        [description]   title: 标题     imageUrl: 分享图片      params: 分享参数
+     * @param  {function} success   [description]
+     * @param  {function} fail      [description]
+     * @param  {any} ald_des        [description]
+     */
+    share: async function (info) {
+        __data.shareVideoRule.total_clickShareCount();
+        miniApi.shareParamsInfo = info
+        let { titleId, imgId, cityId } = info;
+        cityId = cityId || __data.myCityId;
+        imgId = imgId || titleId;
+        let title = info.title || __data.shareConfig.getTitleById(titleId, cityId)
+        let { imageUrl, imageUrlId, localUrl } = __data.shareConfig.getImgUrlIdById(imgId)
+        trace('分享数据：', title, imageUrl, imageUrlId, localUrl);
+        if (miniApi.clientType == 'web') {
+            window.open(encodeURI(`share.html?shareTitle=${title}&shareImg=${imageUrl}`))
+            info.shareOnShowCallback && info.shareOnShowCallback()
+            miniApi.shareGroupClickCallback = info.shareGroupClickCallback;
+        } else if (miniApi.clientType == 'app') {
+            try {
+                if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                    AppBridge.wxShareMiniProgram((ret) => {
+                        if (ret.code == 0) {
+                            __tips('分享成功');
+                        } else {
+                            __tips('分享失败');
+                        }
+                    }, {
+                        title,
+                        desc: '分享内容的描述',
+                        userName: "gh_8948d7f614e2",
+                        type: "release",
+                        withShareTicket: true,
+                        thumb: localUrl.replace('widget://widget/shareImage/', '').replace('.jpg', '')
+                    });
+                } else {
+                    var wxPlus = api.require('wxPlus');
+                    wxPlus.shareProgram({
+                        apiKey: 'wx47f629be8dac75a7',
+                        scene: 'session',
+                        title: title,
+                        description: '分享内容的描述',
+                        thumb: localUrl,
+                        webpageUrl: '',
+                        userName: 'gh_8948d7f614e2',
+                        path: `?${info.params}`,
+                        withShareTicket: true,
+                        miniProgramType: 'release',
+                    }, function (ret, err) {
+                        if (ret.status) {
+                            __tips('分享成功');
+                        } else {
+                            __tips('分享失败');
+                        }
+                    });
+                }
+            } catch (error) {
+                __tips('未支持分享');
+            }
+        }
+    },
+    shareBtnShow(adUnitId) { },
+    shareBtnClose(adUnitId) { },
+    shareBtnClick(adUnitId) { },
+    /**
+     * [screenshot 截图]
+     * @param  {[type]} _x [description]
+     * @param  {[type]} _y [description]
+     * @param  {[type]} _w [description]
+     * @param  {[type]} _h [description]
+     * @return {[type]}    [description]
+     */
+    screenshot: function (_x, _y, _w, _h) {
+
+    },
+    /**
+     * 生成图片到相册 
+     * @param sprite 需要生成图片的精灵容器
+     * @param rec 生成图片的区域信息
+     * @param callBack 0成功；1失败
+     */
+    saveImageToPhotosAlbum: function (imgUrl) {
+
+    },
+    testVersion: function (version, callback) {
+
+    },
+    clearAllLayaLocalCacheRes: function (callback) {
+
+    },
+    isShowVideoAd: true,
+    video_ready: function (adUnitId) {
+        return __tool.queuePromise(1, 'video_ready', this, this.video_ready_queue, arguments)
+    },
+    video_ready_queue: function (adUnitId) {
+        return new Promise(async (res, reject) => {
+            if (miniApi.clientType == 'web') {
+                let r = { adUnitId, pullVideo: true, isSuccess: __data.shareVideoRule.ifVideoSuccessUseRule(adUnitId) }
+                if (window.TestPanel && window.TestPanel.ready_video_fail) {
+                    r.isSuccess = false;
+                }
+                setTimeout(() => {
+                    game.cb.event('update_video_ready', [r])
+                    return res(r)
+                }, 100)
+            }
+            else if (miniApi.clientType == 'app') {
+                let r;
+                if (window.AppAds) {
+                    AppAds.load((e) => {
+                        r = { adUnitId, pullVideo: true, isSuccess: e }
+                        game.cb.event('update_video_ready', [r])
+                        res(r)
+                    })
+                } else if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                    OriginAppAds.load((e) => {
+                        r = { adUnitId, pullVideo: true, isSuccess: e }
+                        game.cb.event('update_video_ready', [r])
+                        res(r)
+                    })
+                } else {
+                    r = { adUnitId, pullVideo: true, isSuccess: true }
+                    game.cb.event('update_video_ready', [r])
+                    res(r)
+                }
+            }
+        })
+    },
+    video_show: function (adUnitId, successCallback, failCallback, useShareTips = 1, stopCallback = null) {
+        let new__successCallback = (noTotalCount = false) => {
+            if (game.isLoginSuccess) {
+                successCallback && successCallback()
+            }
+            miniApi.video_successCallback = successCallback;
+            !noTotalCount && __data.shareVideoRule.total_lookVideoFinishCount(adUnitId)
+        }
+        let cc = __data.shareVideoRule.today_interstitialAdCloseCount + __data.shareVideoRule.today_lookVideoFinishCount
+        let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_vip' + 1)
+        if (a != 1 && !__data.vip.isVip && Math.random() * 1 < 0.3 && cc > 3) {
+            __showScene.show_vipSales(1)
+        } else if (__data.vip.isVip) {
+            game.server.send(11009)
+            new__successCallback(1)
+        } else {
+            if (miniApi.clientType == 'app') {
+                if (window.AppAds) {
+                    __sound.stopAllMusic()
+                    AppAds.show(() => {
+                        new__successCallback()
+                        __sound.playAllMusic()
+                    }, (e) => {
+                        if (e == -1) {
+                            __tips('暂无广告，请稍后再试')
+                        }
+                        failCallback && failCallback()
+                        __sound.playAllMusic()
+                    })
+                } else if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                    __sound.stopAllMusic()
+                    OriginAppAds.show(() => {
+                        new__successCallback()
+                        __sound.playAllMusic()
+                    }, (e) => {
+                        if (e == -1) {
+                            __tips('暂无广告，请稍后再试')
+                        }
+                        failCallback && failCallback()
+                        __sound.playAllMusic()
+                    })
+                } else {
+                    useShareTips && __tips('暂无广告模块')
+                    failCallback && failCallback()
+                }
+            } else if (miniApi.clientType == 'web') {
+                game.scene.add(TestVideo, [adUnitId, new__successCallback, failCallback, useShareTips, stopCallback])
+            }
+        }
+    },
+    videoBtnShow(adUnitId) { },
+    videoBtnClose(adUnitId) { },
+    addBannerAd: function () {
+
+    },
+    removeBannerAd: function () {
+
+    },
+    exit: function () {
+        window.AppHotUpdate && AppHotUpdate.closeApp()
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) { AppBridge.closeApp() }
+    },
+    restart: function () {
+        window.AppHotUpdate && AppHotUpdate.rebootApp()
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) { AppBridge.rebootApp() }
+    },
+    toMarket: () => {
+        window.AppHotUpdate && AppHotUpdate.toMarket()
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) { AppBridge.openMarket("https://apps.apple.com/app/id6744951316") }
+    },
+    setItem: function (key, value, useSuffix = 1) {
+        if (key.includes('groupShareOB')) {
+            console.log('groupShareOB', value);
+        }
+        key = config.key_prefix + key + (useSuffix == 1 ? config.key_suffix : '')
+        localStorage.setItem(key, value)
+    },
+    getItem: function (key, useSuffix = 1) {
+        key = config.key_prefix + key + (useSuffix == 1 ? config.key_suffix : '')
+        var value = localStorage.getItem(key)
+        return value
+    },
+    removeItem: function (key) {
+        key = config.key_prefix + key + config.key_suffix
+        localStorage.removeItem(key)
+    },
+    copy: function (value, callback) {
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+            AppBridge.setClipboard(value, (result) => {
+                callback && callback()
+                result && __tips(__lang.copy_success)
+            });
+        } else {
+            this.clipboard = navigator.clipboard || {
+                writeText: (text) => {
+                    const input = document.createElement('input')
+                    input.value = text
+                    document.body.appendChild(input)
+                    input.select()
+                    document.execCommand('copy')
+                    document.body.removeChild(input)
+                }
+            }
+            this.clipboard.writeText(value)
+            callback && callback()
+            __tips(__lang.copy_success)
+        }
+    },
+    paste: function (callback) {
+        try {
+            if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                AppBridge.getClipboard((text) => {
+                    callback && callback(text)
+                });
+            } else {
+                navigator.clipboard.readText().then(text => {
+                    callback && callback(text)
+                }).catch(err => {
+                    console.error('读取粘贴板失败:', err);
+                    if (miniApi.clientType == 'web') this.listenPasteEvent(callback);
+                });
+            }
+        } catch (error) {
+            console.error('读取粘贴板失败:', error);
+            if (miniApi.clientType == 'web') this.listenPasteEvent(callback);
+        }
+
+    },
+    listenPasteEvent: function (callback) {
+        __tips('请按 Ctrl+V 粘贴');
+        const handlePaste = (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            document.removeEventListener('paste', handlePaste);
+            callback && callback(text);
+        };
+
+        document.addEventListener('paste', handlePaste);
+
+        setTimeout(() => {
+            document.removeEventListener('paste', handlePaste);
+            callback && callback('');
+        }, 5000);
+    },
+    updateRankData: function () {
+
+    },
+    aldSendEvent: function (key, value) { },
+    showKeyboard: function (txt) {
+
+    },
+    jumpToGame: function (appId) { },
+    addGameIcon: function () { },
+    removeGameIcon: function () { },
+    loadSubpackage: async (subpackageNameArray) => {
+        return new Promise((resolve, reject) => {
+            resolve(1)
+        })
+    },
+    axios(vo) {
+        return new Promise(async (resolve, reject) => {
+            // trace('axios', JSON.stringify(vo))
+            // console.time(vo.url);
+            // let v = await axios(vo).catch((e) => { })
+            // console.timeEnd(vo.url);
+            // resolve(v)
+            lajax(vo).then((response) => { resolve(response); });
+        })
+    },
+    uploadError(content) {
+        miniApi.axios({
+            url: `https://testgame.snyngame.com:8111/uploadError`,
+            method: 'post',
+            data: {
+                content
+            }
+        }).catch((e) => { })
+    },
+    deleteLastPayTrade() {
+
+    },
+    pay(pp) {
+        if (miniApi.clientType == 'app') {
+            game.scene.add(LoadingAwait)
+            let { goodsId } = pp;
+            let Pay = window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP ? OriginAppIap : IOSPay;
+            Pay.invest(goodsId, this.paySuccess, (e) => {
+                e && __tips(e)
+                if (!e) {
+                    __tips('支付失败,商品不存在')
+                }
+                game.scene.remove(LoadingAwait)
+                game.scene.remove(LoadingSmall)
+            });
+        }
+    },
+    async paySuccess(ret) {
+        let { transactionId, receipt, productId } = ret
+        receipt = encodeURIComponent(receipt)
+        let tradeData = await miniApi.axios({
+            url: `https://${config.reqIpUrl}:9233/appPayVerify?uid=${__data.openid}&goodsId=${productId}&transactionId=${transactionId}&orderId=${receipt}`,
+            method: 'get',
+        }).catch((e) => { })
+
+        let code = __tool.gdp(tradeData, 'data.code');
+        if (code == 'ok') {
+
+        } else {
+            __tips('支付失败')
+        }
+        game.scene.remove(LoadingAwait)
+        game.scene.remove(LoadingSmall)
+    },
+    statusBarRatio() {
+        // return 0.1
+        if (miniApi.clientType == 'app') {
+            if (window.ratio) { return window.ratio; }
+            let ratio = 0;
+
+            if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                let distance = AppBridge.statusBarHeight;
+                let screenWidth = AppBridge.screenInfo ? AppBridge.screenInfo.width : Laya.stage.width;
+                if (distance > 0) {
+                    ratio = (distance / 1.35 / screenWidth);
+                } else {
+                    ratio = (AppBridge.statusBarHeight / 1.35 / screenWidth);
+                }
+            } else if (window.AppDevice) {
+                let distance = AppDevice.left || AppDevice.statusBarHeight;
+                if (distance > 0) {
+                    if (api.systemType == 'ios') {
+                        ratio = (distance / 1.35 / AppDevice.windowWidth);
+                    } else {
+                        ratio = (distance / AppDevice.windowWidth);
+                    }
+                } else {
+                    if (api.systemType == 'ios') {
+                        ratio = (AppDevice.statusBarHeight / 1.35 / AppDevice.windowWidth);
+                    } else {
+                        ratio = (AppDevice.statusBarHeight / AppDevice.windowWidth);
+                    }
+                }
+            }
+
+            console.log('比例：', ratio)
+            window.ratio = ratio;
+            return ratio;
+        }
+        return 0;
+    },
+    setOpenid(openid) {
+        // try {
+        //     wx.uma.setOpenid(openid)
+        // } catch (e) {
+        //     console.error('setOpenid', e);
+        // }
+    },
+    /**
+     * 字符型属性值，值需要添加‘’
+     * wx.uma.trackEvent('ViewProductDetails', { 'Category':'家电','ItemName':'西门子冰箱' });
+     * 数值型属性值，值没有‘’
+     * wx.uma.trackEvent('Pay', { 'PayAmount':6999 });
+     */
+    trackEvent(eventName, value) {
+        console.log('%c----------【触发埋点】----------', 'color:#ff6666');
+        console.log('%c-------------------------------', 'color:#ff6666');
+        // if(eventName == 'Mj_Error'){ debugger; }
+        if (!value.Mj_County) {
+            value.Mj_County = __data.myCityName
+        }
+        if (
+            eventName == 'Mj_ADClick'
+            || eventName == 'Mj_ShareClick'
+            || eventName == 'Mj_Stages'
+            || eventName == 'Mj_Marketing'
+            || eventName == 'Mj_UIClick'
+        ) {
+            value && (value.Mj_UserID = String(__data.uid));
+        }
+        if (eventName == 'Mj_ADClick'
+            || eventName == 'Mj_ShareClick'
+            || eventName == 'Mj_Pay'
+            || eventName == 'Mj_PropPay'
+            || eventName == 'Mj_Gameanalysis'
+            || eventName == 'Mj_FriendGame'
+            || eventName == 'Mj_Stages'
+            || eventName == 'Mj_Marketing'
+        ) {
+            value && (value.Mj_UserType = String(__data.userType));
+        }
+        if (this.clientType == 'wx' || this.clientType == 'web') {
+            if (eventName == 'Mj_Login' || eventName == 'Mj_Gameanalysis' || eventName == 'Mj_Pay' || eventName == 'Mj_ADClick') {
+                value.Mj_Channel = __data.channel_client || __data.channel_server || '无'
+            }
+        }
+        console.log('事件ID：', eventName, '事件参数：', value);
+        window.AppUma && AppUma.trackEvent(eventName, value)
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) AppBridge.umengEvent(eventName, value)
+    },
+    trackEvent_gameStep(eventId, value) {
+        console.log('事件ID：', eventId, '事件参数：', value);
+        window.AppUma && AppUma.trackEvent(eventId, value)
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) AppBridge.umengEvent(eventId, value)
+    },
+    get isIOS() {
+        if (window.TestPanel && window.TestPanel.isIOS) {
+            return true
+        }
+        if (miniApi.clientType == 'app') return false;
+        return Laya.Browser.onIOS
+    },
+    preloadAd() { },
+    destroyCustomAd(name) { },
+    reloadCustomAd(name) { },
+    showCustomAd_leftRight() { },
+    hideCustomAd_leftRight() { },
+    showCPS() { },
+    preloadCPS(callback) { },
+    destroyCPS() { },
+    shareCountToday: 0,
+    shareCountTodayGet() {
+        this.shareCountToday = this.getItem('shareCountToday:' + new Date().toDateString())
+    },
+    shareModeByShareCount(shareGroupVerify, shareTimeVerify) {
+        if (this.shareCountToday < 2) {
+            shareGroupVerify()
+        } else {
+            if (Math.random() * 1 < 0.5) {
+                shareGroupVerify()
+            } else {
+                shareTimeVerify()
+            }
+        }
+        this.shareCountToday++;
+        this.setItem('shareCountToday:' + new Date().toDateString(), this.shareCountToday)
+    },
+    reportEvent(name, value) {
+        trace('reportEvent', name, value)
+    },
+    getExptInfoSync(exptName, hashCallback) {
+        let a = Object.keys(hashCallback);
+        a.push('fail')
+        let value = a[__tool.randomRange(0, a.length - 1)]
+        if (hashCallback[value]) hashCallback[value]();
+        else hashCallback['fail'] && hashCallback['fail']();
+        // const res = wx.getExptInfoSync(['wxapp_expt_test'])
+        // if (res.wxapp_expt_test === undefined) {
+        //     // 返回空对象；未命中实验、实验待发布（白名单除外）或者实验结束后会命中该分支 
+        //     /* 业务逻辑，可对齐线上 */
+        // } else if (res.wxapp_expt_test == '0') {
+        //     /* 对照组业务逻辑 */
+        // } else if (res.wxapp_expt_test == '1') {
+        //     /* 实验组1业务逻辑 */
+        // } else if (res.wxapp_expt_test == '2') {
+        //     /* 实验组2业务逻辑 */
+        // } else {
+        //     /* 异常分支逻辑 */
+        // }
+    },
+    shareRoomMenu(roomId, activityId, member, limit) { },
+    closeDynamicsMessage() { },
+    showInterstitialAd() { },
+    showPopupAd(data) {
+        // if (window.TestPopupAd) { game.scene.add(TestPopupAd, [data]); }
+    },
+    // 活动订阅
+    activitySubscribe() {
+        miniApi.alert(null, '订阅成功')
+        return 1
+    },
+    // 系统订阅
+    systemUpdateSubscribe() {
+        miniApi.alert(null, '订阅成功')
+        return 1
+    },
+    adsdk_setOpenID() {
+
+    },
+    adsdk_setUUID() {
+
+    },
+    adsdk_track(type, value) {
+        trace('⬆️adsdk_track', type, value);
+    },
+    getWxDeviceName() {
+        // 合法值	说明
+        // ios	iOS微信（包含 iPhone、iPad）
+        // android	Android微信
+        // ohos	HarmonyOS微信
+        // windows	Windows微信
+        // mac	macOS微信
+        // devtools	微信开发者工具
+        return ''
+    },
+    recommend(callback) {
+        __showScene.show_prompt_select('推荐游戏', () => {
+            callback(true)
+        }, () => {
+            callback(false)
+        })
+    },
+    vibrate(type) {
+        if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+            AppBridge.vibrate(type);
+        } else if (window.AppDevice) {
+            window.AppDevice.vibrate(type);
+        }
+    },
+    isCanPay() {
+        return new Promise((resolve, reject) => {
+            if (miniApi.clientType == 'web') {
+                return resolve(1);
+            }
+            if (miniApi.clientType == 'app') {
+                return resolve(1);
+            }
+            if (miniApi.clientType == 'wx') {
+                if (wx.checkIsSupportMidasPayment) {
+                    wx.checkIsSupportMidasPayment({
+                        success(res) {
+                            console.log('支持检查结果:', res)
+                            if (res.data.allow_pay) {
+                                console.log('当前环境支持支付')
+                                return resolve(1);
+                                // 可以继续调用支付相关接口
+                            } else {
+                                console.log('当前环境不支持支付')
+                                return resolve(0);
+                                // 请自行适配用户提示文案
+                            }
+                        },
+                        fail(err) {
+                            console.error('检查支持情况失败:', err)
+                            return resolve(0);
+                        },
+                        complete() {
+                            console.log('检查完成')
+                        }
+                    })
+                } else {
+                    return resolve(0);
+                }
+            }
+        })
+    },
+}
+window.miniApi = miniApi;

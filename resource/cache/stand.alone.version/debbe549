@@ -1,0 +1,423 @@
+class GameMainPlayerInfo extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_playerInfo',
+            layer: 'panel'
+        })
+        this.addChild(this.__tab)
+        this.__tab.selectHandler = new Laya.Handler(this, this.onSelect);
+        this.__list_prop.vScrollBarSkin = '';
+        // this.__list_headFrame.addComponent(S_playerInfo_list_mousemove)
+        this.btn_updateNameAndHead.addComponent(S_playerInfo_auth);
+        // this.__prop_radioGroup.selectHandler = new Laya.Handler(this, this.onSelect_prop);
+        this.rgc.addComponent(MahjongGiftSetScript).rg(this.__prop_radioGroup).clickToSave();
+        this.btn_goGarden.addComponent(S_playerinfo_goGarden)
+    }
+    async added({ uid, name, headFrameId, headFrameUrl, isGaming, area, areaRank, cityId, city, head }) {
+        // miniApi.showCustomAd_leftRight('right')
+        this.area = area;
+        this.areaRank = areaRank;
+        if (this.area) {
+            this.txt_name.y = this.img_frame.y - this.txt_name.height;
+            this.txt_ar.text = `[${excelUtils.getCityName_mj(area)}，${RankUtils.getAreaRankInfo(areaRank)}]`;
+        } else {
+            this.txt_name.y = this.img_frame.y - this.txt_name.height / 2;
+            this.txt_ar.text = '';
+        }
+
+        this.params_name = name
+        this.params_cityId = cityId
+        this.params_city = city
+        this.params_head = head;
+        this.isGaming = isGaming;
+        if (!__data.othersVO[uid])
+            game.server.send(2005, uid);
+        this.curUid = uid;
+        this.txt_name.text = name
+        if (uid == __data.uid) {
+            this.btn_updateNameAndHead.visible = true
+            this.__tab.labels = '荣   誉,互   动';
+            // this.__prop_radioGroup.disabled = false;
+            // this.__tab.labels = '荣   誉'
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '自身玩家信息界面' })
+            this.btn_goGarden.visible = false
+
+            if (__data.loginType != 1 && __data.loginType != 2) {
+                this.btn_updateNameAndHead.visible = false
+            }
+        } else {
+            this.btn_updateNameAndHead.visible = false;
+            this.btn_goGarden.visible = true
+            let p1 = game.scene.get(Mahjong3DBG)
+            if (p1 && p1.parent) {
+                this.__tab.labels = '荣   誉,互   动';
+            } else {
+                this.__tab.labels = '荣   誉';
+            }
+            // this.__prop_radioGroup.disabled = true
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '他人玩家信息界面' })
+        }
+        let p1 = game.scene.get(Mahjong3DBG)
+        if (p1 && p1.parent) {
+            GameMainPlayerInfo.defaultIndex = 1
+            this.btn_goGarden.visible = false;
+        } else {
+            GameMainPlayerInfo.defaultIndex = 0
+        }
+        game.cb.on('update_headFrame', this, this.update_headFrame)
+        game.cb.on('update_nameHead_me', this, this.update_nameHead_me)
+        this.update_headFrame()
+
+        game.cb.on('update_mjThrowProp_data', this, this.update_mjThrowProp_data)
+        this.update_mjThrowProp_data()
+
+        this.__tab.selectedIndex = GameMainPlayerInfo.defaultIndex
+        // 这里需要延迟 不延迟 onSelect 里面设置颜色不好使 laya bug
+        await __tool.await(1)
+        this.onSelect(GameMainPlayerInfo.defaultIndex);
+    }
+    onDisable() {
+        game.cb.off('update_headFrame', this, this.update_headFrame)
+        game.cb.off('update_nameHead_me', this, this.update_nameHead_me)
+        game.cb.off('update_mjThrowProp_data', this, this.update_mjThrowProp_data)
+        ResUtils.clearAtlas('res/atlas/cdn/playerInfo.atlas')
+        ResUtils.clearTextureRes(['cdn.gift', 'cdn.cupAndMedal'])
+    }
+    onSelect_prop(e) {
+        LocalUtils.save(LocalUtils.gift.key, e)
+        LocalUtils.gift.value = e;
+    }
+    update_mjThrowProp_data() {
+        this.__prop_radioGroup.selectedIndex = LocalUtils.gift.value;
+
+        let a = [];
+        for (const key in PropIcon.icon) {
+            if (PropIcon.icon[key].isMjThrowProp) {
+                // if (PropIcon.icon[key].buyType == 'stone' && miniApi.isIOS) continue;
+                a.push({
+                    id: key,
+                    num: BagData.getPropNumber(key),
+                })
+            }
+        }
+        this.__list_prop.array = a;
+        // this.__list_prop.array = BagData.plist;
+    }
+    update_nameHead_me() {
+        this.img_head.skin = __data.getHeadTestDefault(__data.head);
+        this.txt_name.text = __data.name;
+    }
+    update_headFrame() {
+        let curData = __data.othersVO[this.curUid]
+
+        if (!curData) {
+            return;
+        }
+        let nk = curData.headUrl.split('?')
+        if (nk[0]) {
+            this.img_head.skin = __data.getHeadTestDefault(curData.headUrl);
+        } else {
+            this.img_head.skin = ''
+        }
+        if (this.curUid == __data.uid) {
+            this.update_nameHead_me();
+        }
+
+        this.img_frame.skin = PropIcon.icon[curData.headFrameId].skin
+        // 设置模拟数据
+        let cupAndMedalArray = [
+            { propId: 101, num: curData.cupAndMedal.goldCup },
+            { propId: 102, num: curData.cupAndMedal.silverCup },
+            { propId: 103, num: curData.cupAndMedal.copperCup },
+            { propId: 201, num: curData.cupAndMedal.goldMedal },
+            { propId: 202, num: curData.cupAndMedal.silverMedal },
+            { propId: 203, num: curData.cupAndMedal.copperMedal },
+        ]
+        cupAndMedalArray.forEach(e => {
+            let item = this['item_' + e.propId]
+            item.dataSource = e;
+        });
+        // let dd123 = [];
+        // for (const key in PropIcon.icon) {
+        //     if (PropIcon.icon[key].isHeadFrame) {
+        //         dd123.push({
+        //             propId: key,
+        //             isUseing: curData.headFrameId == key,
+        //             isLock: !curData.haveHeadFrameIds.includes(parseInt(key))
+        //         })
+        //     }
+        // }
+        // this.__list_headFrame.array = dd123
+    }
+    onSelect(selectedIndex) {
+        GameMainPlayerInfo.defaultIndex = selectedIndex;
+        // 更改文字
+        let bs = this.__tab.items
+        this.origin_tab_labelColors = this.origin_tab_labelColors || this.__tab.labelColors;
+        for (let index = 0, length = bs.length; index < length; index++) {
+            const e = bs[index];
+            e.labelColors = this.origin_tab_labelColors;
+            e.labelStroke = 0;
+        };
+        bs[selectedIndex].labelStroke = 4;
+        bs[selectedIndex].labelColors = '#fff,#fff,#fff';
+
+        // let b = []
+        // this.sp_prop.visible = true;
+        // this.__list_headFrame.visible = false;
+        this.sp_cup_and_medal.visible = false;
+        this.sp_prop.visible = false;
+        if (selectedIndex == 0) {
+            this.sp_cup_and_medal.visible = true;
+        } else if (selectedIndex == 1) {
+            this.sp_prop.visible = true;
+        }
+    }
+}
+class S_playerinfo_goGarden extends Laya.Script {
+    async onClick(e) {
+        let lastSceneFunction
+        if (game.scene.get(Hall) && game.scene.get(Hall).parent) {
+            lastSceneFunction = () => {
+                __showScene.show_hall()
+            }
+        }
+        if (game.scene.get(HallPlay) && game.scene.get(HallPlay).parent) {
+            lastSceneFunction = async () => {
+                let b = game.scene.get(HallPlayLeft)
+                await __showScene.show_hall_play(HallPlay.lastCityId, 'normal', false, false)
+                game.scene.add(HallPlayRank)
+            }
+        }
+
+        let a = game.scene.get(GameMainPlayerInfo)
+        await game.server.send(15017, a.curUid)
+        await game.server.send(15013, a.curUid)
+        __data.lastSceneQueue.push(lastSceneFunction)
+        await __showScene.show_garden(false)
+        S_garden_rank_look.uid = a.curUid;
+        let vo = {
+            cityId: a.params_cityId,
+            head: a.params_head,
+            name: a.params_name,
+            rank: S_playerinfo_goGarden.rank,
+            score: S_playerinfo_goGarden.buildv,
+            uid: a.curUid,
+        }
+
+        game.cb.event('garden_remove_main_ui')
+        game.scene.add(GardenOther_leftUp, [vo])
+        game.scene.add(GardenOther_centerDown, ['rankLookOther'])
+        game.cb.event('garden_groud_toOtherGarden', [a.curUid, S_garden_rank_look.hashUsePositionIdCompId]);
+    }
+}
+class GameMainPlayerInfoItem1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_playerInfoItem1',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_prop_show_des_seasonRule)
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.txt_num.text = '×' + vo.num;
+        this.img_prop.skin = PropIcon.icon[vo.propId].skin
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_playerInfoItem1UI', GameMainPlayerInfoItem1);
+class GameMainPlayerInfoItem2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_playerInfoItem2',
+            module: false
+        })
+        this.__vo;
+        // this.addComponent(S_click_playerInfoItem2)
+        // this.addComponent(S_prop_show_des__123)
+        // this.btn_use.addComponent(S_click_playerInfoItem2_btn_use)
+
+        this.img_prop.on(Laya.Event.CLICK, this, this._useProp);
+
+    }
+    onEnable() {
+        // game.cb.on('S_click_playerInfoItem2', this, this.S_click_playerInfoItem2)
+    }
+    onDisable() {
+        // game.cb.off('S_click_playerInfoItem2', this, this.S_click_playerInfoItem2)
+    }
+
+    _useProp() {
+        let targetUid = game.scene.get(GameMainPlayerInfo).curUid;
+        if (!targetUid || targetUid == __data.uid) { return }
+
+        let data = PropIcon.icon[this.__vo.id];
+        let cross = false;
+        // 免费道具
+        if (data.buyType == 'free') {
+            cross = true;
+        } else {
+            // 收费道具  数量超过 0个
+            if (this.__vo.num > 0 || BagData.getPropNumber(601) > 0) {
+                cross = true;
+            } else {
+                // console.log('弹出购买界面!');
+                __showScene.show_shop_601();
+                // QuickBuyGift.to(targetUid, this.__vo.id, this.sendGiftAndThenCd.bind(this));
+            }
+        }
+        // 验证通过  可以发送道具
+        if (cross) {
+            this.sendGiftAndThenCd(targetUid, this.__vo.id);
+        }
+    }
+
+    sendGiftAndThenCd(uid, giftId) {
+        if (DeskCommonUI.scene == 1) //麻将 信息
+            game.server.send(5003, uid, giftId);
+        else if (DeskCommonUI.scene == 2) //斗地主信息
+            game.server.send(15003, uid, giftId);
+        this.pieCd = this.img_prop.addComponent(PieCd);
+        this.pieCd.start(3000);
+        game.scene.remove(GameMainPlayerInfo);
+    }
+
+    S_click_playerInfoItem2() {
+        // 使用头像框成功后需要执行此事件
+        // game.cb.event('update_head_frame');
+        // this.btn_use.visible = false;
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        this.sp_stone.visible = false
+        this.txt_free.visible = false
+        this.txt_num.visible = false
+        let p = PropIcon.icon[vo.id];
+        if (p.buyType == 'free') {
+            this.txt_free.visible = true
+        } else if (p.buyType == 'stone' && vo.num <= 0) {
+            this.sp_stone.visible = true
+            this.txt_stone.text = p.price;
+            __tool.labelParentCenterAndSetXY(this.sp_stone, this.width / 2, 5)
+        } else {
+            this.txt_num.visible = true
+            this.txt_num.text = vo.num + '次'
+        }
+        this.img_prop.skin = p.skin;
+        // this.txt_name.text = PropIcon.icon[vo.propId].name
+        // this.img_useing.visible = vo.isUseing ? true : false;
+        // this.img_lock.visible = vo.isLock ? true : false;
+        // this.btn_use.visible = false;
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_playerInfoItem2UI', GameMainPlayerInfoItem2);
+
+// class S_prop_show_des__123 extends S_click_show_des {
+//     onClick() {
+//         try {
+//             if (!this.owner.vo.isLock) return;
+//             this.useDes = PropIcon.icon[this.owner.vo.propId] && PropIcon.icon[this.owner.vo.propId].describe
+//             this.offy_down = 25
+//             this.offy_up = 80
+//             super.onClick()
+//         } catch (error) {
+//         }
+//     }
+// }
+
+// class S_click_playerInfoItem2 extends Laya.Script {
+//     onClick(e) {
+//         let a = game.scene.get(GameMainPlayerInfo)
+//         if (a.isGaming) return;
+//         if (this.owner.vo.isLock) return;
+//         if (this.owner.vo.propId == __data.headFrameId) return;
+//         game.cb.event('S_click_playerInfoItem2')
+//         this.owner.btn_use.visible = true;
+//     }
+// }
+// class S_click_playerInfoItem2_btn_use extends Laya.Script {
+//     onClick(e) {
+//         let a = game.scene.get(GameMainPlayerInfo)
+//         if (a.isGaming) return;
+//         if (this.owner.parent.vo.propId == __data.headFrameId) return;
+//         game.server.send(2253, this.owner.parent.vo.propId)
+//         game.cb.event('S_click_playerInfoItem2')
+//         e.stopPropagation()
+//     }
+// }
+// class S_playerInfo_list_mousemove extends Laya.Script {
+//     onEnable() {
+//         this.isMouseDown = false;
+//     }
+//     onMouseDown() {
+//         this.lastx = game.stage.mouseX
+//         this.lasty = game.stage.mouseY
+//         this.isMouseDown = true
+//     }
+//     onMouseMove() {
+//         if (this.isMouseDown) {
+//             // 有的手机 即时手不移动 也会触发mousemove 所以需要记录坐标对比
+//             if (this.lastx == game.stage.mouseX && this.lasty == game.stage.mouseY) return;
+//             else game.cb.event('S_click_playerInfoItem2')
+//         }
+//     }
+//     onMouseUp() {
+//         this.isMouseDown = false;
+//     }
+// }
+
+class S_playerInfo_auth extends Laya.Script {
+    onClick(e) {
+        if (miniApi.clientType == 'wx') {
+            miniApi.getUserProfile()
+        }
+        if (miniApi.clientType == 'app') {
+            let a = miniApi.getItem('loginType')
+            if (a == 'wx') {
+                miniApi.app_login_wx(() => {
+                    game.server.send(11001, __data.name, __data.head)
+                    game.cb.event('update_nameHead_me')
+                })
+            }
+        }
+    }
+}
+class QuickBuyGift {
+
+    static to(uid, giftId, done) {
+        this._quick = true;
+        this._uid = uid;
+        this._giftId = giftId;
+        this._done = done;
+        game.server.send(2404, this._giftId, 1, 0);
+    }
+
+    static do() {
+        this._done && this._done(this._uid, this._giftId);
+        this.clear();
+    }
+
+    static clear() {
+        this._quick = null;
+        this._uid = null;
+        this._giftId = null;
+        this._done = null;
+    }
+
+    static isQuick(id) {
+        let isGift = BagData.gifts.find((e) => {
+            return e == id;
+        })
+        return isGift && this._quick;
+    }
+}

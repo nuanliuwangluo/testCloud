@@ -1,0 +1,68 @@
+class S_mm_prop_turn extends Laya.Script {
+    onClick(e) {
+        let a;
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+        // } else {
+        a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+            && __data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone
+        // }
+        if (a) {
+            return __tips('本局道具使用次数已达上限')
+        }
+        if (!MjMatch_ui.isGameing) return
+        if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+        game.scene.add(MM_useProp, ['翻面', 'adunit-smallGame_turn', '将牌池内的牌全部翻向正面',
+            () => {
+                __sound.playGameYx('click_card')
+                __data.mjSmallGame.vibrate()
+                let array = S_3D_mjMatch.deskCard
+                for (let index = 0, length = array.length; index < length; index++) {
+                    const e = array[index];
+                    let isfan = isCubeFacingDown(e)
+                    if (isfan) {
+                        let worldPos = e.transform.position.clone();
+                        e.transform.rotationEuler = new Laya.Vector3(0, e.transform.rotation.y, 0)
+                        e.transform.position = worldPos;
+                    }
+                };
+            }
+        ])
+    }
+}
+
+/**
+ * 判断 Cube 是否“不朝上”（局部 Y 轴与世界 Y 轴夹角 > thresholdAngle）
+ * @param cube Laya.Sprite3D
+ * @param thresholdAngle 阈值角度（度），默认 60
+ * @returns boolean - true 表示“朝下”（即不朝上）
+ */
+function isCubeFacingDown(cube, thresholdAngle = 60) {
+    // 1. 获取世界变换矩阵
+    let worldMatrix = cube.transform.worldMatrix;
+
+    // 2. 提取局部 Y 轴在世界空间的方向（worldMatrix 第 2 列）
+    let worldYAxis = new Laya.Vector3(
+        worldMatrix.elements[4],  // X
+        worldMatrix.elements[5],  // Y
+        worldMatrix.elements[6]   // Z
+    );
+
+    // 3. 归一化（防止缩放影响方向）
+    Laya.Vector3.normalize(worldYAxis, worldYAxis);
+
+    // 4. 世界 Y 轴方向
+    let worldUp = new Laya.Vector3(0, 1, 0);
+
+    // 5. 计算点积（= cosθ）
+    let dot = Laya.Vector3.dot(worldYAxis, worldUp);
+    // 限制范围防止 NaN
+    dot = Math.max(-1, Math.min(1, dot));
+
+    // 6. 计算夹角（弧度 → 度）
+    let angle = Math.acos(dot) * 180 / Math.PI;
+
+    // 7. 判断是否超过阈值
+    return angle > thresholdAngle;
+}

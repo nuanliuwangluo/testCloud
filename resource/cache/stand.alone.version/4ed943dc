@@ -1,0 +1,42 @@
+// 晋级失败
+class GameCommonPromoteWin extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game_common/game_common_promoteWin',
+            layer: 'panel'
+        })
+        this.btn_share.addComponent(S_click_gameCommon_promoteWin_share);
+        this.btn_leave.addComponent(S_click_gameCommon_promoteWin_leave);
+        this.btn_againJoin.addComponent(S_click_gameCommon_promoteWin_againJoin);
+    }
+    onAwake() {
+        let url = {};
+        for (let index = 0, length = 10; index < length; index++)
+            url[index] = 'local/game_common/1/' + index + '.png';
+        this.txt_rank = new game.NumText(url);
+        this.addChild(this.txt_rank);
+        game.utils.remove(this.img_d)
+        this.txt_rank.align = 'center';
+        this.txt_rank.x = this.img_d.x;
+        this.txt_rank.y = this.img_d.y;
+    }
+    added() {
+        this.updateRank(88)
+    }
+    updateRank(__r) {
+        this.txt_rank.text = __r;
+        this.font_d.x = this.txt_rank.x - this.txt_rank.width / 2 - 20 - this.font_d.width;
+        this.font_m.x = this.txt_rank.x + this.txt_rank.width / 2 + 20;
+    }
+}
+class S_click_gameCommon_promoteWin_share extends Laya.Script {
+    onClick() { }
+}
+class S_click_gameCommon_promoteWin_leave extends Laya.Script {
+    onClick() {
+        game.scene.remove(this.owner.parent)
+    }
+}
+class S_click_gameCommon_promoteWin_againJoin extends Laya.Script {
+    onClick() { }
+}

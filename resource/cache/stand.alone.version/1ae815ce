@@ -1,0 +1,4076 @@
+class MahjongConfig {
+
+    static get lorp() {
+        if (game.width / game.height < 1.95)
+            return 74;
+        else
+            return 78;
+    }
+
+    static get resHead() {
+        let url = '';
+        return url;
+    }
+
+    static get res_common_3D() {
+        return [
+            // 'src/scene_game_common/desk.common.js' + __version.src,
+            // 'src/scene_game_common/chat.js' + __version.src,
+            // 'src/scene_game_common/desk.dissolve.js' + __version.src,
+            // 'src/scene_game_common/desk.result.bg.js' + __version.src,
+            // 'src/scene_game_common/desk.player.info.js' + __version.src,
+            // 'src/scene_game_common/desk.replay.js' + __version.src,
+            // 'src/scene_game_common/desk.map.js' + __version.src
+        ]
+    }
+    // cityId
+    static get res_$1_3D() {
+        return [
+            'src/scene_mj/heilongjiang/cmmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/cmmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/cmmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/cmmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/cmmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/cmmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_$2_3D() {
+        return [
+            'src/scene_mj/heilongjiang/dzmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/dzmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/dzmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/dzmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/dzmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/dzmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_$3_3D() {
+        return [
+            'src/scene_mj/hzlzmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/hzlzmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/hzlzmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/hzlzmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/hzlzmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/hzlzmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_$4_3D() {
+        return [
+            'src/scene_mj/guangdong/gdmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/guangdong/gdmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/guangdong/gdmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/guangdong/gdmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/guangdong/gdmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/guangdong/gdmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_1_3D() {
+        return [
+            'src/scene_mj/heilongjiang/mlmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/mlmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/mlmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/mlmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/mlmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_3_3D() {
+        return [
+            'src/scene_mj/heilongjiang/dqmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/dqmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/dqmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/dqmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/dqmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/dqmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_7_3D() {
+        return [
+            'src/scene_mj/heilongjiang/hebmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/hebmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/hebmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/hebmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/hebmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/hebmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_8_3D() {
+        return [
+            'src/scene_mj/heilongjiang/fzmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/fzmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/fzmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/fzmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/fzmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/fzmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_9_3D() {
+        return [
+            'src/scene_mj/heilongjiang/bxmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/bxmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/bxmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/bxmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/bxmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_10_3D() {
+        return [
+            'src/scene_mj/heilongjiang/thmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/thmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/thmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/thmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/thmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/thmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_13_3D() {
+        return [
+            'src/scene_mj/heilongjiang/fjmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/fjmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/fjmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/fjmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/fjmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_14_3D() {
+        return [
+            'src/scene_mj/heilongjiang/ysmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/ysmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/ysmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/ysmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/ysmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/ysmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_17_3D() {
+        return [
+            'src/scene_mj/heilongjiang/namj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/namj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/namj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/namj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/namj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_21_3D() {
+        return [
+            'src/scene_mj/heilongjiang/tymj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/tymj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/tymj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/tymj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/tymj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/tymj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_128_3D() {
+        return [
+            'src/scene_mj/heilongjiang/hnmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/hnmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/hnmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/hnmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/hnmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/hnmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_162_3D() {
+        return [
+            'src/scene_mj/heilongjiang/fymj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/fymj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/fymj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/fymj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/fymj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/fymj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_127_3D() {
+        return [
+            'src/scene_mj/heilongjiang/jmsmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/jmsmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/jmsmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/jmsmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/jmsmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/jmsmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_129_3D() {
+        return [
+            'src/scene_mj/heilongjiang/tjmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/tjmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/tjmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/tjmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/tjmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/tjmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_103_3D() {
+        return [
+            'src/scene_mj/heilongjiang/qqhemj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/qqhemj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/qqhemj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/qqhemj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/qqhemj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/qqhemj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_104_3D() {
+        return [
+            'src/scene_mj/heilongjiang/nhmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/nhmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/nhmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/nhmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/nhmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/nhmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_111_3D() {
+        return [
+            'src/scene_mj/heilongjiang/tlmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/tlmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/tlmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/tlmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/tlmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/tlmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_113_3D() {
+        return [
+            'src/scene_mj/heilongjiang/jxmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/jxmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/jxmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/jxmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/jxmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/jxmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_117_3D() {
+        return [
+            'src/scene_mj/heilongjiang/hgmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/hgmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/hgmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/hgmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/hgmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/hgmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_118_3D() {
+        return [
+            'src/scene_mj/heilongjiang/sysmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/sysmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/sysmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/sysmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/sysmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/sysmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_131_3D() {
+        return [
+            'src/scene_mj/heilongjiang/mdjmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/mdjmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/mdjmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/mdjmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/mdjmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/mdjmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_137_3D() {
+        return [
+            'src/scene_mj/heilongjiang/hhmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/hhmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/hhmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/hhmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/hhmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/hhmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_141_3D() {
+        return [
+            'src/scene_mj/heilongjiang/shmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/heilongjiang/shmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/heilongjiang/shmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/heilongjiang/shmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/heilongjiang/shmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/heilongjiang/shmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_252_3D() {
+        return [
+            'src/scene_mj/anhui/whmj/mahjong.msg.read.js' + __version.src,
+            'src/scene_mj/anhui/whmj/mahjong.msg.send.js' + __version.src,
+            'src/scene_mj/anhui/whmj/mahjong.operation.js' + __version.src,
+            'src/scene_mj/anhui/whmj/mahjong.replay.js' + __version.src,
+            'src/scene_mj/anhui/whmj/3D/mahjong.desk.js' + __version.src,
+            'src/scene_mj/anhui/whmj/3D/mahjong.card.js' + __version.src
+        ]
+    }
+
+    static get res_3D_Arr() {
+
+        // let h = ResUtils_cdn_filedor.includes('cdn/') ? 'https://cdn.snyngame.com/mahjong/' + config.resFolderVersion + '/' : config.urlHead
+
+        return [{ "url": config.urlHead + "res/atlas/local/gameMain_lookVideo/1.atlas" + __version.res, "type": Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/button/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/game_common/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+
+        { 'url': config.urlHead + 'res/atlas/local/chat/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/gift/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/mahjong_common/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/mahjong_match/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/mahjong_effect/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': config.urlHead + 'res/atlas/local/mahjong_operation/1.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/mahjong_result/mahjong_result.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/mahjong_br/mahjong_br.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/fire/fire.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/video_operation/video_operation.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/main_icons.atlas' + __version.res, type: Laya.Loader.ATLAS },
+
+        { 'url': 'res/atlas/cdn/mahjong_details.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/mahjong_ma.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/mahjong_ting.atlas' + __version.res, type: Laya.Loader.ATLAS },
+        { 'url': 'res/atlas/cdn/mahjong_pochan.atlas' + __version.res, type: Laya.Loader.ATLAS },
+
+        { 'url': config.urlHead + 'local/game_common/1/img_rc_cqqs.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/game_common/1/img_rc_xyqs.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_common/1/img_lxyd.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_common/1/wait_mine.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_common/1/wait_others.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_effect/1/dyAni.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_effect/1/img_fish.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_effect/1/img_hyy.png' + __version.res, type: Laya.Loader.IMAGE },
+        { 'url': config.urlHead + 'local/mahjong_effect/1/img_szy.png' + __version.res, type: Laya.Loader.IMAGE },
+
+        { 'url': config.urlHead + 'ab/bag/img_tsbox.png' + __version.res, type: Laya.Loader.IMAGE },
+
+        { 'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/gui.png', type: Laya.Loader.IMAGE },
+        { 'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/hun.png', type: Laya.Loader.IMAGE },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bao.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/sign.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/ting.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dir.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bei.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/compress.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/desk1.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/desk2.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dong.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/floor_left.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/floor_right.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/ting_point.jpg',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/MahjongTile.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/MahjongTile02.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/MahjongTile03.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/nan.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/xi.png',
+            type: Laya.Loader.IMAGE
+        },
+
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/sign.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/ting.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/dir.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/bei.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/compress.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/desk1.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/desk2.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/dong.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/floor_left.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/floor_right.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/ting_point.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile_Mobile_Legacy.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile02.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/nan.lmat'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/xi.lmat'
+        },
+
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_1.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_3.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_5.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_7.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_8.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_9.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_10.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_11.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_12.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_13.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_14.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_15.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_16.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_17.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_18.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_19.png',
+            type: Laya.Loader.IMAGE
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_20.png',
+            type: Laya.Loader.IMAGE
+        },
+
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/1-Cylinder001.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/2-Cylinder001.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_1.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_2.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_3.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_4.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_5.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_6.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_7.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_8.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Bam_9.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_1.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_2.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_3.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_4.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_5.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_6.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_7.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_8.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Crak_9.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_1.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_2.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_3.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_4.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_5.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_6.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_7.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_8.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dot_9.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dragon_Blank.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dragon_Green.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dragon_Red.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Dragon_White.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Flower_1.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Flower_2.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Flower_3.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Flower_4.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Season_1.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Season_2.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Season_3.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Wind_East.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Wind_North.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Wind_South.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/MahjongTiles-Wind_West.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/ting-Box001.lm'
+        },
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Models/ting-Sphere001.lm'
+        },
+
+        {
+            'url': this.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/MahjongTilePack.ls'
+        }
+        ]
+    }
+
+    static get HEILONGJIANG_COMMON() { return '-1'; }
+
+
+    static getUniqueId(gameId, ruleId) {
+        // 那就是个通用玩法
+        if (ruleId < 0) {
+            // 负号不可以用 所以转换一下前端
+            ruleId = ruleId.toString().replace('-', '$');
+            return ruleId;
+        } else {
+            return gameId;
+        }
+    }
+
+    static getRes() {
+        let __resArr = [];
+        // 麻将牌资源
+        __resArr = MahjongConfig.res_3D_Arr.concat({
+            'url': 'res/atlas/local/mahjong_2D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/1.atlas' + __version.res,
+            type: Laya.Loader.ATLAS
+        });
+        //通河方正特殊特效
+        // if (__data.domain == 8 || __data.domain == 10) { __resArr = __resArr.concat({ 'url': 'res/atlas/bigEffect.atlas' + __version.res, type: Laya.Loader.ATLAS }) }
+        trace('所需资源：', __resArr)
+        return __resArr;
+    }
+
+    static getSrc(gameId, ruleId) {
+        if (config.isCoreMinJS) { return []; }
+        let uniqueId = this.getUniqueId(gameId, ruleId);
+        if (MahjongConfig['res_' + uniqueId + '_' + '3D']) {
+            return MahjongConfig['res_' + uniqueId + '_' + '3D'];
+        } else {
+            console.warn('Id异常!!!');
+        }
+    }
+
+    static getName(gameId, ruleId) {
+        if (ruleId < 0) {
+            return excelUtils.getCityName_mj(gameId, ruleId) || ''
+        } else if (__data.excelConfig.hashCityIdVO[gameId]) {
+            return excelUtils.getCityName_mj(gameId, ruleId) || ''
+        } else {
+            return "";
+        }
+    }
+
+    static getMusicPath(ruleId) {
+        let number = __data.excelConfig.hashPlayIdMusic[ruleId] || '2';
+        return `s${number}/`;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2019-12-23 12:50:46
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-30 10:23:39
+ */
+
+'use strict';
+
+var gameConfig = {
+
+    keepWinRule: 2,
+
+    create_room_1: {
+        tag: [{
+            name: '木兰麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'ml_mj',
+
+            optionID: 'MlmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,9,10,11,12' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '木兰',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+    },
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_$1: {
+        
+
+        tag: [{
+            name: '大庆麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'dq_mj',
+
+            optionID: 'DqmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '大庆',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+    create_room_$2: {
+        
+
+        tag: [{
+            name: '大众竞技麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'dq_mj',
+
+            optionID: 'DqmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '大庆',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_$3: {
+        
+
+        tag: [{
+            name: '大众竞技麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'dq_mj',
+
+            optionID: 'DqmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '大庆',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+
+
+    create_room_$4: {
+        
+
+        tag: [{
+            name: '广东麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'gd_mj',
+
+            optionID: 'GdmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '广东',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '鬼'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_3: {
+        
+
+        tag: [{
+            name: '大庆麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'dq_mj',
+
+            optionID: 'DqmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '大庆',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_5: {
+        
+
+        tag: [{
+            name: '巴彦麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'by_mj',
+
+            optionID: 'BymjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33, 34, 35]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9,10' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '巴彦',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_7: {
+        
+
+        tag: [{
+            name: '哈尔滨麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_113: {
+        
+
+        tag: [{
+            name: '鸡西麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_117: {
+        
+
+        tag: [{
+            name: '鹤岗麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: false,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_118: {
+        
+
+        tag: [{
+            name: '双鸭山麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: false,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_131: {
+        
+
+        tag: [{
+            name: '牡丹江麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_137: {
+        tag: [{
+            name: '牡丹江麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+
+    create_room_141: {
+        
+
+        tag: [{
+            name: '绥化麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_252: {
+        
+
+        tag: [{
+            name: '牡丹江麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'harbin_mj',
+
+            optionID: 'HarbinmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '哈尔滨',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: false,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+
+    create_room_128: {
+        
+
+        tag: [{
+            name: '桦南麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'hn_mj',
+
+            optionID: 'HnmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '11', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6,7,8,9' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '桦南',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: false,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: false,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_8: {
+        
+
+        tag: [{
+            name: '方正麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fz_mj',
+
+            optionID: 'FzmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    xi: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '方正',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: true,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+    create_room_103: {
+        
+
+        tag: [{
+            name: '方正麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fz_mj',
+
+            optionID: 'FzmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    xi: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '方正',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: true,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+
+
+
+    create_room_104: {
+        
+
+        tag: [{
+            name: '方正麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fz_mj',
+
+            optionID: 'FzmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    xi: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '方正',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: true,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_111: {
+        
+
+        tag: [{
+            name: '方正麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fz_mj',
+
+            optionID: 'FzmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    xi: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11,12,13' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '方正',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: true,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_9: {
+        
+
+        tag: [{
+            name: '宾县麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'bx_mj',
+
+            optionID: 'BxmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    ke: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '宾县',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_10: {
+        
+
+        tag: [{
+            name: '通河麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'th_mj',
+
+            optionID: 'ThmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    xi: 1, //亮喜的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '7,8,9,10,11,12,13,14' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '通河',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: true,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_12: {
+        
+
+        tag: [{
+            name: '阿城麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'ac_mj',
+
+            optionID: 'AcmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '阿城',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_13: {
+        
+
+        tag: [{
+            name: '富锦麻将',
+            name_tail: '(带混)', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fj_dh_mj',
+
+            optionID: 'FjmjDhOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '98', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    hun: 0, //混个数的选项   0 为第一种   依次+1   选项依次类推
+                    hunWf: 0, //混玩法的选项
+                    hunScore: 0, //混分的选项
+                    hzhScore: 0 //红中混分的选项
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        },
+        {
+            name: '富锦麻将',
+            name_tail: '(带宝)', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fj_db_mj',
+
+            optionID: 'FjmjDbOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '99', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '100,101,102,103,104,105,107,111,113,114' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '富锦',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: false,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_14: {
+        
+
+        tag: [{
+            name: '延寿麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'ys_mj',
+
+            optionID: 'YsmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '8', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '4,5,6' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '延寿',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    },
+
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+
+    create_room_16: {
+        
+
+        tag: [{
+            name: '呼兰麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'hl_mj',
+
+            optionID: 'HlmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '44,5,6,7,8' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '呼兰',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_17: {
+        
+
+        tag: [{
+            name: '宁安麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'na_mj',
+
+            optionID: 'NamjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    scoreType: 0 // 0 抻直算分   1  传统算分
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '宁安',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: false,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_21: {
+        
+
+        tag: [{
+            name: '汤原麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'ty_mj',
+
+            optionID: 'TymjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    scoreType: 0 // 0 抻直算分   1  传统算分
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '汤原',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_162: {
+        
+
+        tag: [{
+            name: '抚远麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'fy_mj',
+
+            optionID: 'FymjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    scoreType: 0 // 0 抻直算分   1  传统算分
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '抚远',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '掫鱼'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_127: {
+        
+
+        tag: [{
+            name: '佳木斯麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'jms_mj',
+
+            optionID: 'JmsmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    scoreType: 0 // 0 抻直算分   1  传统算分
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '佳木斯',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+    create_room_129: {
+        
+
+        tag: [{
+            name: '同江麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'tj_mj',
+
+            optionID: 'TjmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 1, 2],
+                //底分
+                createScoreNumber: [31, 32, 33]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    scoreType: 0 // 0 抻直算分   1  传统算分
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '同江',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            checkIgnore:true,
+            show: true,
+            txt: '混'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_19: {
+        
+
+        tag: [{
+            name: '尚志麻将',
+            name_tail: '', //名字注释
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'sz_mj',
+
+            optionID: 'SzmjOption',
+            //玩法
+            play: [],
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0, 2, 3],
+                //底分
+                createScoreNumber: [31]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 0, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                    hzScore: 0, //混分数的选项   0 为第一种   依次+1   选项依次类推
+                },
+                play: '4,6' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '尚志',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: true,
+        
+        
+    },
+
+
+
+
+
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------------------------------------
+    create_room_20: {
+        
+
+        tag: [{
+            name: '五常麻将',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'wc_mj',
+
+            optionID: 'WcmjOption',
+            //玩法
+            play: '我是一号',
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0],
+                //底分
+                createScoreNumber: [31, 32, 33, 34]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '98,6', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '5,7,8,10,12,13,14,16' //玩法所代表的数字
+            },
+            //第一种特殊玩法的玩法集合
+            create_s_0: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            //第二种特殊玩法的玩法集合
+            create_s_1: [1, 2, 3, 4, 5, 6, 8, 9, 11, 12, 13],
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        },
+        {
+            name: '五常麻将',
+            name_tail: '(山河)',
+            //别名  用于区分 麻将斗地主  或者以后加入得其它的游戏的
+            alias: 1,
+            //分区设置存储版本
+            local_version: '0.0.11',
+            //玩法本地存储的尾巴
+            tail: 'sh_mj',
+
+            optionID: 'WcmjShOption',
+            //玩法
+            play: '我是一号',
+            //是否可以自动踢人
+            auto_kick: true,
+            //普通创建房间数据
+            createData: {
+                //普通创建房间模式   都有哪几种
+                createKindArr: ['房主模式', 'AA模式', '体验模式'],
+                //创建房间模式对应的 编号  和 createKindArr 相对应
+                createModelNumber: [1, 2, 3],
+                //创建房间人数对应的选项
+                createPlayerNumber: [2, 3, 4],
+                //回合数代表的编号
+                createRoundNumber: [1, 2],
+                //封顶
+                createMaxScoreNumber: [0],
+                //底分
+                createScoreNumber: [31, 32, 33, 34]
+            },
+
+            //默认玩法   可根据不同地区  添加不同属性（即玩法选项  如 方正亮喜特殊规则 等等）
+            defaultPlay: {
+                model: 0, // 0 createKindArr 下标  
+                player: 0, // 2 人  0      3人  1      4人 2      斗地主没2
+                round: 1, // 第一种圈局数量选择     会随着人数的变动而不同     0或者1
+                maxScore: 0, //封顶选择   0 为第一种   依次+1   选项依次类推
+                score: 1, //分数选择   0 为第一种   依次+1   选项依次类推
+                limit: '7', //3 为 距离限制开启     4 为 IP相同限制      踢人限制   
+                hidePlay: '99', //隐藏玩法  不让用户看到的玩法   但是必须由前端发送给后端的玩法
+                //特殊玩法
+                special: {
+                    //这里面的属性 必须与scene  中  var  一致 
+                },
+                play: '' //玩法所代表的数字
+            },
+
+            //玩法数组
+            playArr: [],
+            //房间限制
+            limitArr: [],
+            //踢人时间  需要注意与选项中一致  单位秒
+            kickTimeArr: [10, 60, 300],
+
+            initPlay: function () { }
+
+        }
+        ],
+
+        
+
+        
+        //默往的分享方式  common为普通分享方式   其它为image分享
+        mwShareType: 'common',
+
+        shareName: '五常',
+        //不需要查询直接进入房间  true 为直接进入房间   false 为需要查询一次   用户看到后再决定是否进入房间
+        directJoin: false,
+        //是否有宝或者混   或者别的啥
+        haveNb: {
+            show: true,
+            txt: '宝'
+        },
+        //胡牌人是否为多个胡牌者 (解析, 版本定死后始终未true)
+        readMulAnalysis: true,
+        //是否需要有听的标志和音效
+        needlisten: true,
+        //特殊牌
+        esp: false,
+        
+        
+    }
+};
+
+
+class MahjongTexture2D {
+    static createTexture(data, group = ''){
+        if(this.textures[`${group}_${data.value}`]){
+            return this.textures[`${group}_${data.value}`];
+        }else{
+            // 1. 创建一个临时的 2D Sprite 容器
+            let textSprite = new Laya.Sprite();
+            // 2. 添加文字组件
+            let txt = new Laya.Label();
+            txt.font = "Arial";
+            txt.fontSize = data.fontSize || 48;
+            txt.padding = '2,0,0,0';
+            txt.color = data.color || "#ffffff";
+            txt.bold = data.bold || true;
+            txt.overflow = 'visible';
+            txt.align = "left";   // 水平居中
+            txt.valign = "middle";  // 垂直居中
+            txt.text = data.value || ' ';
+
+            let width = data.width || Math.max(txt.textField.textWidth, txt.textField.textHeight);  // 贴图宽度
+            let height = data.height || Math.max(txt.textField.textWidth, txt.textField.textHeight); // 贴图高度
+            textSprite.size(width, height);
+            // 可选：添加描边效果，增强在 3D 场景中的可读性
+            textSprite.addChild(txt).pos(width - txt.textField.textWidth >> 1, height - txt.textField.textHeight >> 1);
+            let texture = textSprite.drawToTexture(width, height, 0, 0);
+            this.textures[`${group}_${data.value}`] = texture.bitmap;
+            return this.textures[`${group}_${data.value}`];
+
+            // 原有3d文字实现方式
+            // data.width = data.width || 256;
+            // data.height = data.height || 256;
+            // data.font = data.font || "bold 44px 黑体";
+            // data.color = data.color || '#ffffff';
+            // //画布cavans
+            // let cav = Laya.Browser.createElement("canvas");
+            // var cxt = cav.getContext("2d");
+            // cav.width = data.width;
+            // cav.height = data.height;
+            // cxt.fillStyle = data.color;
+            // cxt.font = data.font;
+            // cxt.bolder = true;
+            // cxt.textAlign = "center"; //文本的对齐方式
+            // cxt.textBaseline = "middle"; //文本相对于起点的位置
+            // //设置文字,位置
+            // cxt.fillText(data.value, data.width / 2, data.height / 2, data.width); //有填充cxt.font="bold 60px 宋体";
+            // // cxt.fillRect(0,0,data.width,data.height)
+            // // cxt.fill();
+            // let texture2D = new Laya.Texture2D(cav.width, cav.height);
+            // texture2D.loadImageSource(cav);
+            // this.t3dMap[`${group}_${data.value}`] = texture2D;
+            // return texture2D;
+        }
+    }
+
+    static get textures(){
+        if(!this._textures){
+            this._textures = {};
+        }
+        return this._textures;
+    }
+}

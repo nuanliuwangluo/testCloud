@@ -1,0 +1,248 @@
+// 结算数据详情
+class MahjongResultDetailsData{
+    static setDetails(value){  
+        this._details = value;
+        console.log('%c结算Details', 'color:#ff0000');
+        console.log('结算Details->', this._details);
+    }
+    static getDetails(){ return this._details; }
+}
+
+// 听牌前数据详情
+class MahjongBeforeTingDetailsData{
+    static clear(){ this._details = {}; }
+    static setDetails(code, value){  
+        this._details[code] = value;
+        console.log('%c听牌前Details', 'color:#ff0000');
+        console.log('听牌前Details->', this._details);
+    }
+    static getDetails(code){ 
+        return this._details && this._details[code] ? this._details[code] : {};
+    }
+}
+// 听牌后数据详情
+class MahjongAfterTingDetailsData{
+    static setDetails(value){
+        this._details = value;
+        console.log('%c听牌后Details', 'color:#ff0000');
+        console.log('听牌后Details->', this._details);
+    }
+    static getDetails(){ 
+        return this._details ? this._details : {};
+    }
+}
+
+// 结算的积分按规则处理一下
+class ResultDetailsNumbersRule{
+    static getStringNumbers(value){
+        if(value == 0){
+            return '-0';
+        }else if(value > 0){
+            return `+${value}`;
+        }else{
+            return value;
+        }
+    }
+
+    static setNumbersColor(txt, value){
+        if(value > 0){
+            txt.color = '#53b104';
+        }else{
+            txt.color = '#dc635f';
+        }
+    }
+}
+// 详情开放大区列表
+const DetailsOpenList = [FriendRoomPlays.AREA.HONGZHONGLAIZI, FriendRoomPlays.AREA.GUANGDONG, FriendRoomPlays.AREA.FUJIN];
+class MahjongResultDetails extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultDetails',
+            layer: 'panel'
+        })
+        this.mouseThrough = true;
+        this.titleObj = { 
+            "本家":`cdn/mahjong_details/img_bjxq.png`,
+            "上家":`cdn/mahjong_details/img_sjxq.png`,
+            "下家":`cdn/mahjong_details/img_xjxq.png`,
+            "对家":`cdn/mahjong_details/img_djxq.png`
+        }
+        this.bg.on(Laya.Event.CLICK, this, ()=>{})
+    }
+
+    onDisable(){
+        this.clearBox();
+    }
+
+    added(data) {
+        this._data = data;
+        this.allDetails = ScoreParser.parse(this._data.details, this._data.player.position, HallPlay.curRuleId);// 所有关于 this._data.player.position 这个位置的人的输赢信息
+        trace('详情：', this.allDetails);
+        this.updateUI();
+        this.updateDetails();
+    }
+
+    clearBox(){
+        while (this.box.numChildren) this.box.removeChildAt(0);
+    }
+
+    updateUI(){
+        this.ui.dataSource = this._data.player;
+        SkinUtils.setSkin(this.title, this.titleObj[PositionRelation.getRelation(this._data.position, this._data.player.position)]);
+    }
+
+    updateDetails(){
+        if(DetailsOpenList.indexOf(HallPlay.curRuleId) >= 0){
+            this.total.visible = true;
+            let records = this.getRecords();
+            this.box.size(0,0);
+            this.box.pos(0,0);
+            for(let i = 0;i < records.length;i++){
+                let item = new MahjongResultDetailsItem();
+                item.setDetails(records[i], this._data.position, this._data.playerArray, __data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND);
+                this.box.addChild(item);
+            }
+            // 好友房不需要显示 倍数， 直接显示分数
+            if(__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND){
+                this.txt_all.text = `${ResultDetailsNumbersRule.getStringNumbers(this._data.player.score)}`;
+                ResultDetailsNumbersRule.setNumbersColor(this.txt_all, this._data.player.score);
+            }else{
+                // 金币场按倍数显示 (如果赢取的金币>0 则显示正倍数)
+                let rate = this._data.player.score > 0 ? (this._data.player.originScore / __data.deskData.roomVo.bottomScore) : -(this._data.player.originScore / __data.deskData.roomVo.bottomScore);
+                this.txt_all.text = `${ResultDetailsNumbersRule.getStringNumbers(rate)}倍`;
+                ResultDetailsNumbersRule.setNumbersColor(this.txt_all, rate);
+            }
+            
+            Laya.timer.callLater(this, this.relocation);// 因为item中存在html文本，宽高都需要延迟计算才可以
+        }else{
+            this.total.visible = false;
+            this.height = this.bg.height = 350;
+            this.comp_addedParams_updatePosition.updatePosition();
+        }
+    }
+
+    // 重新计算
+    relocation(){
+        let height = 0;
+        for(let i = 0;i < this.box.numChildren;i++){
+            let item = this.box.getChildAt(i);
+            item.y = height + i * 10;
+            height = item.y + item.height;
+        }
+        this.box.pos(this.width - this.box.width >> 1, this.ui.y + this.ui.height + 25);
+        this.total.x = this.width - this.total.width - 95;
+        this.total.y = this.box.y + this.box.height + 20;
+        this.height = this.bg.height = this.total.y + this.total.height + 60;
+        this.comp_addedParams_updatePosition.updatePosition();
+    }
+
+    getRecords(){
+        let others = this.exclude([1,2,3,4], this._data.player.position);// 排除 this._data.player.position 这个位置的人的其它人的位置
+        let records = [];
+        for(let i = 0;i < others.length;i++){ // 遍历其它位置的人
+            let isWinner = this._data.winners.some(value=> value == others[i]);// 当前查找的位置的人是输还是赢，
+            let details = DisplayCombiner.displays(this.allDetails, others[i], isWinner, HallPlay.curRuleId);// 看该位置的人与 this._data.player.position 位置人的输赢关系
+            if(details.final){ records.push(details); }// 存在输赢关系，那么保留记录
+        }
+        return records;
+    }
+
+    exclude(array, value){
+        return array.filter(item => item != value);
+    }
+
+    // clickMask() { }
+}
+
+
+class MahjongResultDetailsItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultDetailsItem',
+            module: false
+        })
+        this.max.on(Laya.Event.CLICK, this, this._lookExplain);
+    }
+
+    onDisable(){
+        BagInfoUtils.close();
+    }
+
+    setDetails(details, self_position, players, isFriend = false){
+        this.details = details;// 详情信息
+        this.self_position = self_position;// 我自己的位置，用于计算  哪一家
+        this.players = players;// 所有用户的数据
+        this.isFriend = isFriend;// 是否为好友房
+        this.updateUI();
+    }
+
+    _lookExplain(e){
+        let point = this.localToGlobal(new Laya.Point(this.max.x + this.max.width / 2, this.max.y + this.max.height));
+        BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+        BagInfoUtils.show(`本场失败损失上限${GoldMatchMaxRate}倍`, point, game.scene.layer['panel1'].c);
+    }
+
+    updateUI(){
+        this.cur.text = PositionRelation.getRelation(this.self_position, this.details.sourcePosition);
+        this.other.text = PositionRelation.getRelation(this.self_position, this.details.targetPosition);
+
+        if(this.isFriend){// 好友房
+            let maxScore = FriendRoomPlays.getPlaysScoreMax(HallPlay.curRuleId, __data.deskData.roomVo.roomPlay);// 获取封顶
+            let score = this._getScoreByMax(this.details.summary, maxScore);// 获取一个 基于封顶的分数
+            this.max.visible = false;// 隐藏上线标签
+            this.total.text = `${ResultDetailsNumbersRule.getStringNumbers(score)}`;
+            ResultDetailsNumbersRule.setNumbersColor(this.total, score);
+        } else{ // 金币房才显示上限 标识
+            this.max.visible = Math.abs(this.details.summary) >= GoldMatchMaxRate;// 输赢上限都达到256倍的情况下 都显示上限
+            this.total.text = `${this.details.summary > 0 ? ResultDetailsNumbersRule.getStringNumbers(Math.min(GoldMatchMaxRate, this.details.summary)) : ResultDetailsNumbersRule.getStringNumbers(Math.max(-GoldMatchMaxRate, this.details.summary))}倍`;// 倍数最高展示为256倍
+            ResultDetailsNumbersRule.setNumbersColor(this.total, this.details.summary);
+        }
+
+        let args = [
+            this.html, 
+            { align: 'left', valign: 'top', fontSize: this.cur.fontSize, bold: false, leading: 15, width: 660, color: '#000000' },
+            ...this.getDetailsInfo()
+        ]
+        HtmlTextUtils.text.apply(null, args);
+        Laya.timer.callLater(this, this._relocationHtml);
+    }
+
+    /**
+     * 根据封顶获取一个数值
+     * @param {*} score 
+     * @param {*} max 
+     */
+    _getScoreByMax(score, max){
+        // 无封顶
+        if(max == 0){
+            return score;
+        }else{
+            // 分数小于0
+            if(score < 0){
+                return Math.max(-max, score);
+            }else{ // 分数大于0  需要取一个封顶以下的分数
+                return Math.min(max, score);
+            }
+        }
+    }
+
+    _relocationHtml(){
+        this.height = this.bg.height = this.html.y * 2.5 + this.html.displayHeight;
+        this.cur.y = this.height - this.cur.height >> 1;
+        this.other.y = this.height - this.other.height >> 1;
+        this.total.y = this.height - this.total.height >> 1;
+        this.sign.y = this.height - this.sign.height >> 1;
+        this.max.y = this.total.y + this.total.height + 5;
+    }
+
+    getDetailsInfo(){
+        let array = [];
+        for(let i = 0;i < this.details.tokens.length;i++){
+            let element = this.details.tokens[i];
+            array.push(element.value);
+            // array.push({color:element.highlight ? '#2a1d1a' : '#ec7413'}); // bold:element.highlight 加粗
+            array.push({bold:element.highlight, color:element.highlight ? '#ec7413' : '#ec7413'}); // bold:element.highlight 加粗
+        }
+        return array;
+    }
+}

@@ -1,0 +1,39 @@
+
+class HallPlayCenterDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_playCenterDown',
+            right: true,
+            down: true,
+            offx: () => {
+                return -miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        // this.btn_rank.addComponent(S_click_HallPlay_rank)
+        // this.btn_season.addComponent(S_click_HallPlay_season)
+        // this.btn_MingRen.addComponent(S_click_show_mingRen)
+        this.btn_quick_start.addComponent(S_hall_play_quick_start);
+        this.btn_friendRoom.addComponent(S_hall_play_show_friendRoom);
+        this.btn_friendRoom.addComponent(S_hall_play_show_img_fire);
+    }
+}
+class S_hall_play_show_img_fire extends Laya.Script {
+    onEnable(e) {
+        Laya.timer.frameOnce(1, this, () => {
+            this.update()
+        })
+    }
+    update() {
+        let img = this.owner.getChildByName('img_fire')
+        img.visible = false;
+        img.clipStop();
+
+        if (!__data.redPacket.canShowFriendRedIcon()) return;
+
+        let b = __data.excelConfig.hashCityIdVO[HallPlay.lastCityId].Red == 1
+        if (b) {
+            img.visible = true;
+            img.clipPlay(0)
+        }
+    }
+}

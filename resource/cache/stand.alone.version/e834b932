@@ -1,0 +1,2308 @@
+class HallBg extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallBg',
+            scaleType: 'max',
+        })
+        this.addComponent(HallRightClickTestScript);
+    }
+}
+class HallRightClickTestScript extends Laya.Script {
+    onEnable() {
+        game.cb.on('result_test', this, this.testResult);
+        game.cb.on('all_result_test', this, this.testAllResult);
+        game.cb.on('share_all_result_test', this, this.testShareAllResult);
+    }
+    async testResult(type) {
+
+        game.scene.remove(DeskResultBG);
+        game.scene.remove(MahjongSmallResult);
+        game.scene.remove(FriendMahjongSmallResult);
+
+        this.testNumber = this.testNumber || 0;
+
+        let myResult = 0;
+        let interrupt = false;
+        let keepWinNumber = 0;
+        if (this.testNumber % 2 == 0) {
+            myResult = 1;
+            interrupt = false;
+        } else {
+            myResult = 0;
+            interrupt = false;
+        }
+        this.testNumber++;
+        // myResult = Math.random() < 0.5 ? 1 : 0;
+        // HallPlay.lastCityId = 21;
+        __data.deskData.roomVo.roomID = 200000;
+        __data.deskData.roomVo.roomPlay = '0,31,8'
+        __data.deskData.roomVo.curGame = 2;
+        __data.deskData.roomVo.allGame = 16;
+        __data.deskData.roomVo.indexId = -1;
+        __data.deskData.roomVo.modelId = -1;
+        __data.hashCityLevelCup[HallPlay.lastCityId].cup = 150315;
+        // __data.hashCityLevelCup[HallPlay.lastCityId].cup = __data.hashCityLevelCup[HallPlay.lastCityId].cup || 0;
+
+        // if (myResult == 1) {
+        //     __data.hashCityLevelCup[HallPlay.lastCityId].cup += 15;
+        // } else {
+        //     __data.hashCityLevelCup[HallPlay.lastCityId].cup -= 15;
+        // }
+        await __showScene.load_game_resource_by_gameId();
+        __data.deskData.roomVo.smallResultData = {
+            "keepWinNumber": keepWinNumber,
+            "myResult": myResult,
+            "cup": 60,
+            "msp": 2,
+            "baseCup": 15,
+            "bamboo": 1,
+            "rankLevel": 28,
+            "time": 0,
+            "nowRound": 30,
+            "isOver": 0,
+            "wfArray": [
+                8,
+                31,
+                0
+            ],
+            "baoCode": '0',
+            'mondayPieceCode': '5',
+            "mixed": -1,
+            "playerArray": [{
+                "position": 1,
+                "id": 1000000001,
+                "tileGroupArray": [
+                    "2,12,14,4",
+                    "5,1,4"
+                ],
+                "doorValue": "2,12,14,4;5,1,4",
+                "handTileArray": [
+                    20,
+                    22,
+                    24,
+                    25,
+                    25,
+                    25,
+                    26
+                ],
+                "score": "72000",
+                "realScore": "52000",
+                "initScore": "72000",
+                "isVip": 1,
+                "isMaxMatch": 1,
+                "scoreInfo": "不求人 亮喜X1 自摸",
+                "allScore": "7200",
+                "propertyState": 0,
+                "lackGold": false,
+                "winPosition": [
+                    1
+                ],
+                "huPosition": [
+                    1
+                ],
+                "huPai": 22,
+                "winner": true
+            },
+            {
+                "position": 2,
+                "id": 1000624,
+                "tileGroupArray": [],
+                "doorValue": "",
+                "handTileArray": [
+                    17,
+                    20,
+                    20,
+                    20,
+                    21,
+                    21,
+                    21,
+                    22,
+                    23,
+                    23,
+                    26,
+                    26,
+                    40
+                ],
+                "score": "-16000",
+                'originScore': '80000',
+                "realScore": "-56000",
+                "initScore": "36000",
+                "isVip": 1,
+                "isMaxMatch": 1,
+                "scoreInfo": "",
+                "allScore": "-1600",
+                "propertyState": -1,
+                "lackGold": false,
+                "winPosition": [
+                    1
+                ],
+                "huPosition": [
+                    1
+                ],
+                "huPai": 22,
+                "winner": false
+            },
+            {
+                "position": 3,
+                "id": 1000000002,
+                "tileGroupArray": [],
+                "doorValue": "",
+                "handTileArray": [
+                    13,
+                    14,
+                    15,
+                    16,
+                    16,
+                    16,
+                    16,
+                    17,
+                    18,
+                    24,
+                    25,
+                    28,
+                    28
+                ],
+                "score": "-28000",
+                "realScore": "-18000",
+                "initScore": "1800",
+                "isVip": 1,
+                "isMaxMatch": 1,
+                "scoreInfo": "",
+                "allScore": "-28000",
+                "propertyState": -1,
+                "lackGold": false,
+                "winPosition": [
+                    1
+                ],
+                "huPosition": [
+                    1
+                ],
+                "huPai": 22,
+                "winner": false
+            },
+            {
+                "position": 4,
+                "id": 1000000003,
+                "tileGroupArray": [
+                    "5,6,1"
+                ],
+                "doorValue": "5,6,1",
+                "handTileArray": [
+                    7,
+                    7,
+                    7,
+                    7,
+                    8,
+                    23,
+                    23,
+                    26,
+                    27,
+                    28
+                ],
+                "score": "-18000",
+                "realScore": "-18000",
+                "initScore": "1800",
+                "isVip": 0,
+                "isMaxMatch": 0,
+                "scoreInfo": "三七边 漏宝 刮风 站立 三七边 漏宝 刮风 站立",
+                "allScore": "-1800",
+                "propertyState": 0,
+                "lackGold": false,
+                "winPosition": [
+                    1
+                ],
+                "huPosition": [
+                    1
+                ],
+                "huPai": 22,
+                "winner": false
+            }
+            ],
+            "myPosition": 2,
+            "myScore": "-1600",
+            "myScoreInfo": "",
+            "myPochan": true,
+            "zhuangPosition": 2,
+            "huPositionArr": [
+                1
+            ],
+            "huPosition": 0,
+            "huPai": 22,
+            "interrupt": interrupt,
+            "rankProtect": false,
+            "isDrop": false,
+            "playerState": "3"
+        };
+        //具体处理
+        game.scene.add(DeskResultBG);
+        if (!type) {
+            game.scene.add(MahjongRankAni, [true]);
+            // game.scene.add(MahjongSmallResult);
+        } else {
+            game.scene.add(FriendMahjongSmallResult);
+        }
+    }
+    async testAllResult() {
+        // HallPlay.lastCityId = 21;
+        // HallPlay.curRuleId = -1;
+        __data.deskData.roomVo.modelId = -1;
+        __data.deskData.roomVo.roomPlay = '0,31,5'
+        await __showScene.load_game_resource_by_gameId();
+
+        __data.deskData.roomVo.allRoundResult = {
+            roomType: __data.deskData.roomVo.FRIEND,
+            roomPlay: __data.deskData.roomVo.roomPlay,
+            lastCityId: HallPlay.lastCityId,
+            curRuleId: HallPlay.curRuleId,
+            modelId: HallPlay.curRuleId,
+            time: new Date(),
+            roomPwd: '123456',
+            roomType: __data.deskData.roomVo.FRIEND,
+            roundCount: 8,
+            playerCount: 4,
+            playerArray: [
+                {
+                    "id": 1543018,
+                    "name": "昵称_sweets6024s1",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 0,
+                    "position": 1,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543019,
+                    "name": "昵称_sweets6024s2",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 0,
+                    "position": 2,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543020,
+                    "name": "昵称_sweets6024s3",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 0,
+                    "position": 3,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543017,
+                    "name": "昵称_sweets6024s4",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 0,
+                    "position": 4,
+                    "state": 0,
+                    "dis_status": 1
+                }
+            ]
+        }
+        game.scene.add(FriendMahjongAllResult)
+    }
+    async testShareAllResult() {
+        // HallPlay.lastCityId = 21;
+        // HallPlay.curRuleId = -1;
+        __data.deskData.roomVo.modelId = -1;
+        __data.deskData.roomVo.roomPlay = '0,31,5,6,7,8,9,10,11,12,13,14,15'
+        await __showScene.load_game_result();
+        __data.deskData.roomVo.allRoundResult = {
+            roomType: __data.deskData.roomVo.FRIEND,
+            roomPlay: __data.deskData.roomVo.roomPlay,
+            lastCityId: HallPlay.lastCityId,
+            curRuleId: HallPlay.curRuleId,
+            modelId: HallPlay.curRuleId,
+            time: new Date(),
+            roomPwd: '123456',
+            roomType: __data.deskData.roomVo.FRIEND,
+            roundCount: 8,
+            playerCount: 4,
+            playerArray: [
+                {
+                    "id": 1543018,
+                    "name": "昵称_sweets6024s1",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 1000,
+                    "position": 1,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543019,
+                    "name": "昵称_sweets6024s2",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": -1000,
+                    "position": 2,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543020,
+                    "name": "昵称_sweets6024s3",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 100,
+                    "position": 3,
+                    "state": 0,
+                    "dis_status": 1
+                },
+                {
+                    "id": 1543017,
+                    "name": "昵称_sweets6024s4",
+                    "url": "local/head/1/defaultHead.png",
+                    "score": 0,
+                    "position": 4,
+                    "state": 0,
+                    "dis_status": 1
+                }
+            ]
+        }
+
+        let data = JSON.stringify(__data.deskData.roomVo.allRoundResult);
+        __data.deskData.roomVo.allRoundResult = JSON.parse(data);
+        game.scene.add(FriendMahjongAllResult, [true]);
+    }
+}
+class HallAddMoney extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hall_add_money',
+            layer: 'tips'
+        })
+    }
+}
+class HallLeftUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallLeftUp',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+
+        this.btn_vip.addComponent(S_hall_vip);
+        this.btn_copy.addComponent(S_hall_copy);
+        this.img_frame.addComponent(S_show_playerInfo);
+        this.addComponent(S_hall_money_logic)
+        game.utils.updateLabelY(this.txt_name)
+
+        // this.btn_vip.visible = true;
+        this.img_stone_bg.visible = true;
+        // this.btn_add_gold.visible = true;
+
+        // IOS能支付修改
+        // if (miniApi.isIOS) {
+        //     // this.btn_vip.visible = false;
+        //     this.img_stone_bg.visible = false;
+        //     // this.btn_add_gold.visible = false;
+        //     this.img_star_bg.x = this.img_stone_bg.x;
+        // }
+    }
+    onEnable() {
+        this.txt_uid.text = 'ID:' + __data.uid;
+        game.cb.on('update_headFrame', this, this.update_headFrame)
+        game.cb.on('update_nameHead_me', this, this.update_nameHead_me)
+        this.update_headFrame()
+        this.update_nameHead_me()
+    }
+    onDisable() {
+        game.cb.off('update_headFrame', this, this.update_headFrame)
+        game.cb.off('update_nameHead_me', this, this.update_nameHead_me)
+        // 清理loading缓存
+        // let clearLoadingRes = [
+        //     'local/hall/1/bt_bb.png',
+        //     'local/hall/1/bt_cqdkz.png',
+        //     'local/hall/1/bt_dhm.png',
+        //     'local/hall/1/bt_dqrdb.png',
+        //     'local/hall/1/bt_fl.png',
+        //     'local/hall/1/bt_gd.png',
+        //     'local/hall/1/bt_gg.png',
+        //     'local/hall/1/bt_ggsj.png',
+        //     'local/hall/1/bt_hytw.png',
+        //     'local/hall/1/bt_mrdl.png',
+        //     'local/hall/1/bt_qmzjj.png',
+        //     'local/hall/1/bt_qszl.png',
+        //     'local/hall/1/bt_sc.png',
+        //     'local/hall/1/bt_schl.png',
+        //     'local/hall/1/bt_sj.png',
+        //     'local/hall/1/bt_sz.png',
+        //     'local/hall/1/bt_tjhb.png',
+        //     'local/hall/1/bt_ts.png',
+        //     'local/hall/1/bt_vipyk.png',
+        //     'local/hall/1/bt_xy.png',
+        //     'local/hall/1/bt_yj.png',
+        //     'local/hall/1/bt_yqyl.png',
+        //     'local/hall/1/btn_tab1.png',
+        //     'local/hall/1/btn_tab1_app.png',
+        //     'local/hall/1/btn_tab2.png',
+        //     'local/hall/1/btn_tab2_app.png',
+        //     'local/hall/1/btn_tab3.png',
+        //     'local/hall/1/img_qshy.png',
+        // ]
+        // for (const iterator of clearLoadingRes) {
+        //     Laya.loader.clearTextureRes(iterator)
+        // }
+        // ResUtils.clearTextureRes(['ab.hall_area_btn_big'])
+        // ResUtils.clearTextureRes(['cdn.hall_area_btn_big_font'])
+    }
+    update_headFrame() {
+        this.img_frame.skin = PropIcon.icon[__data.headFrameId || 301].skin
+    }
+    update_nameHead_me() {
+        this.img_head.skin = __data.getHeadTestDefault(__data.head);
+        this.txt_name.text = __data.name;
+    }
+}
+class S_show_playerInfo extends Laya.Script {
+    onClick(e) {
+        __showScene.show_playerInfo(__data);
+
+        // Panel_imageShare.instance.create();
+        // game.scene.add(Panel_imageShare);
+        // __showScene.show_club();
+        // game.cb.event('result_test');
+        // miniApi.showCustomAd_leftRight('down');
+        // miniApi.showCustomAd_leftRight('down1');
+    }
+}
+class HallLeftDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallLeftDown',
+            left: true,
+            down: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+
+        this.ix1 = this.ix1 || this.btn_shop.x;
+        this.ix2 = this.ix2 || this.scene_red.x;
+        this.btn_shop.addComponent(S_show_shop).init(0, 1)
+        this.btn_shop.visible = true;
+    }
+    added() {
+        // if (miniApi.isIOS) {
+        //     this.btn_shop.visible = false;
+        // } else {
+        // this.btn_shop.visible = true;
+        // this.btn_shop.x = this.ix1 + this.btn_shop.width / 2;
+        // }
+    }
+}
+class HallRightDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallRightDown',
+            right: true,
+            down: true,
+            offx: () => {
+                return -miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_bag.addComponent(S_hall_bag)
+        this.btn_set.addComponent(S_hall_set);
+        this.btn_notice.addComponent(S_hall_notice);
+        miniApi.clientType != 'wx' && this.btn_service.addComponent(S_login_service);
+        this.btn_complaint.addComponent(S_hall_complaint);
+        this.btn_seven.addComponent(S_hall_seven)
+        this.btn_reward.addComponent(S_hall_reward)
+        this.btn_more.addComponent(S_hall_img_more)
+        this.btn_dailyLogin.addComponent(S_hall_dailyLogin)
+        this.btn_email.addComponent(S_hall_email)
+        this.btn_collect.addComponent(S_hall_collect).init('headFrame')
+        this.btn_invite.addComponent(S_hall_invite);
+        this.btn_redPacket.addComponent(S_hall_redPacket);
+        this.btn_adTime.addComponent(S_hall_adTime);
+        this.btn_freeVip.addComponent(S_hall_freeVip);
+        this.btn_exchangeCode.addComponent(S_hall_exchangeCode);
+        this.btn_chuanqiReward.addComponent(S_show_chuanqiReward)
+        this.btn_gameCircle.addComponent(S_hall_gameCircle)
+        this.btn_poster.addComponent(S_hall_poster)
+    }
+    added() {
+        if (miniApi.clientType == 'app') {
+            this.btn_redPacket.visible = false;
+            this.btn_chuanqiReward.visible = false;
+        }
+        this.btn_service.visible = miniApi.clientType != 'wx';
+        this.btn_exchangeCode.visible = miniApi.clientType == 'wx' || miniApi.clientType == 'web';
+        let a = [this.btn_bag, this.btn_complaint, this.btn_service, this.btn_notice, this.btn_set];
+        let w = 20
+        for (let index = 0, length = a.length; index < length; index++) {
+            if (!a[index].visible) continue;
+            a[index].x = w + a[index].width / 2;
+            w += a[index].width + 20
+        };
+        this.img_more.width = w;
+    }
+}
+let hallTestShowPanel = async () => {
+    try {
+        await __tool.await(150) // 有的面板关闭按钮式btn_close 有100毫秒缓动消失 所以这里也增加延迟
+
+        let canBombbox = () => {
+            if (__showScene.sceneType != 'hall') return false;
+            let a = game.scene.layer['panel'].c.numChildren;
+            let b = game.scene.layer['panel0'].c.numChildren;
+            // console.log('a+b', a + b);
+            return a + b == 0 ? true : false;
+        }
+        if (!canBombbox()) return
+        if (!__data.newPlayerGift.isReceive) {
+            // 如果显示新人大礼包 不检测 hallTestShowPanel
+            game.cb.event('hall_play_show_hand')
+            return;
+        }
+        if (!__data.myCityId) {
+            game.cb.event('hall_play_show_hand')
+            return;
+        }
+
+        if (Hall.bombbox_count <= 0) {
+            Hall.bombbox_count = 0;
+            Hall.test_show_free_panel = 0;
+            Hall.test_show_pay_panel = 0;
+            Hall.test_show_other_panel = 0;
+            Hall.testEndCount = 0;
+            return
+        }
+        // 3.1.20版本暂时关闭惊喜暴击功能
+        // let b = miniApi.getItem(__data.uid + ':show_panel_surpriseCrit_loginTime')
+        // if (!b) {
+        //     b = '[]'
+        // }
+        // let timeKey = new Date().toDateString();
+        // b = JSON.parse(b);
+        // let b1 = b.find((e) => {
+        //     return e.timeKey == timeKey
+        // })
+        // if (!b1) {
+        //     b.push({ timeKey: new Date().toDateString(), value: 0 })
+        //     b = b.slice(-3)
+        //     miniApi.setItem(__data.uid + ':show_panel_surpriseCrit_loginTime', JSON.stringify(b))
+        // }
+
+        let uidDateString = __data.uid + ':' + new Date().toDateString()
+        let a;
+        let test_free = async () => {
+            if (Hall.test_show_free_panel == 1) {
+                if (!canBombbox()) return
+                a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_winLoseGuide_go')
+                if (a != 1) {
+                    // 没有点击 输赢界面立即前往
+                    a = miniApi.getItem(uidDateString + ':show_panel_winLoseGuideType')
+                    // 上次显示 输赢类型
+                    // 如果这次需要显示输赢
+                    if (GameMainWinLoseGuide.showType) {
+                        if (!a) {
+                            __showScene.show_gameMain_winLoseGuide()
+                            Hall.bombbox_count--;
+                            Hall.test_show_free_panel = 0
+                            return
+                        } else if (a == GameMainWinLoseGuide.showType) {
+                            __showScene.show_gameMain_winLoseGuide()
+                            Hall.bombbox_count--;
+                            Hall.test_show_free_panel = 0
+                            return
+                        }
+                    }
+                }
+
+                if (!canBombbox()) return
+                await __data.returnPlayerGift.send(1)
+                if (__data.returnPlayerGift.isHaveGift == 1) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_newPlayerGift('returnPlayer')
+                    Hall.test_show_free_panel = 0
+                    return
+                }
+
+                if (miniApi.isIOS && miniApi.clientType == 'wx') {
+                    let d12 = new Date();
+                    let b3 = miniApi.getItem(__data.uid + ":" + __tool.getWeeks(d12) + ':iosSpecailBombbox_week')
+                    if (b3 != 1) {
+                        if (!canBombbox()) return
+                        // IOS能支付修改
+                        let isCP = await miniApi.isCanPay()
+                        if (isCP) {
+                            if (!canBombbox()) return
+                            await game.server.send(16007)
+                            if (__data.game_count_total > 3) {
+                                if (!canBombbox()) return
+                                __showScene.show_iosSpecailBombbox()
+                                Hall.bombbox_count--;
+                                Hall.test_show_free_panel = 0
+                                return
+                            }
+                        }
+                    }
+                }
+
+                a = miniApi.getItem(uidDateString + ':show_panel_helpGold')
+                if (!a) {
+                    if (!canBombbox()) return
+                    await game.server.send(2211)
+                    if (__data.helpGold_count > 0 && __bigNumberCal.lt(__data.gold, __data.d_match.showReliefConditionGold)) {
+                        if (!canBombbox()) return
+                        Hall.bombbox_count--;
+                        __showScene.show_gameMain_relief()
+                        Hall.test_show_free_panel = 0
+                        return
+                    }
+                }
+
+                a = miniApi.getItem(uidDateString + ':show_panel_seven')
+                if (__data.seven.isRedPoint && a != 1 && __data.seven.seven_hasReceiveNum >= 1) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_seven()
+                    Hall.test_show_free_panel = 0
+                    return
+                }
+                if (miniApi.clientType != 'app') {
+                    a = miniApi.getItem(uidDateString + ':show_panel_redPacket')
+                    if (a != 1) {
+                        if (!canBombbox()) return
+                        await __data.redPacket.send(1)
+                        if (__data.redPacket.isRedPoint) {
+                            if (!canBombbox()) return
+                            Hall.bombbox_count--;
+                            __showScene.show_redPacket();
+                            Hall.test_show_free_panel = 0
+                            return
+                        }
+                    }
+                }
+
+                a = miniApi.getItem(uidDateString + ':show_panel_dailyLogin')
+                if (a != 1) {
+                    if (!canBombbox()) return
+                    await __data.dailyLogin.send(1)
+                    if (__data.dailyLogin.isRedPoint) {
+                        if (!canBombbox()) return
+                        Hall.bombbox_count--;
+                        __showScene.show_dailyLogin()
+                        Hall.test_show_free_panel = 0
+                        return
+                    }
+                }
+
+                if (miniApi.clientType != 'app') {
+                    a = miniApi.getItem(uidDateString + ':show_panel_chuanqiReward')
+                    if (a != 1) {
+                        if (!canBombbox()) return
+                        await __data.chuanqi.reward.send(1)
+                        if (__data.chuanqi.isRedPoint) {
+                            if (!canBombbox()) return
+                            Hall.bombbox_count--;
+                            __showScene.show_chuanqiReward()
+                            Hall.test_show_free_panel = 0
+                            return
+                        }
+                    }
+                }
+
+                if (miniApi.clientType != 'app') {
+                    a = miniApi.getItem(uidDateString + ':show_panel_freeVip')
+                    if (!__data.vip.isReceiveFreeVip && a != 1) {
+                        if (Date.now() - parseInt(__data.Mj_registeDateMs) < 24 * 3600 * 1000) {
+                            if (!canBombbox()) return
+                            Hall.test_show_free_panel = 0;
+                            Hall.bombbox_count--;
+                            __showScene.show_freeVip();
+                            return
+                        }
+                        if (!__data.vip.isVip && __data.vip.addUpToLoginDayNum > 7) {
+                            if (!canBombbox()) return
+                            Hall.test_show_free_panel = 0;
+                            Hall.bombbox_count--;
+                            __showScene.show_freeVip();
+                            return
+                        }
+                    }
+                }
+
+                a = miniApi.getItem(uidDateString + ':show_panel_adTime')
+                if (a != 1) {
+                    if (!canBombbox()) return
+                    await AdData.send(1)
+                    if (AdData.isActive && AdData.time > 0) {
+                        if (!canBombbox()) return
+                        Hall.bombbox_count--;
+                        __showScene.show_gameMain_ad()
+                        Hall.test_show_free_panel = 0
+                        return
+                    }
+                }
+                // IOS能支付修改
+                // a = miniApi.getItem(uidDateString + ':show_panel_invite')
+                // if (miniApi.isIOS && __data.hasInviteEmptyPosition() && a != 1) {
+                //     if (!canBombbox()) return
+                //     Hall.bombbox_count--;
+                //     __showScene.show_gameMain_invite()
+                //     Hall.test_show_free_panel = 0
+                //     return
+                // }
+            }
+            return 'nextTest'
+        }
+
+        // IOS能支付修改
+        // if (!miniApi.isIOS) {
+        let test_pay = async () => {
+            if (Hall.test_show_pay_panel == 1) {
+                a = miniApi.getItem(uidDateString + ':show_panel_firstPay')
+                if (a != 1) {
+                    if (!canBombbox()) return
+                    await __data.firstPay.send(1);
+                    if (!__data.firstPay.isHasBuy) {
+                        if (!canBombbox()) return
+                        Hall.bombbox_count--;
+                        __showScene.show_gameMain_firstPay()
+                        Hall.test_show_pay_panel = 0
+                        return
+                    }
+                }
+                // 3.1.20版本暂时关闭惊喜暴击功能
+                // let r001 = Math.random()
+                // if (r001 < 1) {
+                //     if (!canBombbox()) return
+                //     await __data.firstPay.send(1);
+
+                //     let b = miniApi.getItem(__data.uid + ':show_panel_surpriseCrit_loginTime')
+                //     if (!b) {
+                //         b = '[]'
+                //     }
+                //     b = JSON.parse(b);
+                //     let showPanel
+                //     if (b.length >= 3) {
+                //         showPanel = b.every((e) => {
+                //             return e.value == 0
+                //         })
+                //     }
+                //     if (__data.firstPay.isHasBuy && showPanel) {
+                //         if (!canBombbox()) return
+                //         Hall.bombbox_count--;
+                //         Panel_marketActivity_surpriseCrit.time = new Date(Date.now() + 120 * 1000)
+                //         __showScene.show_panel_surpriseCrit()
+                //         Hall.test_show_pay_panel = 0;
+
+                //         let timeKey = new Date().toDateString();
+                //         let b1 = b.find((e) => {
+                //             return e.timeKey == timeKey
+                //         })
+                //         if (b1) {
+                //             b1.value = 1;
+                //         } else {
+                //             b.push({ timeKey: new Date().toDateString(), value: 1 })
+                //         }
+                //         b = b.slice(-3)
+                //         miniApi.setItem(__data.uid + ':show_panel_surpriseCrit_loginTime', JSON.stringify(b))
+                //         return
+                //     }
+                // }
+
+                // 今日特惠有次数弹出
+                a = miniApi.getItem(uidDateString + ':show_panel_todayDiscount_time')
+                if (a != 1 && __data.activity.todayDiscount.isAllowBuy) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_panel_todayDiscount()
+                    Hall.test_show_pay_panel = 0
+                    return
+                }
+
+                // 步步有礼有可以领取奖励弹出
+                a = miniApi.getItem(uidDateString + ':show_panel_stepstepGift_time')
+                if (a != 1 && !__data.activity.stepstepGift.isFinal) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_panel_stepstepGift()
+                    Hall.test_show_pay_panel = 0
+                    return
+                }
+
+                // 金币罐子达到开启条件
+                a = miniApi.getItem(uidDateString + ':show_panel_goldBox_time')
+                if (a != 1 && __data.activity.goldBox.isOpen) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_panel_goldBox()
+                    Hall.test_show_pay_panel = 0
+                    return
+                }
+
+                // a = miniApi.getItem(uidDateString + ':show_panel_vip' + 1)
+                let time3 = miniApi.getItem(__data.uid + ':show_panel_vipSale3')
+                time3 = parseInt(time3)
+                time3 = Number.isFinite(time3) ? time3 : 0
+                // 间隔超过3天
+                if (!__data.vip.isVip && (Date.now() - time3 >= 3 * 24 * 3600 * 1000)) {
+                    if (!canBombbox()) return
+                    Hall.bombbox_count--;
+                    __showScene.show_vipSales(1)
+                    Hall.test_show_pay_panel = 0
+                    return
+                }
+                a = miniApi.getItem(uidDateString + ':show_panel_fuguiManor')
+                if (a != 1) {
+                    if (!canBombbox()) return
+                    await __data.garden.fuguiManor.query(1)
+                    if (__data.garden.fuguiManor.buyNum < 1) {
+                        await gtool.query([15009], 1)
+                        let cx = __data.garden.fuguiManor.unlock()
+                        if (cx) {
+                            if (!canBombbox()) return
+                            Hall.bombbox_count--;
+                            __showScene.show_garden_fugui_manor_bombbox()
+                            Hall.test_show_pay_panel = 0
+                            return
+                        }
+                    }
+                }
+            }
+            return 'nextTest'
+        }
+
+        // }
+        let test_other = async () => {
+            if (Hall.test_show_other_panel == 1) {
+                // 3.1.19.3改动挪到这里
+                a = miniApi.getItem(uidDateString + ':show_allPlayerRed')
+                if (a != 1) {
+                    if (!__data.redPacket.everyState) { }
+                    else if (miniApi.clientType == 'app') { }
+                    else if (miniApi.getWxDeviceName() === 'windows') { }
+                    else {
+                        if (!canBombbox()) return
+                        await game.server.send(18001)
+                        if (!canBombbox()) return
+                        if (__data.newPlayerRedChallenge.isRemove()) {
+                            Hall.bombbox_count--;
+                            __showScene.show_allPlayerRed();
+                            Hall.test_show_other_panel = 0;
+                            return
+                        }
+                    }
+                }
+                a = miniApi.getItem(uidDateString + ':show_inviteRed')
+                if (a != 1) {
+                    if (!__data.redPacket.inviteState) { }
+                    else if (miniApi.clientType == 'app') { }
+                    else if (miniApi.getWxDeviceName() === 'windows') { }
+                    else {
+                        Hall.bombbox_count--;
+                        __showScene.show_panel_inviteRed();
+                        Hall.test_show_other_panel = 0;
+                        return
+                    }
+                }
+                a = miniApi.getItem(uidDateString + ':show_panel_auth')
+                if (!miniApi.isAuthorize && a != 1 && miniApi.clientType == 'wx') {
+                    Hall.bombbox_count--;
+                    miniApi.getUserProfile()
+                    Hall.test_show_other_panel = 0
+                    return
+                }
+                a = miniApi.getItem(uidDateString + ':show_panel_garden_mainScene_bombbox')
+
+                if (a != 1) {
+                    if (!canBombbox()) return
+                    await Promise.all([
+                        gtool.query([15003], 1), // 花园解锁装饰list
+                        gtool.query([15008], 1), // 这里这个服务缓存是为了不让 星星货币数值 反复缓动
+                        gtool.query([15009], 1), // 任务id
+                        gtool.query([15012], 1), // 章节奖励
+                    ])
+                    if (__data.garden.task.isRedPoint) {
+                        if (!canBombbox()) return
+                        Hall.bombbox_count--;
+                        __showScene.show_garden_mainScene_bombbox()
+                        Hall.test_show_other_panel = 0
+                        return
+                    }
+                }
+                // 合作先屏蔽掉
+                // let b1 = miniApi.getItem(__data.uid + '-cooperateSubmit')
+                // if (b1 != 1) {
+                //     await gtool.query([16021], 1)
+                //     if (__data.onoff_cooperate == 1) {
+                //         let b2 = miniApi.getItem(__data.uid + '-closeCooperatePanelNum')
+                //         trace('合作面板关闭次数-' + b2)
+                //         if (parseInt(b2) >= 3) {
+                //             let d12 = new Date();
+                //             trace('合作面板月日期' + d12.toISOString())
+                //             let b3 = miniApi.getItem(__data.uid + ":" + __tool.getMonths(d12) + ':showCooperatePanel_month', 0)
+                //             if (b3 != 1) {
+                //                 if (!canBombbox()) return
+                //                 await game.server.send(16007)
+                //                 if (__data.game_count_total > 100) {
+                //                     if (!canBombbox()) return
+                //                     __showScene.show_allPeopleRed(1)
+                //                     Hall.bombbox_count--;
+                //                     Hall.test_show_other_panel = 0
+                //                     return
+                //                 }
+                //             }
+                //         } else {
+                //             let d12 = new Date();
+                //             trace('合作面板周日期' + d12.toISOString())
+                //             let b3 = miniApi.getItem(__data.uid + ":" + __tool.getWeeks(d12) + ':showCooperatePanel_week')
+                //             if (b3 != 1) {
+                //                 if (!canBombbox()) return
+                //                 await game.server.send(16007)
+                //                 if (__data.game_count_total > 100) {
+                //                     if (!canBombbox()) return
+                //                     __showScene.show_allPeopleRed()
+                //                     Hall.bombbox_count--;
+                //                     Hall.test_show_other_panel = 0
+                //                     return
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+            }
+            return 'nextTest'
+        }
+
+        game.cb.event('hall_play_show_hand')
+        let r1, r2, r3;
+        if (Hall.testEndCount == 3) {
+            r1 = await test_free()
+            if (r1 == 'nextTest') {
+                r2 = await test_pay()
+                if (r2 == 'nextTest') {
+                    r3 = await test_other()
+                }
+            }
+        } else {
+            r1 = await test_pay()
+            if (r1 == 'nextTest') {
+                r2 = await test_free()
+                if (r2 == 'nextTest') {
+                    r3 = await test_other()
+                }
+            }
+        }
+        if (r1 != 'nextTest' || r2 != 'nextTest' || r3 != 'nextTest') {
+            return;
+        }
+
+        Hall.testEndCount--;
+        if (Hall.testEndCount > 0 && Hall.bombbox_count >= 1) {
+            Hall.test_show_free_panel = 1;
+            Hall.test_show_pay_panel = 1;
+            Hall.test_show_other_panel = 1;
+            hallTestShowPanel()
+        } else {
+            Hall.bombbox_count = 0;
+            Hall.test_show_free_panel = 0;
+            Hall.test_show_pay_panel = 0;
+            Hall.test_show_other_panel = 0;
+        }
+    } catch (error) {
+        console.error('hallTestShowPanel', error)
+    }
+
+}
+class Hall extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hall',
+        })
+        this.addComponent(TestGameDeskScript);
+        this.addComponent(Hall_s_rank);
+        this.btn_share.addComponent(S_hall_rank_share)
+        this.btn_queshen.addComponent(S_hall_queShenRoad)
+        this.btn_queshen.addComponent(S_look_queShen_red)
+        this.btn_mjSmallGame.addComponent(S_show_mjSmallGame).init(1)
+        // this.btn_mj_more.addComponent(S_hall_mj_more).init(1)
+        this.btn_changePlay.addComponent(S_hall_changePlay).init(1)
+        this.btn_open_set.addComponent(S_hall_open_set)
+        this.btn_garden.addComponent(S_show_garden).init(this.img_tips1);
+        this.btn_friendRoom.addComponent(S_show_friendRoom);
+    }
+    async added(type) {
+        miniApi.deleteLastPayTrade()
+        __data.callback11005 && __data.callback11005()
+        if (miniApi.isUpdateHeadName == 2) {
+            miniApi.isUpdateHeadName = 0;
+            game.server.send(11001, __data.wx_name || '昵称', __data.wx_head || __data.defaultHead)
+            game.cb.event('update_nameHead_me')
+        }
+        // this.scene_my_play.visible = false
+        this.img_hand.visible = false;
+        miniApi.shareCountTodayGet()
+        game.server.send(11004, __data.myCityId)
+        game.cb.on('update_rank_by_type', this, this.update_rank_by_type)
+        game.cb.on('update_myCityId', this, this.update_myCityId)
+        game.cb.on('update_cityId_rank', this, this.update_myCityId)
+        this.update_myCityId()
+        game.cb.on('hall_play_show_hand', this, this.hall_play_show_hand)
+
+        // game.server.send(3311, 1, 1)
+        // game.server.send(2202, __data.uid); // 查询用户数据
+        game.server.send(2405) // 商城信息
+
+        if (!__data.helpGold_haveData) {
+            game.server.send(2211)
+        }
+        game.server.send(2224) // 背包
+
+        this.sendServerCount = this.sendServerCount || 0;
+        if (this.sendServerCount > 0) {
+            // 这些服务 第一次登录 请求了 所以 第一次展示界面 不发送
+
+            game.server.send(3326, __data.domain) // vip是否领取 七日领取,天数 查询金币
+            game.server.send(2202, __data.uid); // 查询用户数据
+            // game.server.send(2405) // 商城信息
+            game.server.send(2411) // 查询VIP剩余天数
+            // game.server.send(2245) // 查询新人礼包
+        }
+        this.sendServerCount++;
+        game.server.send(2230) // 输赢上线
+        game.server.send(2226) // 邀请信息
+        game.server.send(16007) // 获取游戏对局次数 充值总额
+
+        let isNew = 0
+        // await game.server.send(2245) // 查询新人礼包
+        if (!__data.newPlayerGift.isReceive) {
+            __showScene.show_newPlayerGift('newPlayer')
+            isNew = 1
+            // 如果显示新人大礼包 不检测 hallTestShowPanel
+        }
+        try {
+            console.log('share hall added');
+            wx.onShow_callback()
+            __showScene.handleShowParams();
+        } catch (error) {
+
+        }
+
+        if (type == 'noShowPanel') return;
+        if (isNew) return;
+        // 弹出免费面板和充值面板 赋值
+        if (!__data.seasonEndData.isHaveData) {
+            await game.server.send(2252) // 赛季结算信息 只发送一次 游戏内部 不要发送 否则会覆盖数据 清空
+            if ('goldCup' in __data.seasonEndData) {
+                __showScene.show_seasonEnd()
+                return
+            }
+        }
+        Hall.test_show_free_panel = 1
+        Hall.test_show_pay_panel = 1
+        Hall.test_show_other_panel = 1
+        Hall.bombbox_count = 3;
+        Hall.testEndCount = Hall.bombbox_count;
+        // Hall.test_show_ad_panel = 1
+        hallTestShowPanel()
+    }
+    onDisable() {
+        game.cb.off('update_rank_by_type', this, this.update_rank_by_type)
+        game.cb.off('update_myCityId', this, this.update_myCityId)
+        game.cb.off('update_cityId_rank', this, this.update_myCityId)
+        game.cb.off('hall_play_show_hand', this, this.hall_play_show_hand)
+        Laya.timer.clearAll(this)
+        this.clearAwait && this.clearAwait();
+        this.img_hand.visible = false;
+        this.img_hand.clipStop()
+    }
+    hall_play_show_hand() {
+        if (__data.matchCount == 0 && __data.myCityId) {
+            this.img_hand.visible = true;
+            this.img_hand.clipPlay()
+        }
+    }
+    update_myCityId() {
+        this.scene_my_play.dataSource = {
+            cityId: __data.myCityId,
+        }
+    }
+    update_rank_by_type(event_rankType = -1) {
+        this.scene_my_play.dataSource = {
+            cityId: __data.myCityId,
+        }
+    }
+
+    /**
+     * 所在团队
+     */
+    updateTeam() {
+        this.txt_team.text = __data.getTeamName(__data.team);
+
+    }
+}
+class S_hall_bag extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_bag();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '背包界面' })
+        game.scene.get(HallRightDown).img_more.visible = false;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_rule extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_rule();
+    }
+}
+class S_hall_set extends Laya.Script {
+    onClick() {
+        __showScene.show_game_set();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '设置界面' })
+        game.scene.get(HallRightDown).img_more.visible = false;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_notice extends Laya.Script {
+    onClick() {
+        __showScene.show_notice();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '公告界面' })
+        game.scene.get(HallRightDown).img_more.visible = false;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_exchangeCode extends Laya.Script {
+    onClick() {
+        __showScene.show_exchangeCode();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '兑换码界面' })
+        game.scene.get(HallRightDown).img_more.visible = false;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_complaint extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_complaint();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '投诉界面' })
+        game.scene.get(HallRightDown).img_more.visible = false;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_invite extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_invite();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '邀请有礼界面' })
+    }
+    onEnable() {
+        this.update_invite_list()
+        game.cb.on('update_invite_list', this, this.update_invite_list)
+    }
+    onDisable() {
+        game.cb.off('update_invite_list', this, this.update_invite_list)
+    }
+    update_invite_list() {
+        let red = this.owner.getChildByName('img_red');
+        if (!red) return
+        red.visible = false
+        for (let i = 0; i < __data.inviteData.length; i++) {
+            if (__data.inviteData[i].state == 0 && __data.inviteData[i].allPlayer == __data.inviteData[i].invitedArr.length) { // 可以领取   不显示邀请按钮   按钮可以点击
+                red.visible = true
+                break;
+            }
+        }
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+class S_hall_redPacket extends Laya.Script {
+    onClick(e) {
+        __showScene.show_redPacket()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '红包图标' })
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() { }
+    onEnable() {
+        __data.redPacket.send(1)
+        this.update_red();
+        game.cb.on('update_redPacket_data', this, this.update_red)
+    }
+    onDisable() {
+        game.cb.off('update_redPacket_data', this, this.update_red)
+    }
+    update_red() {
+        // 连续登录红点检测
+        if (__data.redPacket.isRedPoint) {
+            this.owner.getChildByName('img_red').visible = true
+        } else {
+            this.owner.getChildByName('img_red').visible = false
+        }
+    }
+}
+class S_hall_vip extends Laya.Script {
+    onClick() {
+        // if (miniApi.isIOS) {
+        //     if (__data.vip.isVip) {
+        //         __showScene.show_vip();
+        //     } else {
+        //         __tips('VIP到期')
+        //         this.owner.visible = false;
+        //     }
+        // } else {
+        __showScene.show_vip();
+        // }
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': 'VIP月卡图标' })
+    }
+    onEnable() {
+        this.update_vip_data()
+        game.cb.on('update_vip_data', this, this.update_vip_data)
+    }
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.update_vip_data)
+    }
+    update_vip_data() {
+        // if (miniApi.isIOS) {
+        //     if (__data.vip.isVip) {
+        //         this.owner.visible = true;
+        //     } else {
+        //         this.owner.visible = false;
+        //     }
+        // }
+        if (__data.vip.isRedPoint) {
+            this.owner.parent.img_red_vip.visible = true
+        } else {
+            this.owner.parent.img_red_vip.visible = false
+        }
+    }
+}
+class S_hall_copy extends Laya.Script {
+    onClick() {
+        miniApi.copy(__data.uid, () => {
+        })
+        return;
+    }
+}
+
+class S_update_value extends Laya.Script {
+    onAwake() {
+        this.text_value = 0;
+    }
+    onEnable() {
+        this.update();
+        game.cb.on(this.eventName, this, this.update)
+    }
+    onDisable() {
+        game.cb.off(this.eventName, this, this.update)
+        this.clearAwait && this.clearAwait();
+    }
+    async update() {
+        let lastValue = S_update_value[`last_${this.valueName}_value`]
+        lastValue = String(lastValue)
+        let curValue = __data[this.valueName];
+        curValue = String(curValue)
+        if (lastValue == -1 || curValue == lastValue) {
+            let ns = bigNumberToCH(curValue)
+            this.owner.text = ns
+        } else if (__bigNumberCal.gt(curValue, lastValue)) {
+            let startv = 0
+            let endv = 0
+            let suffix = ''
+            for (let index = bigNumberLengthConfig.length - 1; index >= 0; index--) {
+                const e = bigNumberLengthConfig[index];
+                if (lastValue.length >= e.len && curValue.length >= e.len) {
+                    if (e.suffix) {
+                        startv = __bigNumberCal.divide(lastValue, e.divide, 2)
+                        endv = __bigNumberCal.divide(curValue, e.divide, 2)
+                    } else {
+                        startv = __bigNumberCal.divide(lastValue, e.divide, 2)
+                        endv = __bigNumberCal.divide(curValue, e.divide, 2)
+                    }
+                    suffix = e.suffix
+                    break;
+                }
+            };
+
+            let start_ob = {
+                v: Number(startv)
+            };
+            let t = Laya.Tween.to(start_ob, {
+                v: Number(endv)
+            }, 200)
+            t.update = new Laya.Handler(this, function () {
+                if (suffix.length) this.owner.text = Number(start_ob.v).toFixed(1) + suffix
+                else this.owner.text = Math.floor(start_ob.v) + suffix
+            })
+            // 如果万-亿 缓动 最后需要修正后缀
+            await __tool.await(250, this);
+
+            let ns = bigNumberToCH(curValue)
+            this.owner.text = ns
+        } else {
+            let ns = bigNumberToCH(curValue)
+            this.owner.text = ns
+        }
+        S_update_value[`last_${this.valueName}_value`] = curValue
+    }
+}
+
+// gold_update_count stone_update_count
+S_update_value.last_gold_value = -1
+S_update_value.last_stone_value = -1
+S_update_value.last_cup_value = -1
+class S_update_gold extends S_update_value {
+    onAwake() {
+        this.valueName = 'gold';
+        this.eventName = 'update_gold'
+        super.onAwake()
+    }
+}
+class S_update_stone extends S_update_value {
+    onAwake() {
+        this.valueName = 'stone';
+        this.eventName = 'update_stone'
+        super.onAwake()
+    }
+}
+class S_update_card extends S_update_value {
+    onAwake() {
+        this.valueName = 'card';
+        this.eventName = 'update_card'
+        super.onAwake()
+    }
+}
+class S_show_money_int_tipsLayer extends Laya.Script {
+    onAwake() {
+        this.h = this.owner.parent
+        this.bg = this.h[`img_${this.type}_bg1`]
+        this.txt = this.h[`txt_${this.type}1`]
+        this.initx = this.bg.x
+        this.inity = this.bg.y
+    }
+    onClick() {
+        this.bg.visible = true;
+        this.txt.text = __data[this.type]
+
+        let w = this.txt.textField.textWidth + this.h[`offw_${this.type}`]
+        this.bg.width = Math.max(w, this.h[`min_img_${this.type}_bg1_w`])
+        game.scene.layer[`tips`].c.addChild(this.bg)
+        this.bg.scaleX = this.h.scaleX;
+        this.bg.scaleY = this.h.scaleY;
+        this.bg.x = this.initx * this.h.scaleX + this.h.x;
+        this.bg.y = this.inity * this.h.scaleY + this.h.y;
+    }
+    onStageMouseDown() {
+        this.bg.visible = false;
+    }
+}
+class S_click_main_gold extends S_show_money_int_tipsLayer {
+    onAwake() {
+        this.type = `gold`
+        super.onAwake()
+    }
+}
+class S_click_main_stone extends S_show_money_int_tipsLayer {
+    onAwake() {
+        this.type = `stone`
+        super.onAwake()
+    }
+}
+class HallRankItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallRankItem',
+            module: false
+        })
+        this.__vo;
+        game.utils.updateLabelY(this.txt_lv)
+        game.utils.updateLabelY(this.txt_score)
+        game.utils.updateLabelY(this.txt_rank_name)
+        this.addComponent(S_click_HallRankItem_head)
+    }
+    onEnable() { }
+
+    onDisable() { }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        // this.txt_rank_name.text = vo.name;
+        LabelHiddenUtils.getAdapterContent(this.txt_rank_name, vo.name)
+        this.img_head.skin = __data.getHeadTestDefault(vo.head);
+        let rd = RankUtils.getRankLvDataByScore(vo.score, vo.uid, vo.cityId)
+        this.img_lv.visible = false
+        this.img_lv1.visible = false
+        if (rd.toNextLevelNeedCup == 0) {
+            this.img_lv1.visible = true;
+            this.txt_lv1.text = rd.name;
+            this.txt_score.text = vo.score - rd.minCup // bigNumberToCH(vo.score, 2);
+            this.img_lv1.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}1.png`;
+        } else {
+            this.img_lv.visible = true
+            this.txt_lv.text = rd.name;
+            this.txt_lv_num.text = rd.level;
+            this.img_lv.skin = `local/lvNameBg/1/img_dwx${rd.iconIndex}.png`;
+        }
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.rank == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.rank <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.rank > 999 ? '999+' : vo.rank;
+        }
+        this.txt_mjName.text = vo.city;
+
+        if (vo.isMy) {
+            this.img_line.visible = false;
+            game.cb.on('update_headFrame', this, this.update_headFrame)
+            game.cb.on('update_nameHead_me', this, this.update_nameHead_me)
+        }
+        this.update_headFrame()
+    }
+    update_headFrame() {
+        if (this.__vo.uid == __data.uid) {
+            this.img_head_frame.skin = PropIcon.icon[__data.headFrameId || 301].skin
+        } else {
+            this.img_head_frame.skin = PropIcon.icon[this.__vo.headFrameId || 301].skin
+        }
+    }
+    update_nameHead_me() {
+        this.txt_rank_name.text = __data.name;
+        this.img_head.skin = __data.getHeadTestDefault(__data.head);
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.hallRankItemUI', HallRankItem);
+
+class S_click_HallRankItem_head extends Laya.Script {
+    onClick(e) {
+        __showScene.show_playerInfo(this.owner.__vo)
+    }
+}
+
+// class HallRankItemTeam extends game.ModuleBase {
+//     constructor() {
+//         super({
+//             map: 'scene_hall/hallRankItemTeam',
+//             module: false
+//         })
+//         this.__vo;
+//         game.utils.updateLabelY(this.txt_score)
+//         game.utils.updateLabelY(this.txt_rank_name)
+//     }
+//     onEnable() { }
+
+//     onDisable() { }
+
+//     set dataSource(vo) {
+//         if (!vo) return;
+//         this.__vo = vo;
+
+//         // this.txt_score.text = bigNumberToCH(vo.score, 2);
+//         this.txt_score.text = vo.score;
+//         this.txt_rank_name.text = vo.name;
+
+//         this.txt_rank.visible = false;
+//         this.img_rank.visible = false;
+//         let type = game.scene.get(Hall).default_rank_type;
+
+//         this.txt_rank.visible = false;
+//         this.img_rank.visible = false;
+//         if (vo.rank == -1) {
+//             this.txt_rank.visible = true;
+//             this.txt_rank.text = `--`;
+//         } else if (vo.rank <= 3) {
+//             this.img_rank.visible = true;
+//             this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+//         } else {
+//             this.txt_rank.visible = true;
+//             this.txt_rank.text = vo.rank;
+//         }
+//     }
+// }
+// Laya.ClassUtils.regClass('ui.scene_hall.hallRankItemTeamUI', HallRankItemTeam);
+// HallRankItemTeam.maxScore = 0;
+class S_show_friendRoom extends Laya.Script {
+    onClick(e) {
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        __showScene.show_hall_play(__data.myCityId, 'friend')
+    }
+    onEnable() {
+        game.cb.on('update_myCityId', this, this.update)
+        Laya.timer.frameOnce(1, this, () => {
+            this.update()
+        })
+    }
+    onDisable() {
+        game.cb.on('update_myCityId', this, this.update)
+    }
+    update() {
+        let img = this.owner.getChildByName('img_fire')
+        img.visible = false;
+        img.clipStop();
+
+        if (!__data.redPacket.canShowFriendRedIcon()) return false;
+
+        let b = __data.excelConfig.hashCityIdVO[__data.myCityId].Red == 1
+        if (b) {
+            img.visible = true;
+            img.clipPlay(0)
+        }
+    }
+}
+class S_show_garden extends Laya.Script {
+    init(img_tips1) {
+        this.img_tips1 = img_tips1;
+    }
+    onAwake() {
+        this.img_tips1.iy = this.img_tips1.y;
+    }
+    onClick() {
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '雀神花园图标' });
+        let a = game.scene.get(Hall)
+        let b = null;
+        if (a && a.parent) {
+            __data.lastSceneQueue.push(__showScene.show_hall)
+        } else {
+            __data.lastSceneQueue.push(__showScene.show_mjSmallGame)
+        }
+        __showScene.show_garden(true)
+    }
+    onEnable() {
+        this.tweening = false;
+        gtool.query([15008], 0) // 货币
+        gtool.query([15009], 1) // 任务id
+        gtool.query([15012], 1) // 章节奖励
+        game.cb.on('update_star', this, this.update_red)
+        game.cb.on('update_garden_task_data', this, this.update_red)
+        this.update_red();
+    }
+    onDisable() {
+        game.cb.off('update_star', this, this.update_red)
+        game.cb.off('update_garden_task_data', this, this.update_red)
+        Laya.Tween.clearAll(this.img_tips1)
+        this.clearAwait && this.clearAwait()
+        this.tweening = false;
+    }
+    update_red() {
+        let img_red = this.owner.getChildByName('img_red');
+        img_red = img_red || {}; // 兼容小游戏界面 因为那个界面没有红点
+        img_red.visible = __data.garden.task.isRedPoint;
+        this.img_tips1.visible = img_red.visible
+        if (this.img_tips1.visible) {
+            this.img_tips1.scaleX = 1
+            this.img_tips1.scaleY = 1
+            this.addTween()
+        } else {
+            Laya.Tween.clearAll(this.img_tips1)
+            this.clearAwait && this.clearAwait()
+            this.tweening = false;
+        }
+    }
+    async addTween() {
+        if (this.tweening) return
+        this.tweening = true
+        this.img_tips1.y = this.img_tips1.iy;
+
+        await __tool.tweenp(this.img_tips1, { y: this.img_tips1.iy - 5 }, 500)
+        await __tool.tweenp(this.img_tips1, { y: this.img_tips1.iy + 10 }, 1000)
+        await __tool.tweenp(this.img_tips1, { y: this.img_tips1.iy }, 500)
+
+        this.tweening = false;
+        this.addTween()
+    }
+}
+class S_hall_gameCircle extends Laya.Script {
+    onEnable() {
+        if (miniApi.clientType == 'app') {
+            this.owner.visible = false;
+        }
+    }
+    onClick() {
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '游戏圈界面' })
+        __showScene.show_club();
+    }
+}
+class S_hall_poster extends Laya.Script {
+    onEnable() {
+        if (miniApi.clientType == 'app') {
+            this.owner.visible = false;
+        }
+    }
+    onClick() {
+        // 如果是windows微信就__tips提示
+        if (miniApi.getWxDeviceName() === 'windows') {
+            __tips('PC平台暂不支持，敬请期待~');
+            return;
+        }
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '海报界面' })
+        __showScene.show_imageSharePre();
+    }
+}
+class S_show_chuanqiReward extends Laya.Script {
+    onClick() {
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '传奇的馈赠界面' })
+        __showScene.show_chuanqiReward()
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onEnable() {
+        __data.chuanqi.reward.send(1)
+        // if (S_show_chuanqiReward.showCount) {
+        //     game.server.send(16013);
+        // }
+        // S_show_chuanqiReward.showCount = 1;
+        this.update()
+        game.cb.on('update_chuanqi_data', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_chuanqi_data', this, this.update)
+    }
+    update(e) {
+        let red = this.owner.getChildByName('img_red')
+        if (__data.chuanqi.isRedPoint) red.visible = true;
+        else red.visible = false;
+    }
+}
+class S_show_shop extends Laya.Script {
+    init(shopIndex, type) {
+        // type 1商城按钮 0不是
+        this.type = type;
+        this.shopIndex = shopIndex;
+    }
+    onClick(e) {
+        __showScene.show_shop(this.shopIndex)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '商城界面' })
+        if (this.type == 1) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '商城图标' })
+        }
+        if (this.type == 0) {
+            if (this.shopIndex == 0) {
+                miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '金币加号按钮' })
+            } else if (this.shopIndex == 2) {
+                miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '钻石加号按钮' })
+            }
+        }
+        e.stopPropagation()
+    }
+    onEnable() {
+        if (this.type != 1) return
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     this.owner.skin = 'local/hall/1/bt_sc1.png'
+        // } else {
+        this.owner.skin = 'local/hall/1/bt_sc.png'
+        // }
+        __data.shop.discount.query(9009)// 商城信息 红点需要者2个道具判断
+        __data.shop.discount.query(9010)// 商城信息 红点需要者2个道具判断
+        // 富贵庄园红点检测
+        __data.garden.fuguiManor.query(1)
+
+        this.update_shop_data()
+        game.cb.on('update_shop_data', this, this.update_shop_data)
+        game.cb.on('update_fuguiManor_data', this, this.update_shop_data)
+    }
+    onDisable() {
+        if (this.type != 1) return
+        game.cb.off('update_shop_data', this, this.update_shop_data)
+        game.cb.off('update_fuguiManor_data', this, this.update_shop_data)
+    }
+    update_shop_data() {
+        if (this.type != 1) return
+        let red = this.owner.getChildByName('img_red');
+        red.visible = false;
+        // 这里不用判断花园解锁区域
+        if (__data.garden.fuguiManor.buyNum < 1) {
+            red.visible = true;
+            return
+        }
+
+        let n1;
+        let n2;
+        if (shopConfig.discount[9009].buyNum < shopConfig.discount[9009].limit_count) {
+            n1 = 1
+        }
+        if (shopConfig.discount[9010].buyNum < shopConfig.discount[9010].limit_count) {
+            n2 = 1
+        }
+        if (n1 || n2) {
+            red.visible = true;
+        }
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx' ) {
+        //     red.visible = false;
+        // }
+    }
+}
+class S_hall_rank_share extends Laya.Script {
+    onClick(e) {
+        // 地区热度榜分享
+        try {
+            if (!__data.myCityId) {
+                let a = null;
+                a.b = 1;
+            }
+            let ob = {
+                titleId: __tool.randomRange(1, 5),
+                params: `uid=${__data.uid}&myCityId=${__data.myCityId}&shareRewardType=hallShare`
+            }
+            if (TestBtn.btn) {
+                ob.shareGroupClickCallback = () => {
+                    game.scene.remove(GameMainRedPacket_2)
+                    __tips('模拟领取成功')
+                }
+                ob.shareOnShowCallback = () => {
+                    game.scene.add(GameMainRedPacket_2)
+                }
+            }
+            miniApi.share(ob);
+
+        } catch (error) {
+            miniApi.share({
+                titleId: 1,
+                params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+            });
+        }
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '地区榜炫耀', 'Mj_Participation': '参与分享' })
+        // }
+        // } catch (error) {
+        //     console.error(error);
+        // }
+    }
+}
+class S_hall_img_more extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.img_more.visible = !this.owner.parent.img_more.visible;
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() {
+        this.owner.parent.img_more.visible = false;
+    }
+    onEnable() {
+        this.owner.parent.img_more.visible = false;
+    }
+    onDisable() { }
+}
+class S_hall_reward extends Laya.Script {
+    onClick(e) {
+        let img_reward_container = this.owner.parent.img_reward_container;
+        img_reward_container.visible = !img_reward_container.visible;
+        if (img_reward_container.visible) {
+            this.update_red()
+            img_reward_container.x = this.owner.parent.btn_reward.x - img_reward_container.width / 2;
+            if (img_reward_container.x + img_reward_container.width > this.width) {
+                img_reward_container.x = this.width - img_reward_container.width
+            }
+        }
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() {
+        this.owner.parent.img_reward_container.visible = false;
+    }
+    onEnable() {
+        this.owner.parent.img_reward_container.visible = false;
+        this.update_red()
+        game.cb.on('update_dailyLogin_data', this, this.update_dailyLogin_data)
+        game.cb.on('update_redPacket_data', this, this.update_redPacket_data)
+        game.cb.on('update_firstPay_data', this, this.update_firstPay_data)
+        game.cb.on('update_seven_data', this, this.update_seven_data)
+        game.cb.on('update_hall_reward_bg_ad', this, this.update_ad)
+        game.cb.on('update_video_ready', this, this.update_video_ready)
+        game.cb.on('update_invite_list', this, this.update_invite_list)
+        game.cb.on('update_vip_data', this, this.update_red)
+    }
+    onDisable() {
+        game.cb.off('update_dailyLogin_data', this, this.update_dailyLogin_data)
+        game.cb.off('update_redPacket_data', this, this.update_redPacket_data)
+        game.cb.off('update_firstPay_data', this, this.update_firstPay_data)
+        game.cb.off('update_seven_data', this, this.update_seven_data)
+        game.cb.off('update_hall_reward_bg_ad', this, this.update_ad)
+        game.cb.off('update_video_ready', this, this.update_video_ready)
+        game.cb.off('update_invite_list', this, this.update_invite_list)
+        game.cb.off('update_vip_data', this, this.update_red)
+    }
+    update_invite_list() {
+        this.is_btn_invite_red = false;
+        for (let i = 0; i < __data.inviteData.length; i++) {
+            if (__data.inviteData[i].state == 0 && __data.inviteData[i].allPlayer == __data.inviteData[i].invitedArr.length) { // 可以领取   不显示邀请按钮   按钮可以点击
+                this.is_btn_invite_red = true;
+                break;
+            }
+        }
+    }
+    update_dailyLogin_data() {
+        // 连续登录红点检测
+        if (__data.dailyLogin.isRedPoint) {
+            this.is_btn_dailyLogin_red = true;
+        } else {
+            this.is_btn_dailyLogin_red = false;
+        }
+        this.update_red()
+    }
+    update_redPacket_data() {
+        // 连续登录红点检测
+        if (__data.redPacket.isRedPoint) {
+            this.is_btn_redPacket_red = true;
+        } else {
+            this.is_btn_redPacket_red = false;
+        }
+        this.update_red()
+    }
+    update_firstPay_data() {
+        this.update_red()
+    }
+    update_seven_data() {
+        this.is_btn_seven_red = false;
+        if (__data.seven.isRedPoint) {
+            this.is_btn_seven_red = true;
+        }
+        // 是否显示-七日签到按钮
+        if (__data.seven.seven_hasReceiveNum >= 7 || __data.seven.seven_hasReceiveNum <= 0) {
+            this.is_btn_seven_red = false;
+        }
+        this.update_red()
+    }
+    update_ad() {
+        this.is_btn_ad_red = this.owner.parent.btn_adTime.visible && (AdData.time > 0)
+        this.update_red()
+    }
+    update_video_ready(r) {
+        this.update_red()
+    }
+    update_red() {
+        let p = this.owner.parent
+        let isShowGiftRed = this.is_btn_ad_red ||
+            this.is_btn_seven_red ||
+            this.is_btn_dailyLogin_red ||
+            this.is_btn_invite_red ||
+            this.is_btn_redPacket_red
+        let img_red = this.owner.getChildByName('img_red')
+        img_red.visible = isShowGiftRed;
+
+        let b = [
+            p.btn_chuanqiReward,
+            p.btn_seven,
+            p.btn_dailyLogin,
+            p.btn_adTime,
+            p.btn_redPacket,
+            p.btn_invite,
+            p.btn_freeVip,
+            p.btn_exchangeCode,
+        ]
+        // IOS能支付修改
+        p.btn_invite.visible = false;
+        // if (!miniApi.isIOS) p.btn_invite.visible = false;
+        // else p.btn_invite.visible = true;
+
+
+
+        let startx = 20
+        let w = 0
+        for (let index = 0, length = b.length; index < length; index++) {
+            const e = b[index];
+            if (e.visible) {
+                e.x = startx + e.width / 2;
+                startx += e.width + 20
+                w = e.x + e.width / 2;
+            }
+        };
+        // 因为按钮都是0.5 anchorX 所以 右边应该重新计算 空白
+        w += 20
+        p.img_reward_container.width = w;
+    }
+}
+class S_hall_seven extends Laya.Script {
+    onClick(e) {
+        __showScene.show_seven()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '七日签到图标' })
+    }
+    onEnable() {
+        this.update_red();
+        game.cb.on('update_seven_data', this, this.update_red)
+    }
+    onDisable() {
+        game.cb.off('update_seven_data', this, this.update_red)
+    }
+    update_red() {
+        this.owner.getChildByName('img_red').visible = false
+        if (__data.seven.isRedPoint) {
+            this.owner.getChildByName('img_red').visible = true
+        }
+        // 是否显示-七日签到按钮
+        if (__data.seven.seven_hasReceiveNum >= 7 || __data.seven.seven_hasReceiveNum <= 0) {
+            this.owner.visible = false;
+        } else {
+            this.owner.visible = true;
+        }
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() { }
+}
+class S_hall_dailyLogin extends Laya.Script {
+    onClick(e) {
+        __showScene.show_dailyLogin()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '每日登录图标' })
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() { }
+    onEnable() {
+        __data.dailyLogin.send(1)
+        this.update_red();
+        game.cb.on('update_dailyLogin_data', this, this.update_red)
+    }
+    onDisable() {
+        game.cb.off('update_dailyLogin_data', this, this.update_red)
+    }
+    update_red() {
+        // 连续登录红点检测
+        if (__data.dailyLogin.isRedPoint) {
+            this.owner.getChildByName('img_red').visible = true
+        } else {
+            this.owner.getChildByName('img_red').visible = false
+        }
+    }
+}
+class S_hall_email extends Laya.Script {
+    onRightClick(e) {
+        __showScene.show_bless()
+        return;
+        if (config.useVersionIP) return;
+        game.server.send(2244);
+    }
+    async onClick(e) {
+        __showScene.show_email()
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '邮件界面' })
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown() { }
+    onEnable() {
+        game.server.send(2232)
+        this.update_email_data()
+        game.cb.on('update_email_data', this, this.update_email_data)
+    }
+    onDisable() {
+        game.cb.off('update_email_data', this, this.update_email_data)
+    }
+    update_email_data() {
+        let haveNoRead = __data.email.some((e) => {
+            return e.isRead == 0
+        })
+        let img_red = this.owner.getChildByName('img_red')
+        img_red.visible = haveNoRead;
+    }
+}
+class S_hall_collect extends Laya.Script {
+    init(type) {
+        this.type = type
+    }
+    onClick(e) {
+        // game.scene.remove(GameMainCardShare)
+        let shareCardId = this.owner.parent.shareCardId || 0;
+        __showScene.show_collect(this.type, shareCardId)
+    }
+}
+
+class S_hall_rankRule extends Laya.Script {
+    onClick(e) {
+        __showScene.show_gameMain_rankRule()
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '地区榜规则界面' })
+    }
+}
+class S_hall_mj_more extends Laya.Script {
+    init(isHall) {
+        this.isHall = isHall
+    }
+    onClick(e) {
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '选择更多玩法界面' })
+        if (this.isHall) {
+            let b = game.scene.get(HallPlayLeft)
+            __data.lastSceneQueue.push((cityId) => {
+                __showScene.show_hall_play(cityId || __data.myCityId, 'normal', false, false)
+            })
+            __showScene.show_gameMain_selectPlay(0, 1)
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '主界面更多玩法' })
+        } else {
+            let a = game.scene.get(FriendRoom_hallPlay_center)
+            let fn = a && a.parent ? (cityId) => {
+                __showScene.show_hall_play(cityId || __data.myCityId, 'friend', false, false)
+            } : (cityId) => {
+                __showScene.show_hall_play(cityId || __data.myCityId, 'normal', false, false)
+            }
+            __data.lastSceneQueue.push(fn)
+            __showScene.show_gameMain_selectPlay(0, 1)
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '玩法界面查看全部' })
+        }
+    }
+}
+class S_hall_changePlay extends Laya.Script {
+    init(isHall) {
+        this.isHall = isHall
+    }
+    onClick(e) {
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '选择我的玩法界面' })
+        if (this.isHall) {
+            __data.lastSceneQueue.push(__showScene.show_hall)
+            __showScene.show_gameMain_selectPlay(1, 1)
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '主界面切换玩法' })
+        } else {
+            let a = game.scene.get(FriendRoom_hallPlay_center)
+            let fn = a && a.parent ? (cityId) => {
+                __showScene.show_hall_play(cityId || __data.myCityId, 'friend', false, false)
+            } : (cityId) => {
+                __showScene.show_hall_play(cityId || __data.myCityId, 'normal', false, false)
+            }
+            __data.lastSceneQueue.push(fn)
+            __showScene.show_gameMain_selectPlay(1, 1)
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '玩法界面切换玩法' })
+        }
+    }
+}
+
+// 广告时间
+class S_hall_adTime extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_ad();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '广告时间界面' })
+    }
+    onEnable() {
+        AdData.send(1)
+        this.update_ad()
+        this.owner.visible = false
+        game.cb.on('update_ad', this, this.update_ad)
+        this.update_video_ready({ adUnitId: 'adunit-24f34675f1830a6c', isSuccess: 1 })
+        Laya.timer.loop(1000, this, this.updateCountdown)
+    }
+    onDisable() {
+        game.cb.off('update_ad', this, this.update_ad)
+        Laya.timer.clearAll(this)
+    }
+    updateCountdown() {
+        let ssm = new Date().setHours(0, 0, 0, 0) - Date.now() + 24 * 3600 * 1000
+        if (ssm <= 0) {
+            this.owner.visible = false
+            game.cb.event('update_ad')
+        }
+    }
+    update_video_ready(r) {
+        if (r.adUnitId == 'adunit-24f34675f1830a6c') {
+            GameMainAd.videoR = r;
+            // this.owner.visible = r && r.isSuccess;
+        }
+        this.tt()
+    }
+    update_ad() {
+        AdData.testAdActive()
+        this.tt()
+    }
+    tt() {
+        this.owner.visible = false;
+        if (AdData.isActive) {
+            if (GameMainAd.videoR && GameMainAd.videoR.isSuccess) {
+                this.owner.visible = true;
+                this.owner.getChildByName('img_red').visible = (AdData.time > 0)
+            }
+        }
+        game.cb.event('update_hall_reward_bg_ad')
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}
+
+class S_hall_freeVip extends Laya.Script {
+    onClick() {
+        __showScene.show_freeVip();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '免费VIP界面' })
+    }
+    onEnable() {
+        this.update()
+        game.cb.on('update_vip_data', this, this.update)
+        game.cb.on('update_freeVip_data', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.update)
+        game.cb.off('update_freeVip_data', this, this.update)
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    update() {
+        this.owner.visible = false;
+        if (miniApi.clientType == 'app') return;
+        if (__data.vip.isReceiveFreeVip) return;
+        if (Date.now() - parseInt(__data.Mj_registeDateMs) < 24 * 3600 * 1000) {
+            this.owner.visible = true
+        }
+        if (!__data.vip.isVip && __data.vip.addUpToLoginDayNum > 7) {
+            this.owner.visible = true
+        }
+    }
+}
+
+class S_hall_money_logic extends Laya.Script {
+    onAwake() {
+        let t = this.owner
+        t.txt_gold && t.txt_gold.addComponent(S_update_gold)
+        t.txt_stone && t.txt_stone.addComponent(S_update_stone)
+        t.txt_star && t.txt_star.addComponent(S_hall_tween_star)
+        t.img_gold_bg && t.img_gold_bg.addComponent(S_click_main_gold)
+        t.img_stone_bg && t.img_stone_bg.addComponent(S_click_main_stone)
+        t.img_gold_bg1 && (t.img_gold_bg1.visible = false)
+        t.img_stone_bg1 && (t.img_stone_bg1.visible = false)
+        t.offw_gold = t.img_gold_bg1 && (t.img_gold_bg1.width - t.txt_gold1.width)
+        t.offw_stone = t.img_stone_bg1 && (t.img_stone_bg1.width - t.txt_stone1.width)
+        t.min_img_gold_bg1_w = t.img_gold_bg1 && (t.img_gold_bg1.width)
+        t.min_img_stone_bg1_w = t.img_stone_bg1 && (t.img_stone_bg1.width)
+        t.txt_gold && game.utils.updateLabelY(t.txt_gold)
+        t.txt_gold1 && game.utils.updateLabelY(t.txt_gold1)
+        t.txt_stone && game.utils.updateLabelY(t.txt_stone)
+        t.txt_stone1 && game.utils.updateLabelY(t.txt_stone1)
+        t.btn_add_gold && t.btn_add_gold.addComponent(S_show_shop).init(1, 0)
+        t.btn_add_stone && t.btn_add_stone.addComponent(S_show_shop).init(3, 0)
+    }
+    onEnable() {
+
+    }
+}
+
+// @Test 测试
+class TestGameDeskScript extends Laya.Script {
+    async onRightClick() {
+        // await __showScene.load_game_mahjong();
+        // __showScene.show_game_mahjong();
+    }
+
+    async onDoubleClick() {
+        // await __showScene.load_game_mahjong();
+        // __showScene.show_game_mahjong();
+
+        // __showScene.show_prompt_team_advance('阿斗', '', '蜀国');
+    }
+}
+
+// class HallPlayItem1 extends game.ModuleBase {
+//     constructor() {
+//         super({
+//             map: 'scene_hall/hallPlayItem1',
+//             module: false
+//         })
+//         this.__vo;
+//         this.__ss = this.addComponent(S_HallPlayItem1And2).init('small')
+//     }
+//     set dataSource(vo) {
+//         if (!vo) return;
+//         this.__vo = vo;
+//         this.__ss.dataSource = vo;
+//     }
+// }
+// Laya.ClassUtils.regClass('ui.scene_hall.hallPlayItem1UI', HallPlayItem1);
+
+class HallPlayItem2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/hallPlayItem2',
+            module: false
+        })
+        this.__vo;
+        this.__ss = this.addComponent(S_HallPlayItem1And2).init('big')
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.__ss.dataSource = vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.hallPlayItem2UI', HallPlayItem2);
+
+class S_HallPlayItem1And2 extends Laya.Script {
+    init(type) {
+        this.type = type;
+        this.__vo;
+        this.owner.img_city.addComponent(S_hall_btn_mj)
+        return this;
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.owner.img_city.skin = ''
+        if (__data.excelConfig.hashCityIdVO[vo.cityId]) {
+            this.owner.img_city.visible = true
+
+            let i1 = vo.cityId % 5 + 1
+            try {
+                i1 = __data.excelConfig.hashCityIdToBtnSkin[vo.cityId].bigBtnIndex
+            } catch (error) { }
+            this.owner.img_city.skin = `ab/hall_area_btn_big/img_clb${i1}.png`
+            this.owner.img_flower.skin = `cdn/hall_area_btn_big_font/${vo.cityId}.png`
+            // }
+        } else {
+            this.owner.img_city.visible = false
+        }
+    }
+}
+class S_hall_btn_mj extends Laya.Script {
+    onClick(e) {
+        let cityId = __tool.gdp(this, 'owner.parent.__vo.cityId')
+        if (cityId != undefined) {
+            __data.lastSceneQueue.push(__showScene.show_hall)
+            __showScene.show_hall_play(cityId)
+        }
+    }
+}
+S_HallPlayItem1And2.txtUrl = {
+    '1': 'local/rank_ui/1/img_font_1.png',
+    '2': 'local/rank_ui/1/img_font_2.png',
+    '3': 'local/rank_ui/1/img_font_3.png',
+    '4': 'local/rank_ui/1/img_font_4.png',
+    '5': 'local/rank_ui/1/img_font_5.png',
+    '6': 'local/rank_ui/1/img_font_6.png',
+    '7': 'local/rank_ui/1/img_font_7.png',
+    '8': 'local/rank_ui/1/img_font_8.png',
+    '9': 'local/rank_ui/1/img_font_9.png',
+    '0': 'local/rank_ui/1/img_font_0.png',
+}
+
+class S_hall_tween_star extends Laya.Script {
+    onEnable() {
+        this.owner.text = __data.garden.star + '/' + __data.garden.maxStar
+        this.star_v = __data.garden.star
+        game.cb.on('update_star', this, this.update_star)
+    }
+    onDisable() {
+        game.cb.off('update_star', this, this.update_star)
+    }
+    update_star() {
+        let start_ob = {
+            v: Number(this.star_v)
+        };
+        let t = Laya.Tween.to(start_ob, {
+            v: Number(__data.garden.star)
+        }, 200)
+        t.update = new Laya.Handler(this, function () {
+            this.owner.text = Math.floor(start_ob.v) + '/' + __data.garden.maxStar
+        })
+    }
+}

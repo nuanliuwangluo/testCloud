@@ -1,0 +1,249 @@
+// 支付模块  负责查询商品，监听，购买，完成交易
+class OriginAppIap {
+    static init() {
+        OriginAppIap.initMallListener();
+    }
+
+    static initMallListener() {
+
+        AppBridge.setIapListener((ret) => {
+            if (ret) {
+                console.log('IOS支付监听：' + JSON.stringify(ret));
+                // if (ret.state != 0 && ret.state != 1) { OriginAppIap.fail && OriginAppIap.fail(); }
+                // state
+                // 0 //已加入交易队列
+                // 1 //交易完成
+                // 2 //交易失败
+                // 3 //恢复购买
+                // 4 //交易等待被确认
+                if (ret.state == 0) {
+                    // OriginAppIap.fail && OriginAppIap.fail('未知错误');
+                } else if (ret.state == 1) {
+                    // 交易完成获取
+                    OriginAppIap.deliverTransactionId = ret.transactionId;
+                    if (OriginAppIap.success) OriginAppIap.success(ret);
+                    else if (OriginAppIap.exchangeGoodsInterface) OriginAppIap.exchangeGoodsInterface(ret);
+                    // game.server.send(4001, ret.transactionId, ret.receipt, OriginAppIap.getValue(ret.productId));
+                    // game.server.send(7700, ret.productId, ret.transactionId, ret.receipt);
+                } else if (ret.state == 2) {// 交易失败了
+                    OriginAppIap.finishTransaction(ret.transactionId);
+                    OriginAppIap.fail && OriginAppIap.fail(ret.msg);
+                }
+            } else {
+                OriginAppIap.fail && OriginAppIap.fail();
+            }
+        });
+    }
+
+    static initMallItems() {
+        console.log('商品id集合：', OriginAppIap.investIds)
+        AppBridge.getIapProduces((ret) => {
+            OriginAppIap.mallData.inited = true;
+            OriginAppIap.mallData.iosItems = ret.products || OriginAppIap.mallData.iosItems;
+            // 价格从小到大排序
+            OriginAppIap.mallData.iosItems.sort((a, b) => { return a.price - b.price })
+            console.log('商品信息：', JSON.stringify(OriginAppIap.mallData.iosItems))
+        }, OriginAppIap.investIds);
+    }
+
+    static getPriceById(id) {
+        if (OriginAppIap.mallData.inited) {
+            for (let i = 0; i < OriginAppIap.mallData.iosItems.length; i++) {
+                if (OriginAppIap.mallData.iosItems[i].productId == id) {
+                    return OriginAppIap.mallData.iosItems[i].formattedPrice;
+                    // return OriginAppIap.mallData.iosItems[i].price;
+                }
+            }
+        }
+        return '';
+    }
+
+    static invest(id, success, fail) {
+        console.log('支付ID：', id);
+        OriginAppIap.success = success;
+        OriginAppIap.fail = fail;
+
+        AppBridge.iapPurchase(id);
+    }
+
+    // 完成交易
+    static finishTransaction(transactionId, callback) {
+        if (transactionId) {
+            AppBridge.iapFinishTransaction(transactionId);
+        }
+    }
+
+    static set success(value) { this._success = value; }
+    static get success() { return this._success; }
+
+    static set fail(value) { this._fail = value; }
+    static get fail() { return this._fail; }
+
+    static set deliverTransactionId(value) { this._deliverTransactionId = value; }
+    static get deliverTransactionId() { return this._deliverTransactionId; }
+
+    static set exchangeGoodsInterface(value) { this._exchangeGoodsInterface = value; }
+    static get exchangeGoodsInterface() { return this._exchangeGoodsInterface; }
+
+    // [{id, value}]
+    static set goods(value) { this._goods = value; }
+    static get goods() { return this._goods; }
+    static getValue(id) {
+        for (let i = 0; i < this.goods.length; i++) {
+            if (this.goods[i].id == id) {
+                return this.goods[i].value;
+            }
+        }
+        return 0;
+    }
+    static get investIds() {
+        if (this._investIds) {
+            return this._investIds;
+        } else {
+            let ids = [];
+            for (let i = 0; i < this.goods.length; i++) {
+                ids.push(this.goods[i].id);
+            }
+            return ids;
+        }
+    }
+    static set investIds(values) { this._investIds = values; }
+
+    static get mallData() {
+        if (!this._mallData) {
+            this._mallData = { inited: false, productId: '', iosItems: [], androidItems: [] };
+        }
+        return this._mallData;
+    }
+}
+window.OriginAppIap = OriginAppIap;
+
+
+
+class OriginAppLogin {
+    /**
+     * @param {Function} success 登录成功回调 会附带参数 （用户信息Object）
+     * @param {Function} fail 登录失败回调 会附带参数（错误码对应字符串）
+     */
+    static wx(success, fail) {
+        AppBridge.wxLogin((ret) => {
+            if (ret.code == 0) {
+                let info = ret.ret;
+                success && success(info);
+                OriginAppLogin.save(info.openid, info.unionid, '', info.nickname, info.headimgurl, info.sex);
+            }
+        })
+    }
+
+    /**
+     * @param {Function} success 登录成功回调 会附带参数 （用户信息Object）
+     * @param {Function} fail 登录失败回调 会附带参数（错误码对应字符串）
+     */
+    static apple(success, fail) {
+        AppBridge.appleLogin((ret) => {
+            if (ret.code == 0) {
+                console.log(JSON.stringify(ret))
+                success && success(ret);
+                let coupleName = ret.fullName;
+                let nickName = ret.fullName;
+                OriginAppLogin.save('', '', '', ret.user, '', nickName ? nickName : coupleName);
+            } else {
+
+            }
+        });
+    }
+
+    static save(openId, unionId, appleId, name, head = '', sex = 1) {
+        let object = { openId, unionId, appleId, name, head, sex }
+        OriginAppStorage.save('loginData', object);
+    }
+}
+window.OriginAppLogin = OriginAppLogin;
+
+
+class OriginAppStorage {
+    static save(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    static get(key) {
+        let value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+    }
+}
+window.OriginAppStorage = OriginAppStorage;
+
+
+class OriginAppAds {
+    static auth(callback) {
+        AppBridge.requestAuth('ad', (ret) => {
+            console.log('广告授权结果：', JSON.stringify(ret));
+            callback && callback();
+        });
+    }
+
+    static load(callBack) {
+        this.auth(() => {
+            AppBridge.loadAdVideo((ret) => {
+                if (String(ret.status).toUpperCase() == 'ONADLOAD') {
+                    OriginAppAds.ready = true;
+                    callBack && callBack(1);
+                }
+                if (String(ret.status).toUpperCase() == 'ONREWARD') { OriginAppAds.videoCompleteState = true; }
+                if (String(ret.status).toUpperCase() == 'ONNOAD') {
+                    callBack && callBack(0);
+                    OriginAppAds.fail && OriginAppAds.fail(-1);
+                }
+                if (String(ret.status).toUpperCase() == 'ONADCLICK') { }// 点击广告
+                if (String(ret.status).toUpperCase() == 'ONADCLOSE') {
+                    if (OriginAppAds.videoCompleteState) OriginAppAds.complete && OriginAppAds.complete();
+                    OriginAppAds.ready = false;
+                    OriginAppAds.load();
+                }
+                if (String(ret.status).toUpperCase() == 'ONADSHOW') { }
+                if (String(ret.status).toUpperCase() == 'ONADEXPOSE') { }
+                if (String(ret.status).toUpperCase() == 'ONVIDEOCACHED') {
+                    OriginAppAds.ready = true;
+                    callBack && callBack(1);
+                    OriginAppAds.waitStatus && OriginAppAds.show(OriginAppAds.complete, OriginAppAds.fail);
+                }
+                if (String(ret.status).toUpperCase() == 'ONVIDEOCOMPLETE') { }
+                if (String(ret.status).toUpperCase() == 'OVERDUE') { OriginAppAds.ready = false; OriginAppAds.load(callBack); } // overdue为激励视频已过期，需要开发者自行重新预加载广告
+            }, "9146328111299007");
+        })
+    }
+
+    static show(complete, fail) {
+        OriginAppAds.complete = complete;
+        OriginAppAds.fail = fail;
+        OriginAppAds.videoCompleteState = false;
+        OriginAppAds.waitStatus = true;
+        if (OriginAppAds.ready) {
+            OriginAppAds.waitStatus = false;
+            AppBridge.showAdVideo();
+        }
+    }
+
+    static set ready(value) { this._ready = value; }
+    static get ready() { return this._ready; }
+
+    static set inited(value) { this._inited = value; }
+    static get inited() { return this._inited; }
+
+    static set complete(value) { this._complete = value; }
+    static get complete() { return this._complete; }
+
+    static set fail(value) { this._fail = value; }
+    static get fail() { return this._fail; }
+
+    static set videoCompleteState(value) { this._videoCompleteState = value; }
+    static get videoCompleteState() { return this._videoCompleteState; }
+
+    static set waitStatus(value) { this._waitStatus = value; }
+    static get waitStatus() { return this._waitStatus; }
+
+    static get adId() {
+        return "9146328111299007";
+    }
+}
+window.OriginAppAds = OriginAppAds;

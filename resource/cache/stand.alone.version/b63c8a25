@@ -1,0 +1,796 @@
+class TestPanel extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestPanel',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = '';
+    }
+    _closeVideo() {
+        // 关闭 HTML5 video 元素
+        if (this._videoElement) {
+            this._videoElement.pause();
+            this._videoElement.src = '';
+            this._videoElement.remove();
+            this._videoElement = null;
+        }
+        // 关闭微信视频
+        if (this._wxVideo) {
+            this._wxVideo.destroy();
+            this._wxVideo = null;
+        }
+        // 关闭按钮
+        if (this._closeBtn && this._closeBtn.parent) {
+            this._closeBtn.removeSelf();
+        }
+    }
+    onEnable() {
+        this.__list.array = [
+            {
+                name: 'web模式',
+                fn: () => {
+                    miniApi.clientType = 'web'
+                }
+            },
+            {
+                name: 'wx模式',
+                fn: () => {
+                    miniApi.clientType = 'wx'
+                }
+            },
+            {
+                name: 'app模式',
+                fn: () => {
+                    miniApi.clientType = 'app'
+                }
+            },
+            {
+                name: 'IOS模式' + (TestPanel.isIOS ? '-ing' : ''),
+                fn: async () => {
+                    TestPanel.isIOS = 1
+                }
+            },
+            {
+                name: '赛季结算界面',
+                fn: () => {
+                    __data.seasonEndData = {
+                        index: 1,
+                        maxIndex: 1,
+                        maxScore: 50000,
+                        year: 2024,
+                        season: '春',
+                        newSeason: '春',
+                    }
+                    __showScene.show_seasonEnd()
+                }
+            }, {
+                name: '赛季开始界面',
+                fn: () => {
+                    __data.seasonEndData = {
+                        index: 1,
+                        maxIndex: 1,
+                        maxScore: 20000,
+                        newScore: 10001,
+                        year: 2024,
+                        newYear: 2025,
+                        season: '春',
+                        newSeason: '春',
+                    }
+
+                    __showScene.show_seasonStart()
+                }
+            }, {
+                name: '赛季奖励弹框',
+                fn: async () => {
+                    let rs = []
+                    rs.push({
+                        propId: 102,
+                        propNum: 1
+                    })
+                    rs.push({
+                        propId: 202,
+                        propNum: 1
+                    })
+                    rs.push({
+                        propId: 303,
+                        propNum: 1
+                    })
+                    // for (let index = 0, length = 8; index < length; index++) {
+                    //     rs.push({
+                    //         propId: 101,
+                    //         propNum: 1
+                    //     })
+                    // };
+                    game.scene.add(GameMainSeasonReward, [
+                        rs
+                    ])
+                }
+            },
+            // {
+            //     name: '繁荣度特效',
+            //     fn: async () => {
+            //         let a = game.scene.get(GardenMainUI_leftUp_res)
+            //         if (a && a.parent) {
+            //             gardenEffect.startBuildValueEffect()
+            //         } else {
+            //             __tips('需要打开花园界面')
+            //         }
+            //     }
+            // },
+            // {
+            //     name: '星星特效',
+            //     fn: async () => {
+            //         let a = game.scene.get(GardenTask)
+            //         if (a && a.parent) {
+            //             gardenEffect.taskStar()
+            //         } else {
+            //             __tips('需要打开花园任务界面')
+            //         }
+            //     }
+            // },
+            {
+                name: '建造跳过星星验证' + (TestPanel.garden_build_skip_star_test ? '-ing' : ''),
+                fn: async () => {
+                    TestPanel.garden_build_skip_star_test = 1;
+                }
+            }, {
+                name: '拉取视频失败' + (TestPanel.ready_video_fail ? '-ing' : ''),
+                fn: async () => {
+                    TestPanel.ready_video_fail = 1
+                }
+            }, {
+                name: '完成日常任务',
+                fn: async () => {
+                    game.server.send(15002)
+                }
+            },
+            // {
+            //     name: '花园弹框',
+            //     fn: async () => {
+            //         __showScene.show_garden_mainScene_bombbox()
+            //     }
+            // },
+            {
+                name: '获得道具弹框-没星星',
+                fn: async () => {
+                    let rs = []
+                    for (let index = 0, length = 2; index < length; index++) {
+                        rs.push({
+                            propId: 101,
+                            propNum: 1
+                        })
+                    };
+                    game.scene.add(GameMainPropGet, [
+                        rs
+                    ])
+                }
+            },
+            // {
+            //     name: '打开 互动符不足 面板',
+            //     fn: () => {
+            //         __showScene.show_shop_601()
+            //     }
+            // },
+            // {
+            //     name: '繁荣度特效',
+            //     fn: async () => {
+            //         let a = game.scene.get(GardenMainUI_leftUp_res)
+            //         if (a && a.parent) {
+            //             gardenEffect.startBuildValueEffect()
+            //         } else {
+            //             __tips('需要打开花园界面')
+            //         }
+            //     }
+            // },
+            // {
+            //     name: '星星特效',
+            //     fn: async () => {
+            //         let a = game.scene.get(GardenTask)
+            //         if (a && a.parent) {
+            //             gardenEffect.taskStar()
+            //         } else {
+            //             __tips('需要打开花园任务界面')
+            //         }
+            //     }
+            // },
+            {
+                name: '获得道具弹框-有星星',
+                fn: async () => {
+                    let rs = []
+                    for (let index = 0, length = 8; index < length; index++) {
+                        rs.push({
+                            propId: 5,
+                            propNum: 5
+                        })
+                    };
+                    game.scene.add(GameMainPropGet, [
+                        rs, 0
+                    ])
+                }
+            },
+            {
+                name: '添加一个新装饰',
+                fn: async () => {
+                    __data.garden.newDress.push(3);
+                    game.cb.event('garden_add_new_dress')
+                }
+            },
+            {
+                name: '断线重连',
+                fn: async () => {
+                    clearConnect()
+                }
+            },
+            {
+                name: '花园添加龙骨',
+                fn: async () => {
+                    let a = game.scene.get(Garden_groud)
+                    a.moveTo(250, 250)
+                    a.tileMap.tileChangeTexture('sign', 250, 250, 'Jianzao.sk-Jianzao1-0')
+                }
+            },
+            {
+                name: '建造完毕测试',
+                fn: async () => {
+                    game.cb.event('garden_remove_main_ui')
+                    game.scene.add(GardenBuildMask);
+                    game.cb.event('garden_build', [__data.garden.task.branchTaskId])
+                }
+            },
+            {
+                name: '花园解锁',
+                fn: async () => {
+                    game.scene.add(TestInput, ['花园解锁测试', '输入章节id', (e) => {
+                        game.scene.get(Garden_groud).unlock_area(parseInt(e) || 2)
+                    }])
+                }
+            },
+            {
+                name: '结算测试',
+                fn: async () => {
+                    game.cb.event('result_test');
+                }
+            },
+            {
+                name: '好友房结算测试',
+                fn: async () => {
+                    game.cb.event('result_test', [1]);
+                }
+            },
+            {
+                name: '大结算测试',
+                fn: async () => {
+                    game.cb.event('all_result_test');
+                }
+            },
+            {
+                name: '分享结算测试',
+                fn: async () => {
+                    game.cb.event('share_all_result_test');
+                }
+            },
+            {
+                name: '回归玩家面板',
+                fn: async () => {
+                    __showScene.show_newPlayerGift('returnPlayer')
+                }
+            },
+            {
+                name: '获得vip体验卡',
+                fn: async () => {
+                    let rs = []
+                    for (let index = 0, length = 1; index < length; index++) {
+                        rs.push({
+                            propId: game.utils.randomSample([701, 702, 703], [1, 1, 1]),
+                            propNum: 1,
+                        })
+                    };
+                    game.scene.add(GameMainPropGet_vip, [
+                        rs
+                    ])
+                }
+            },
+            {
+                name: '邀请有礼',
+                fn: async () => {
+                    __showScene.show_gameMain_invite();
+                }
+            },
+            {
+                name: '桌面进入',
+                fn: async () => {
+                    miniApi.wxScene = 1023
+                }
+            },
+            {
+                name: '活动订阅',
+                fn: async () => {
+                    let a = await miniApi.activitySubscribe()
+                    __tips(a)
+                }
+            },
+            {
+                name: '系统订阅',
+                fn: async () => {
+                    let a = await miniApi.systemUpdateSubscribe()
+                    __tips(a)
+                }
+            },
+            {
+                name: '录像测试',
+                fn: async () => {
+                    let rid = game.utils.getWebParams("recordId");
+                    if (rid) {
+                        __showScene.wait();
+                        game.server.send(14015, rid);
+                    } else {
+                        __tips('网页参数中请添加[ recordId ]字段.');
+                        console.log('网页参数中请添加[ recordId ]字段.');
+                    }
+                }
+            },
+            // {
+            //     name: '富贵庄园',
+            //     fn: async () => {
+            //         __showScene.show_garden_fugui_manor_bombbox()
+            //     }
+            // },
+            {
+                name: '激励弹窗',
+                fn: async () => {
+                    ResultGoldVideoHandle.gold = 1000;
+                    LookVideoProxy.type = LookVideoProxy.TYPE_LOSE;
+                    LookVideoProxy.proxy(ResultGoldVideoHandle);
+                    LookVideoProxy.active = true;
+                }
+            },
+            {
+                name: '视频看完次数5',
+                fn: async () => {
+                    let key = __data.uid + ':today_lookVideoFinishCount:' + new Date().toDateString()
+                    miniApi.setItem(key, 5)
+                }
+            },
+            {
+                name: '一键安装花园第一区域',
+                fn: async () => {
+                    for (let index = 1, length = 25; index <= length; index++) {
+                        let d2 = __data.excelConfig.hashGardenTaskPositionId_compId[index]
+                        if (d2) {
+                            game.server.send(15005, index, d2[0])
+                        }
+                    };
+                }
+            },
+            // {
+            //     name: '拉起推荐',
+            //     fn: async () => {
+            //         /**
+            //          *  推荐组件参考代码
+            //          *  核心由 pageManager实例 + openlink值 决定活动，开发者可根据下方代码自行适配
+            //          */
+            //         /**
+            //          *  游戏内提前加载推荐组件数据
+            //          */
+            //         async function loadRecommend() {
+            //             if (!wx.createPageManager) {
+            //                 throw '当前基础库版本暂不支持。';
+            //             }
+            //             TestPanel.recommendPageManager = wx.createPageManager();
+            //             TestPanel.recommendPageManager.on(
+            //                 'error', // show | destroy | error
+            //                 (res) => {
+            //                     console.log('recommend component show.', res);
+            //                 },
+            //             )
+            //             TestPanel.recommendPageManager.on(
+            //                 'show', // show | destroy | error
+            //                 (res) => {
+            //                     console.log('recommend component show.', res);
+            //                 },
+            //             )
+            //             TestPanel.recommendPageManager.on(
+            //                 'destroy', // show | destroy | error
+            //                 (res) => {
+            //                     debugger
+            //                     console.log('recommend component destroy：', res, res.isRecommended);
+            //                 },
+            //             )
+            //             await TestPanel.recommendPageManager.load({
+            //                 openlink: 'TWFRCqV5WeM2AkMXhKwJ03MhfPOieJfAsvXKUbWvQFQtLyyA5etMPabBehga950uzfZcH3Vi3QeEh41xRGEVFw', // 推荐组件OPENLINK常量，直接复制即可，无需理解含义
+            //             });
+            //         }
+
+            //         /**
+            //          *  拉起推荐组件
+            //          */
+            //         async function showRecommend() {
+            //             if (!TestPanel.recommendPageManager) {
+            //                 await loadRecommend();
+            //             }
+            //             return await TestPanel.recommendPageManager.show();
+            //         }
+
+            //         // 游戏场景load时
+            //         await loadRecommend();
+
+            //         // 需要展示时
+            //         await showRecommend();
+            //     }
+            // },
+            {
+                name: '红包进度+1',
+                fn: async () => {
+                    game.server.send(18011)
+                }
+            },
+            {
+                name: '红包进度-1',
+                fn: async () => {
+                    game.server.send(18012)
+                }
+            },
+            {
+                name: '新人红包完成',
+                fn: async () => {
+                    game.server.send(18013)
+                }
+            },
+            {
+                name: '全民红包出现',
+                fn: async () => {
+                    game.server.send(18014)
+                }
+            },
+            {
+                name: '玩法匹配调试',
+                fn: async () => {
+                    let cityId = HallPlay.lastCityId;
+                    let ruleId = HallPlay.curRuleId;
+                    __data.deskData.roomVo.clear();
+                    await __showScene.load_game_resource_by_gameId(cityId);
+                    __data.prev_match_modelId = ruleId;
+                    __data.prev_match_lv = 1;
+                    __data.deskData.roomVo.matchName = '新手场';
+                    __data.deskData.roomVo.bottomScore = 100;
+                    __data.deskData.roomVo.modelId = ruleId;
+                    __data.deskData.roomVo.indexId = 1;
+                    __showScene.show_game_mahjong(false, true, true);
+                    game.scene.add(GameMahjongPreMatch, [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore, (isVideoMax) => {
+                        console.log('开始匹配...' + '视频匹配方式：' + isVideoMax);
+                    }]);
+                    game.cb.event('update_roomId');
+                }
+            },
+            {
+                name: "对局统计",
+                fn: async () => {
+                    if (!TestPlay.view) {
+                        TestPlay.view = new TestPlay();
+                        TestPlay.view.zOrder = 1000;
+                    }
+                    game.stage.addChild(TestPlay.view);
+                }
+            }
+            , {
+                name: "广告时间激活",
+                fn: async () => {
+                    let key = __data.uid + ':' + new Date().toDateString() + ":adActive";
+                    miniApi.setItem(key, 1);
+                    game.cb.event('update_ad')
+                }
+            }
+            , {
+                name: "群分享回调",
+                fn: async () => {
+                    game.scene.add(TestInput, ['群分享回调', '输入群id', (e) => {
+                        trace('群分享回调', e)
+                        __data.shareVideoRule.shareGroupCallback(e)
+                    }])
+                }
+            }
+            , {
+                name: "模拟分享3群3天0人",
+                fn: async () => {
+                    let a = __data.shareVideoRule.shareGroupItem;
+                    a = {
+                        dealgid: {},
+                        lowValueGnum: 0,
+                        playerGIN: 7,
+                        gday: {
+                            wxq001: { 100: 7, 101: 7, 102: 7 },
+                            wxq002: { 100: 7, 101: 7, 102: 7 },
+                            wxq003: { 100: 7, 101: 7, 102: 7 },
+                        }
+                    }
+                    miniApi.setItem(__data.uid + ":groupShareOB", JSON.stringify(a))
+                }
+            }
+            , {
+                name: "模拟分享3群4天0人",
+                fn: async () => {
+                    let a = __data.shareVideoRule.shareGroupItem;
+                    a = {
+                        dealgid: { wxq002: 1, wxq003: 1 },
+                        lowValueGnum: 2,
+                        playerGIN: 7,
+                        gday: {
+                            wxq001: { 100: 0, 101: 7, 102: 7 },
+                            wxq002: { 100: 7, 101: 7, 102: 7, 103: 7 },
+                            wxq003: { 100: 7, 101: 7, 102: 7, 103: 7 },
+                        }
+                    }
+                    miniApi.setItem(__data.uid + ":groupShareOB", JSON.stringify(a))
+                }
+            }
+            , {
+                name: "低价值低分享缓存",
+                fn: async () => {
+                    // let a = `
+                    //     死群id集合：${'sdf'}
+                    //     显示分享按钮次数：${10}
+                    // `
+                    let an = miniApi.getItem(__data.uid + ':show_shareBtnNumber')
+                    an = parseInt(an)
+                    an = Number.isFinite(an) ? an : 0;
+                    let a = `激励视频显示分享按钮次数：${an}`
+
+                    let b = __data.shareVideoRule.shareGroupItem;
+                    let c = Object.keys(b.dealgid).join(',')
+                    a += `\n死群id集合：${c}`
+                    a += `\n低价值群数量：${b.lowValueGnum}`;
+                    a += `\n上次邀请人数：${b.playerGIN || 0}`
+                    a += `\n群邀请人数信息`
+                    for (const opengid in b.gday) {
+                        a += `\n    群id：${opengid}`
+                        let a1 = b.gday[opengid]
+                        for (const days in a1) {
+                            a += `\n        天数：${days} 人数：${a1[days]}`
+                        }
+                    }
+                    game.scene.add(TestContent, [a])
+                }
+            }
+            , {
+                name: "选择大众玩法",
+                fn: async () => {
+                    let getkey1 = __data.uid + `:cityId:${HallPlay.lastCityId}-ruleId`
+                    let getkey = __data.uid + `:cityId:${HallPlay.lastCityId}-ruleIndex`
+                    miniApi.setItem(getkey1, 'a')
+                    let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId);
+                    miniApi.setItem(getkey, ud.onPlayId.length)
+                    let g1 = __data.uid + ':showOfflineTips:-2'
+                    miniApi.setItem(g1, '0')
+                }
+            }
+            , {
+                name: "插屏弹窗广告",
+                fn: async () => {
+                    miniApi.showPopupAd(ResultPanelManager.IAd);
+                }
+            }
+            , {
+                name: "格子弹窗广告",
+                fn: async () => {
+                    miniApi.showPopupAd(ResultPanelManager.GAd);
+                }
+            }
+            , {
+                name: "CPS弹窗广告",
+                fn: async () => {
+                    miniApi.showPopupAd(ResultPanelManager.CAd);
+                }
+            }
+            , {
+                name: "中马",
+                fn: async () => {
+                    game.scene.remove(GdResultzhongma);
+                    GdHorseInfo.horses = { all: [0, 1], get: [0, 1] }
+                    game.scene.add(GdResultzhongma, [GdHorseInfo.horses])
+                }
+            }
+            , {
+                name: "用户类型",
+                fn: async () => {
+                    miniApi.alert('提示', `用户类型：${__data.userType}`);
+                }
+            }
+            , {
+                name: "激活幸运激励",
+                fn: async () => {
+                    game.server.send(18017);
+                    game.server.send(18007);
+                }
+            }
+            , {
+                name: "活动-惊喜暴击",
+                fn: async () => {
+                    // 3.1.20版本暂时关闭惊喜暴击功能
+                    // Panel_marketActivity_surpriseCrit.time = new Date(Date.now() + 120 * 1000)
+                    // __showScene.show_panel_surpriseCrit()
+                }
+            }
+            , {
+                name: "播放视频",
+                fn: async () => {
+                    var videoUrl = "https://ldc2.layabox.com/demo/h5/res/av/mov_bbb.mp4";
+                    if (miniApi.clientType == 'web') {
+                        // 创建Video元素
+                        let videoElement = Laya.Browser.createElement("video");
+                        Laya.Browser.document.body.appendChild(videoElement);
+
+                        // 设置Video元素地样式和属性
+                        videoElement.style.zIndex = Laya.Render.canvas.style.zIndex + 1;
+                        videoElement.src = videoUrl;
+                        videoElement.controls = true;
+                        // 阻止IOS视频全屏
+                        videoElement.setAttribute("webkit-playsinline", true);
+                        videoElement.setAttribute("playsinline", true);
+
+                        // 设置画布上的对齐参照物
+                        let reference = new Laya.Sprite();
+                        Laya.stage.addChild(reference);
+                        reference.pos(100, 100);
+                        reference.size(600, 400);
+                        reference.graphics.drawRect(0, 0, reference.width, reference.height, "#CCCCCC");
+
+                        Laya.Utils.fitDOMElementInArea(videoElement, reference, 0, 0, reference.width, reference.height);
+                        // 每次舞台尺寸变更时，都会调用Utils.fitDOMElementInArea设置Video的位置，对齐的位置和refence重合
+                        Laya.stage.on(Laya.Event.RESIZE, this, Laya.Utils.fitDOMElementInArea, [videoElement, reference, 0, 0, reference.width, reference.height]);
+                    } else if (miniApi.clientType == 'wx') {
+                        // 使用微信 createVideo API
+                        var screenW = Laya.stage.width;
+                        var screenH = Laya.stage.height;
+                        var videoW = Math.min(640, screenW * 0.8);
+                        var videoH = videoW * 9 / 16;
+
+                        var wxVideo = wx.createVideo({
+                            width: videoW,
+                            height: videoH,
+                            controls: false,
+                            showProgress: false,
+                            showProgressInControlMode: false,
+                            autoplay: true
+                        });
+                        this._wxVideo = wxVideo;
+
+                        wxVideo.src = videoUrl;
+
+                        wxVideo.onPlay(() => {
+                            console.log('视频开始播放');
+                        });
+
+                        wxVideo.onEnded(() => {
+                            console.log('视频播放完成');
+                            this._closeVideo();
+                        });
+
+                        wxVideo.onError((err) => {
+                            console.log('视频播放错误:', err);
+                            __tips('视频播放失败');
+                            this._closeVideo();
+                        });
+
+                        // 等待视频加载完成后显示
+                        wxVideo.onWaiting(() => {
+                            console.log('视频加载中...');
+                        });
+
+                        // 创建关闭按钮
+                        var closeBtn = new Laya.Button();
+                        closeBtn.label = "关闭";
+                        closeBtn.labelSize = 24;
+                        closeBtn.stateNum = 1;
+                        closeBtn.size(80, 40);
+                        closeBtn.pos((screenW - videoW) / 2 + videoW - 90, (screenH - videoH) / 2 + 10);
+                        closeBtn.zOrder = 100000;
+                        closeBtn.on(Laya.Event.CLICK, this, () => {
+                            this._closeVideo();
+                        });
+                        this._closeBtn = closeBtn;
+                        Laya.stage.addChild(closeBtn);
+
+                        wxVideo.play();
+                    }
+                }
+            }
+
+            // ,
+            // {
+            //     name: "CPS1",
+            //     fn: async () => {
+            //         const pageManager = wx.createPageManager();
+            //         await pageManager.load({
+            //             // CPS推荐组件OPENLINK常量，直接复制即可
+            //             openlink: 'wFFX1cDJnwJCet72QGUJJvBpa9z9lfAob-7EYHwzFENHJ_tNECj5LquvJqnbm82RktAcRyg7gORaUSh0yRSiuYF21JvF84j7-SgazajvTW-ScbwFiQccq8FWsrzHVPox1dr90HHv_CTrgRJD4HOdiRJFeLNRrDu0Pj3vsIGuonI',
+            //             query: {
+            //                 id: 'CpsCBgAAoXkpQY9GAJQS-RB-', // mp端配置的组件id，必填，在mp申请
+            //                 //组件的位置，选填，不填时系统自动适应，均为逻辑像素。
+            //                 left: 0, // 组件左上角屏幕横坐标，单游戏组件/多游戏组件时有效，
+            //                 top: 100, // 组件左上角屏幕纵坐标，单游戏组件/多游戏组件时有效
+            //                 isVertical: false, // 可选，多游戏组件时有效，默认为false。
+            //             }
+            //         });
+            //         // 已进行预加载
+            //         pageManager.show();
+            //         pageManager.on(
+            //             'show', // show | destroy | error｜ click
+            //             () => {
+            //                 console.log('cps recommend component show.');
+            //             },
+            //         )
+            //         pageManager.on(
+            //             'click', // show | destroy | error｜ click
+            //             (res) => {
+            //                 console.log('cps recommend component click：', res.targetAppName);
+            //             },
+            //         )
+            //     }
+            // },
+            // {
+            //     name: "CPS2",
+            //     fn: async () => {
+            //         const pageManager = wx.createPageManager();
+            //         await pageManager.load({
+            //             // CPS推荐组件OPENLINK常量，直接复制即可
+            //             openlink: 'wFFX1cDJnwJCet72QGUJJvBpa9z9lfAob-7EYHwzFENHJ_tNECj5LquvJqnbm82RktAcRyg7gORaUSh0yRSiuYF21JvF84j7-SgazajvTW-ScbwFiQccq8FWsrzHVPox1dr90HHv_CTrgRJD4HOdiRJFeLNRrDu0Pj3vsIGuonI',
+            //             query: {
+            //                 id: 'CpsCBgAAoXkpQY9GAJQS-RB9', // mp端配置的组件id，必填，在mp申请
+            //                 //组件的位置，选填，不填时系统自动适应，均为逻辑像素。
+            //                 left: 0, // 组件左上角屏幕横坐标，单游戏组件/多游戏组件时有效，
+            //                 top: 100, // 组件左上角屏幕纵坐标，单游戏组件/多游戏组件时有效
+            //                 isVertical: true, // 可选，多游戏组件时有效，默认为false。
+            //             }
+            //         });
+            //         pageManager.show()
+            //         pageManager.on(
+            //             'show', // show | destroy | error｜ click
+            //             () => {
+            //                 console.log('cps recommend component show.');
+            //             },
+            //         )
+            //         pageManager.on(
+            //             'click', // show | destroy | error｜ click
+            //             (res) => {
+            //                 console.log('cps recommend component click：', res.targetAppName);
+            //             },
+            //         )
+            //     }
+            // },
+            // {
+            //     name: "CPS3",
+            //     fn: async () => {
+            //         const pageManager = wx.createPageManager();
+            //         await pageManager.load({
+            //             // CPS推荐组件OPENLINK常量，直接复制即可
+            //             openlink: 'wFFX1cDJnwJCet72QGUJJvBpa9z9lfAob-7EYHwzFENHJ_tNECj5LquvJqnbm82RktAcRyg7gORaUSh0yRSiuYF21JvF84j7-SgazajvTW-ScbwFiQccq8FWsrzHVPox1dr90HHv_CTrgRJD4HOdiRJFeLNRrDu0Pj3vsIGuonI',
+            //             query: {
+            //                 id: 'CpsCBgAAoXkpQY9GAJQS-RB8', // mp端配置的组件id，必填，在mp申请
+            //                 //组件的位置，选填，不填时系统自动适应，均为逻辑像素。
+            //                 // left: 0, // 组件左上角屏幕横坐标，单游戏组件/多游戏组件时有效，
+            //                 // top: 100, // 组件左上角屏幕纵坐标，单游戏组件/多游戏组件时有效
+            //                 isVertical: false, // 可选，多游戏组件时有效，默认为false。
+            //             }
+            //         });
+            //         // 已进行预加载
+            //         pageManager.show();
+            //         pageManager.on(
+            //             'show', // show | destroy | error｜ click
+            //             () => {
+            //                 console.log('cps recommend component show.');
+            //             },
+            //         )
+            //         pageManager.on(
+            //             'click', // show | destroy | error｜ click
+            //             (res) => {
+            //                 console.log('cps recommend component click：', res.targetAppName);
+            //             },
+            //         )
+            //     }
+            // },
+        ]
+    }
+}
+TestPanel.garden_build_skip_star_test;
+TestPanel.ready_video_fail;
+window.TestPanel = TestPanel

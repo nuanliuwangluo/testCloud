@@ -1,0 +1,102 @@
+class AppRealName extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/AppRealName',
+        })
+        this.btn_submit.addComponent(S_realname_submit)
+    }
+    onEnable() {
+        this.txt_name.text = ''
+        this.txt_code.text = ''
+    }
+}
+class S_realname_submit extends Laya.Script {
+    async onClick(e) {
+        if (!this.owner.parent.txt_name.text) {
+            __tips('请输入姓名')
+            return
+        }
+        if (!this.owner.parent.txt_code.text) {
+            __tips('请输入身份证')
+            return
+        }
+        if (!verify_realName(this.owner.parent.txt_code.text)) {
+            __tips('身份证号错误')
+            return
+        }
+        this.owner.mouseEnabled = false
+        let id = miniApi.getItem('appLoginId')
+        let b1 = await miniApi.axios({
+            url: `https://${config.reqIpUrl}:8111/server/auth_check`,
+            method: 'post',
+            data: {
+                wxId: id,
+                name: this.owner.parent.txt_name.text,
+                idNum: this.owner.parent.txt_code.text
+            }
+        }).catch((e) => { })
+        this.owner.mouseEnabled = true;
+        let code = __tool.gdp(b1, 'data.errcode');
+        let msg = __tool.gdp(b1, 'data.msg');
+        if (code == 1) {
+            if (msg == '已成年') {
+                miniApi.setItem('appRealNameAge', 18)
+                game.scene.remove(this.owner.parent)
+                app_verify_age()
+            } else if (msg == '未成年') {
+                miniApi.setItem('appRealNameAge', 1)
+                game.scene.remove(this.owner.parent)
+                app_verify_age()
+            } else {
+                __showScene.show_prompt_single('请求实名错误')
+            }
+        } else if (code == 2) {
+            __tips(msg)
+        } else if (code == 3) {
+            if (msg == '已成年') {
+                miniApi.setItem('appRealNameAge', 18)
+                game.scene.remove(this.owner.parent)
+                app_verify_age()
+            } else if (msg == '未成年') {
+                miniApi.setItem('appRealNameAge', 1)
+                game.scene.remove(this.owner.parent)
+                app_verify_age()
+            } else {
+                __showScene.show_prompt_single('请求实名错误')
+            }
+        } else if (code == -99) {
+            __tips(msg)
+        } else {
+            __showScene.show_prompt_single('请求实名错误')
+        }
+        // miniApi.setItem('appRealNameAge', 18)
+        // game.scene.remove(this.owner.parent)
+        // app_verify_age()
+    }
+}
+let verify_realName = (idCard) => {
+    // 身份证号码为 15 位或者 18 位，15 位时全为数字，18 位前 17 位为数字，最后一位是校验位，可能为数字或字母 X
+    const reg = /(^\d{15}$)|(^\d{17}([0-9]|X)$)/;
+    if (!reg.test(idCard)) {
+        return false;
+    }
+    // 如果是 18 位身份证，还需验证校验码
+    if (idCard.length === 18) {
+        // 截取前 17 位
+        const idCardBase = idCard.substring(0, 17);
+        // 设定加权因子
+        const weightFactor = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+        // 设定校验码
+        const checkCode = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
+        let sum = 0;
+        for (let i = 0; i < 17; i++) {
+            sum += parseInt(idCardBase.charAt(i)) * weightFactor[i];
+        }
+        const last = checkCode[sum % 11];
+        // 如果校验码不符合规范，则不是合法的身份证号码
+        if (last !== idCard.charAt(17)) {
+            return false;
+        }
+    }
+    return true;
+}

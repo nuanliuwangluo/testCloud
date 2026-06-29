@@ -1,0 +1,1746 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-15 16:21:08
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-05-18 14:35:33
+ */
+
+'use strict';
+/**
+ * 录像回放数据
+ * [HzlzmjReplay description]
+ * @param {[type]} data [description]
+ */
+var __hzlzmj_replay_data, __hzlzmj_replay_over, allIn
+
+function HzlzmjReplay(data) {
+    __hzlzmj_replay_over = false
+    DeskReplay.__DealNextReplayMsg = HzlzmjReplayLoop.loop.bind(HzlzmjReplayLoop);
+    __hzlzmj_replay_data = data
+
+    DeskReplay_delay = 400
+
+    allIn = 0
+}
+window.mahjongReplay$3 = HzlzmjReplay
+
+
+let HzlzmjReplayLoop = {
+    loop: function() {
+        if (__hzlzmj_replay_over) { return }
+
+        var resetCalcu = false;
+        var resetCalcuArr = []; //重新排序的集合
+        var operationValue = ""; //
+        var optionArr = [];
+        var position
+
+        var code, code2
+            // var allIn = 0
+
+
+        var sign = ___frame.byte.readByte(__hzlzmj_replay_data); //标志位
+        trace("标志：" + sign)
+
+        if (sign < 80) { //标志位小于80 可以根据算法计算出真实标志位和指向的玩家位置
+
+            position = Math.floor(sign / 20);
+            var truthSign = sign - (position * 20); // 真实标志位
+
+            position += 1; //指向玩家位置
+            trace("真实标志位：" + truthSign)
+            switch (truthSign) { //truthSign真实标志
+
+                case 0: //指向玩家的完整手牌信息 发牌时使用
+                    trace("开始发牌" + position + "位置")
+                    allIn++
+                    __data.deskData.roomVo.deal = true
+                    __data.deskData.roomVo.matchState = false
+                    __data.deskData.roomVo.phase = "game"
+                    while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) { //code为手牌
+                        this.shouPaiZengJian(code, 1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    trace("要显示的混子：" + gameConfig['create_room_' + MahjongConfig.getUniqueId(HallPlay.lastCityId, HallPlay.curRuleId)].esp)
+                        // if(gameConfig['create_room_' + MahjongConfig.getUniqueId(HallPlay.lastCityId, HallPlay.curRuleId)].esp){ game.scene.add(WcmjEffectMixed, [__data.deskData.roomVo.mixed]) }
+                    trace('数据：', __data.deskData.roomVo, allIn, __data.deskData.roomVo.roomPlayer)
+                    if (allIn == __data.deskData.roomVo.roomPlayer) {
+                        MahjongStatus.READY = true;
+                        game.cb.event(__eh + "show_phase")
+                        game.cb.event(__eh + "show_give_card")
+                    }
+                    break;
+                case 1: //(不录像)指向玩家的手牌数量 用于摸牌情况下
+                    var num = ___frame.byte.readByte(__hzlzmj_replay_data); //手牌数量
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+
+                    //处理手牌数量数据
+                    if (vo) vo.handNumber = num
+                    trace("位置:" + position + "手牌数量:" + num)
+
+                    __data.deskData.roomVo.surplus -= 1;
+                    game.cb.dispatchEvent(__eh + "update_desk_info")
+                    game.cb.dispatchEvent(__eh + "update_hand_number", [position, num])
+                    break;
+                case 2:
+                    var state = ___frame.byte.readByte(__hzlzmj_replay_data) //position 位置离线或者在线
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+                    if (vo && state < 2) { vo.onlineState = state } else if (vo && state == 2) { vo.thState = state }
+                    trace("在线离线状态：" + state + "位置：" + position)
+                    game.cb.dispatchEvent(__eh + "update_user_info")
+                    game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+                    break
+                case 3: //手牌增加 - 即摸牌
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //增加的牌
+                    this.shouPaiZengJian(code, 1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    //其他摸牌处理  减少一张剩余牌数
+                    operationValue = 1000
+                    optionArr[1000] = code
+
+                    __data.deskData.roomVo.surplus -= 1;
+                    game.cb.dispatchEvent(__eh + "update_desk_info")
+
+                    game.cb.event(__eh + 'remove_video_operation')
+                    trace("摸牌了：" + code + "摸牌位置：" + position)
+                    break;
+                case 4: //门前牌组增加 - 即吃碰杠.
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); // 0 不播  1 播
+                    trace('当前用户手牌：', __data.deskData.roomVo.getPlayer(position).handValue)
+                    var type = ___frame.byte.readByte(__hzlzmj_replay_data); //type为门前牌组类型
+                    var tileGroup = this.menQianPaiChuLi(type, position, true, code); //函数在下面定义了 type为门前牌组的类型; position为门前牌组增加的玩家位置; xgsp是否修改手牌; 返回牌组对象 详见函数定义部分注释
+
+                    let pvo = __data.deskData.roomVo.getPlayer(position);
+                    if(pvo){
+                        if(tileGroup.type == 88){
+                            let keyWords = `1,${tileGroup.code}`;
+                            pvo.doorValue = pvo.doorValue.replace(keyWords, `5,${tileGroup.code}`)
+                        }else if(tileGroup.type == 89){
+                            let keyWords = `5,${tileGroup.code}`;
+                            pvo.doorValue = pvo.doorValue.replace(keyWords, `1,${tileGroup.code}`)
+                        }else{
+                            if(pvo.doorValue)pvo.doorValue += `;${tileGroup.comb}`;
+                            else pvo.doorValue = tileGroup.comb;
+                        }
+                        game.cb.event('rate_recount', [pvo.seat_tag]);
+                    }
+                    //其他门前牌增加处理
+                    trace("位置：" + position + "增加门前牌组：" + tileGroup.comb)
+                    game.cb.dispatchEvent(__eh + "update_door_card", [position, tileGroup.comb, tileGroup, code])
+                    break;
+                case 5: //杠被抢 - position为抢杠发生时,被抢杠的玩家位置
+                    var type = ___frame.byte.readByte(__hzlzmj_replay_data); //type为被抢杠的杠的类型
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //code为被抢杠的杠是杠的什么牌
+                    if (type == 0) { //普通明杠被抢
+                        this.shouPaiZengJian(code, 3, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                        //position位置玩家门前牌组移除code杠
+
+                    } else { //杠门前被抢
+                        var srcPosition = Math.floor(type / 20);
+                        srcPosition += 1; //杠门前之前的刻子是碰的哪个位置的玩家打出的牌
+                        //position位置玩家门前牌组移除code杠 增加code刻子(碰的srcPosition的牌)
+                        game.cb.dispatchEvent(__eh + "change_door_Qg", [position, code, srcPosition])
+                    }
+                    game.cb.event(__eh + 'remove_video_operation')
+                    break;
+                case 6: //弃牌 - 即 打牌
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //code为打出的牌
+
+                    this.shouPaiZengJian(code, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+
+                    // var codeType = ___frame.byte.readByte(__hzlzmj_replay_data);  // 0  没上听   1   上听了     2   票     3 七对
+                    // if(vo && codeType >= 2){ vo.tingType = codeType;game.cb.dispatchEvent(__eh + "update_player_tingTips") }
+
+                    if (vo && vo.id != __data.uid) vo.outValue += (vo.outValue == "") ? code : "," + code
+                    trace("弃牌了：" + code + "弃牌位置：" + position)
+                        //position玩家弃牌增加code
+                    game.cb.dispatchEvent(__eh + "player_out_card", [position, code])
+
+                    game.cb.event(__eh + 'remove_video_operation')
+                    break;
+                case 7: //轮到position玩家操作
+                    trace("轮到谁操作：" + position)
+                        //显示position位置玩家正在操作
+                    __data.deskData.roomVo.operatorPosition = position
+                    game.cb.event(__eh + 'change_compass', [position])
+                    break;
+                case 8: //听牌-position玩家听牌 收到此消息代表对应位置玩家听牌
+                    //显示position位置玩家听牌
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); // 1 普通听   2 碰听  3 吃听
+
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+                    if (vo) vo.tingState = 1
+                    if (code == 1 && vo) { __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + vo.sex + "/ting", 2) } else if (code == 2 && vo) { __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + vo.sex + "/ting_peng", 2) } else if (code == 3 && vo) { __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + vo.sex + "/ting_chi", 2) } else if (code == 4 && vo) { __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + vo.sex + "/ting_gang") }
+                    game.cb.dispatchEvent(__eh + "update_player_tingTips", [position])
+
+                    game.cb.event(__eh + 'remove_video_operation')
+                    break;
+                case 9: //
+                    resetCalcu = true
+                        //position进入
+                    var id = ___frame.byte.readInt(__hzlzmj_replay_data);
+                    var ip = ___frame.byte.readString(__hzlzmj_replay_data);
+                    var jd = ___frame.byte.readString(__hzlzmj_replay_data);
+                    var wd = ___frame.byte.readString(__hzlzmj_replay_data);
+                    var address = ___frame.byte.readString(__hzlzmj_replay_data);
+                    if (id > 0) {
+                        var vo = new __data.deskData.PlayerVo();
+                        vo.id = id
+                        vo.position = position
+                        vo.ipAddress = ip
+                        vo.longitude = jd
+                        vo.latitude = wd
+                        vo.address = address
+                        vo.readyState = 0
+                        vo.onlineState = 1
+                        __data.deskData.roomVo.addPlayer(vo)
+                        __data.deskData.roomVo.calcuPlayerSeat();
+                        game.server.send(2005, vo.id)
+                        game.server.send(14003, vo.id)
+
+                        //game.server.send(8022, vo.id)
+                    }
+                    trace("玩家进入：" + position, "玩家ID：" + id)
+                    game.cb.dispatchEvent(__eh + "player_join_room")
+                    game.cb.dispatchEvent(__eh + 'recheck_distance')
+                    break;
+                case 10:
+                    trace("退出：" + position)
+                        //position退出
+                    resetCalcu = true
+                    var vo = __data.deskData.roomVo.getPlayer(position);
+                    if (!__data.deskData.drivQuit) {
+                        if (vo && vo.id == __data.uid) {
+                            __data.othersVO[vo.id] = null;
+                            __data.deskData.roomVo.clearByVo(vo);
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            game.cb.dispatchEvent(__eh + "update_user_info")
+                            sceneManager.showMainPanel()
+                            game.scene.add(SinglePrompt, ["您已被踢出房间"])
+                        } else if (vo) {
+                            __data.othersVO[vo.id] = null;
+                            __data.deskData.roomVo.clearByVo(vo);
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            game.cb.dispatchEvent(__eh + "update_user_info")
+                        }
+                    } else if (vo && vo.id == __data.uid) {
+                        __data.othersVO[vo.id] = null;
+                        __data.deskData.roomVo.clearByVo(vo);
+                        __data.deskData.roomVo.calcuPlayerSeat();
+                        game.cb.dispatchEvent(__eh + "update_user_info")
+                        sceneManager.showMainPanel()
+                    } else if (vo) {
+                        __data.othersVO[vo.id] = null;
+                        __data.deskData.roomVo.clearByVo(vo);
+                        __data.deskData.roomVo.calcuPlayerSeat();
+                        game.cb.dispatchEvent(__eh + "update_user_info")
+                    }
+
+                    __data.deskData.drivQuit = false
+                    game.cb.dispatchEvent(__eh + 'recheck_distance')
+                    game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+                    break;
+                case 11: //选风 position玩家
+                    var feng = ___frame.byte.readByte(__hzlzmj_replay_data); //选择的风 30 - 33 东南西北
+                    var fengPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //fengPosition风的显示位置 0-3
+                    this.sheZhiFeng(feng, fengPosition, position); //函数定义在下面
+
+                    trace(feng, fengPosition)
+                        //其他处理
+                    game.cb.dispatchEvent(__eh + "chooseVentilation", [position, feng, fengPosition])
+                    break;
+                case 12: //换位置 选风结束后位置变更
+                    var id = ___frame.byte.readInt(__hzlzmj_replay_data); //position位置应该对应的玩家ID
+                    //处理位置改变
+                    resetCalcu = true
+                    __data.deskData.roomVo.getPlayer(id).position = position
+                    break;
+                case 13: //薛处理
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //薛的牌
+                    //薛的处理
+                    game.cb.dispatchEvent(__eh + "show_xue", [code, position])
+
+                    game.cb.event(__eh + 'remove_video_operation')
+                    break;
+                case 14: //庄家位置 position就是庄家的位置
+                    MahjongCollectUtils.resetMap();
+                    __data.deskData.roomVo.bankerPosition = position
+                        //处理庄家的显示
+                    game.cb.dispatchEvent(__eh + "update_banker")
+                    game.cb.on('update_dailyTask_data');
+                    break;
+                case 15: //准备 position位置的玩家已经准备就绪
+                    this.sheZhiZhunBei(1, position); //函数定义在下面
+                    //处理其他
+
+                    break;
+                case 16: //取消准备 position位置的玩家取消了准备
+                    this.sheZhiZhunBei(0, position); //函数定义在下面
+                    //处理其他
+
+                    break;
+                case 17: //胡 position位置的玩家胡了
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //胡牌类型  如果是255 代表流局了 那就与position无关了 只是恰巧轮到他操作而已
+                    var tile;
+                    if (code < 255) {
+                        tile = ___frame.byte.readByte(__hzlzmj_replay_data); //胡牌的什么牌
+                    }
+                    //处理胡牌特效
+                    // Laya.timer.frameOnce(30, this, game.cb.dispatchEvent, [__eh + "game_over", [position, tile, code]])
+                    game.cb.dispatchEvent(__eh + "game_over", [position, tile, code])
+
+                    game.cb.event(__eh + 'remove_video_operation')
+                    break;
+                case 18: //(不录像)position位置的玩家开始托管
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+                    if (vo) vo.autoState = 1
+                    trace("用户开始托管" + position)
+                        //设置显示
+                    game.cb.dispatchEvent(__eh + "update_user_info", [position])
+                    break;
+                case 19: //(不录像)position位置的玩家结束托管
+                    var vo = __data.deskData.roomVo.getPlayer(position)
+                    if (vo) {
+                        setTimeout(function() {
+                            vo.autoState = 0;
+                            game.cb.dispatchEvent(__eh + "update_user_info", [position])
+                        }, 500)
+                    }
+                    trace("用户取消托管" + position)
+                    break;
+            }
+            if (resetCalcu) __data.deskData.roomVo.calcuPlayerSeat();
+        } else if (sign < 90) {
+            switch (parseInt(sign)) {
+                case 80: //圈/局数 用于开始
+                    var nowRound = ___frame.byte.readByte(__hzlzmj_replay_data); //当前圈/局数
+                    var roundCount = ___frame.byte.readByte(__hzlzmj_replay_data); //总前圈/局数
+                    //设置圈/局数
+                    // __data.deskData.roomVo.curGame = nowRound
+                    // __data.deskData.roomVo.allGame = roundCount
+                    break;
+                case 81: //(不录像) 用于重新返回房间
+                    var type = ___frame.byte.readByte(__hzlzmj_replay_data); //操作类型
+                    switch (type) {
+                        case 1: //房间处于准备阶段
+                            trace("房间处于准备阶段")
+                            var a = ___frame.byte.readByte(__hzlzmj_replay_data);
+                            var curGame = ___frame.byte.readByte(__hzlzmj_replay_data);
+
+                            // __data.deskData.roomVo.phase = (a < 1) ? "result" : "ready"
+                            __data.deskData.roomVo.gameCount = a
+
+                            var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                            var myPosition; //自己的位置
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var player = new Object();
+                                player.position = code; //玩家位置
+                                player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+                                player.ip = ___frame.byte.readString(__hzlzmj_replay_data); //ip
+                                player.jd = ___frame.byte.readString(__hzlzmj_replay_data); //精度
+                                player.wd = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                player.address = ___frame.byte.readString(__hzlzmj_replay_data);
+
+                                var isMe = false; //是不是自己
+                                if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                                    isMe = true;
+                                    myPosition = player.position;
+                                }
+                                player.readyStat = ___frame.byte.readByte(__hzlzmj_replay_data); //玩家准备状态 true/false
+                                player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+                                player.onlineState = ___frame.byte.readByte(__hzlzmj_replay_data) //在线状态
+                                playerArray.push(player);
+
+                                resetCalcu = true
+                                var vo = new __data.deskData.PlayerVo();
+                                vo.id = player.id
+                                vo.position = player.position
+                                vo.score = player.score
+                                vo.ipAddress = player.ip
+                                vo.longitude = player.jd
+                                vo.latitude = player.wd
+                                vo.address = player.address
+                                    // vo.readyState = player.readyStat
+                                vo.onlineState = player.onlineState
+                                __data.deskData.roomVo.addPlayer(vo)
+
+                                game.server.send(2005, vo.id)
+                                game.server.send(14003, vo.id)
+
+                                if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+
+                                //game.server.send(8022, vo.id)
+                            }
+                            trace("********************************************")
+                            trace("准备阶段用户数据：", playerArray)
+                            trace("********************************************")
+                            __data.deskData.roomVo.calcuPlayerSeat();
+
+                            //具体处理
+                            game.cb.dispatchEvent(__eh + "show_phase")
+                            game.cb.dispatchEvent(__eh + "update_player_ready")
+                            game.cb.dispatchEvent(__eh + "update_player_score");
+                            // game.server.send(6001, 112)
+                            break;
+                        case 2: //抽风阶段
+                            trace("抽风阶段")
+                            __data.deskData.roomVo.phase = "ready"
+                            var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                            var myPosition; //自己的位置
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var player = new Object();
+                                player.position = code; //玩家位置
+                                player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+                                player.ip = ___frame.byte.readString(__hzlzmj_replay_data); //ip
+                                player.jd = ___frame.byte.readString(__hzlzmj_replay_data); //精度
+                                player.wd = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                player.address = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                var isMe = false; //是不是自己
+                                if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                                    isMe = true;
+                                    myPosition = player.position;
+                                }
+
+                                player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+                                player.feng = ___frame.byte.readByte(__hzlzmj_replay_data); //玩家选择的风牌 30-33 东南西北 255代表没选风
+                                if (player.feng < 255) { //玩家选择了风 255代表尚未选择风
+                                    player.fengIndex = ___frame.byte.readByte(__hzlzmj_replay_data); //玩家选择的风牌的位置 0-3
+                                    //处理显示
+                                } else { //玩家未选择风
+                                    //处理显示
+
+                                }
+                                player.onlineState = ___frame.byte.readByte(__hzlzmj_replay_data) //在线状态
+                                playerArray.push(player);
+
+                                resetCalcu = true
+                                var vo = new __data.deskData.PlayerVo();
+                                vo.id = player.id
+                                vo.position = player.position
+                                vo.score = player.score
+                                vo.ipAddress = player.ip
+                                vo.longitude = player.jd
+                                vo.latitude = player.wd
+                                vo.address = player.address
+                                vo.readyState = 1
+                                vo.onlineState = player.onlineState
+                                __data.deskData.roomVo.addPlayer(vo)
+
+                                game.server.send(2005, vo.id)
+                                game.server.send(14003, vo.id)
+
+                                if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+                            }
+                            var nowPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //轮到nowPosition位置玩家选风
+                            var time = ___frame.byte.readByte(__hzlzmj_replay_data); //选风剩余时间
+                            __data.deskData.roomVo.calcuPlayerSeat();
+
+                            //具体处理
+                            game.cb.dispatchEvent(__eh + "show_ventilation", [nowPosition, time])
+                            for (var i = 0; i < playerArray.length; i++) {
+                                trace(playerArray[i].id + "旋风" + playerArray[i].feng, playerArray[i].fengIndex)
+                                if (playerArray[i].feng >= 30 && playerArray[i].feng <= 33) {
+
+                                    game.cb.dispatchEvent(__eh + "chooseVentilation", [playerArray[i].position, playerArray[i].feng, playerArray[i].fengIndex])
+                                }
+                            }
+                            game.cb.dispatchEvent(__eh + "update_player_score");
+                            break;
+                        case 4: //游戏中
+                            trace("游戏中")
+                            __data.deskData.roomVo.phase = "game"
+
+                            var syps = ___frame.byte.readByte(__hzlzmj_replay_data); //剩余牌数
+                            var nowRound = ___frame.byte.readByte(__hzlzmj_replay_data); //当前圈/局数
+                            var roundCount = ___frame.byte.readByte(__hzlzmj_replay_data); //圈/局总数
+
+                            __data.deskData.roomVo.surplus = syps
+                                //设置圈/局数
+                                // __data.deskData.roomVo.curGame = nowRound
+                                // __data.deskData.roomVo.allGame = roundCount
+
+                            var wfArray = new Array(); //玩法数组
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                wfArray.push(code);
+                            }
+                            var baoCode = ___frame.byte.readByte(__hzlzmj_replay_data); //宝牌code  255代表不显示宝牌
+                            var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                            var myPosition; //自己的位置
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var player = new Object();
+                                player.position = code; //玩家位置
+                                player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+
+                                player.ip = ___frame.byte.readString(__hzlzmj_replay_data); //ip
+
+                                player.jd = ___frame.byte.readString(__hzlzmj_replay_data); //精度
+                                player.wd = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                player.address = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+
+                                var isMe = false; //是不是自己
+                                if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                                    isMe = true;
+                                    myPosition = player.position;
+                                }
+
+                                player.disTileArray = new Array(); //玩家弃牌数组
+                                while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                    player.disTileArray.push(code2);
+                                }
+
+
+                                var doorValue = ""
+                                player.tileGroupArray = new Array(); //玩家门前牌组数组
+                                while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                    var door = this.menQianPaiChuLi(code2, player.position, false)
+                                    doorValue += (doorValue == "") ? door.comb : ";" + door.comb
+                                    player.tileGroupArray.push(door); //this.menQianPaiChuLi() 函数在下面定义了 type为门前牌组的类型; position为门前牌组增加的玩家位置; xgsp是否修改手牌; 返回牌组对象 详见函数定义部分注释
+                                }
+                                if (isMe) {
+                                    player.handTileArray = new Array(); //如果是自己则可以得到手牌数组
+                                    while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                        player.handTileArray.push(code2);
+                                    }
+                                } else {
+                                    player.handTileCount = ___frame.byte.readByte(__hzlzmj_replay_data); //如果不是自己则得到手牌数量
+                                }
+                                player.tingState = ___frame.byte.readByte(__hzlzmj_replay_data); //玩家是否听牌 true/false
+                                // if(player.tingState == 1)player.tingType = ___frame.byte.readByte(__hzlzmj_replay_data); //0 普通   1  飘胡    2   七对
+
+                                if (player.tingState && isMe) {
+                                    player.tingTileArray = new Array(); //如果玩家听牌且是自己 则可以得到听牌数组
+                                    if (player.tingState == 1) {
+                                        // while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                        //     var obj = {}
+                                        //     obj.num = 0
+                                        //     obj.view = code2
+                                        //     player.tingTileArray.push(obj);
+                                        // }
+                                        let len = ___frame.byte.readByte(__hzlzmj_replay_data); // 大众经济特殊解析办法
+                                        for(let i = 0;i < len;i++){
+                                            var obj = {}
+                                            obj.view = ___frame.byte.readByte(__hzlzmj_replay_data);
+                                            obj.rate = ___frame.byte.readInt(__hzlzmj_replay_data);
+                                            obj.num = 0;
+                                            player.tingTileArray.push(obj);
+                                        }
+                                        // 听牌积分说明
+                                        let t_fan_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                                        let t_details = { fan:[], jia:[] }
+                                        for (let i = 0; i < t_fan_len; i++) {
+                                            let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                                            let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                                            t_details.fan.push([score, detali]);// 为了保证和结算的数据统一  数组前填充2个0
+                                        }
+                                        let t_jia_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                                        for (let i = 0; i < t_jia_len; i++) {
+                                            let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                                            let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                                            t_details.jia.push([score, detali]);
+                                        }
+                                        MahjongAfterTingDetailsData.setDetails(t_details);// 为了保证和结算的数据统一  数组前填充2个0
+                                    }
+                                }
+                                player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+                                player.tuoGuanStat = ___frame.byte.readByte(__hzlzmj_replay_data); //托管状态 true-false
+                                player.onlineState = ___frame.byte.readByte(__hzlzmj_replay_data) //在线状态
+                                playerArray.push(player);
+                                trace("用户托管状态", player.id, player.tuoGuanStat)
+
+                                var vo = new __data.deskData.PlayerVo();
+                                vo.id = player.id
+                                vo.position = player.position
+                                vo.ipAddress = player.ip
+                                vo.longitude = player.jd
+                                vo.latitude = player.wd
+                                vo.address = player.address
+                                vo.autoState = player.tuoGuanStat
+                                vo.tingState = player.tingState;
+                                vo.onlineState = player.onlineState;
+                                vo.hupai = player.tingTileArray;
+                                vo.score = player.score
+                                vo.handNumber = player.handTileCount
+                                vo.handValue = (player.handTileArray) ? player.handTileArray.join(",") : ""
+                                vo.doorValue = doorValue
+                                vo.outValue = (player.tileGroupArray) ? player.disTileArray.join(",") : ""
+                                vo.tingType = player.tingType == 1 ? 2 : player.tingType == 2 ? 3 : 0
+                                __data.deskData.roomVo.addPlayer(vo)
+
+                                game.server.send(2005, vo.id)
+                                game.server.send(14003, vo.id)
+
+                                if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+                            }
+                            var zhuangPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //庄家位置
+                            var operPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //当前操作者位置
+
+                            __data.deskData.roomVo.bankerPosition = zhuangPosition
+                            __data.deskData.roomVo.operatorPosition = operPosition
+
+                            __data.deskData.roomVo.roomPlayer = playerArray.length;
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            __data.deskData.roomVo.phase = "game";
+                            __data.deskData.roomVo.deal = false;
+
+                            game.cb.dispatchEvent(__eh + "show_give_card")
+                                // game.cb.dispatchEvent(__eh + "update_all_card");
+                            game.cb.dispatchEvent(__eh + "update_player_tingTips");
+                            game.cb.dispatchEvent(__eh + "show_game_bao", [baoCode]);
+                            game.cb.dispatchEvent(__eh + "update_player_score");
+                            game.cb.event(__eh + 'change_compass', [operPosition])
+                                // game.cb.dispatchEvent(__eh + "add_handCard_handler", [__data.deskData.roomVo.operatorPosition])
+
+                            var operArray = null; //操作数组
+                            operArray = new Array();
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var oper = this.caoZuoChuLi(code)
+                                this.showOperation(oper)
+                                operArray.push(oper); //this.caoZuoChuLi()函数定义在下面 返回操作对象 详见函数定义里的注释
+                            }
+                            var gameState = ___frame.byte.readByte(__hzlzmj_replay_data); //游戏进行中的状态 详见下面的注释
+                            var op = Math.floor(gameState / 20);
+                            var ot = gameState - op * 20; //状态类型
+                            op += 1; //状态应用的玩家
+                            var oData; //状态数据
+                            switch (ot) {
+                                case 0:
+                                    //op位置玩家正准备打牌 不包含摸牌后直接准备打牌的情况 而是 吃碰听完要打牌的情况
+
+                                    break;
+                                case 1:
+                                    //op位置玩家刚摸完牌 包含摸牌后直接准备打牌的情况
+                                    if (op == myPosition) { //如果刚摸完牌的是自己 可以得到具体的摸到牌
+                                        oData = ___frame.byte.readByte(__hzlzmj_replay_data); //摸到牌
+                                    }
+                                    //具体处理
+
+                                    break;
+                                case 2:
+                                    //op位置玩家刚打出牌
+                                    oData = ___frame.byte.readByte(__hzlzmj_replay_data); //刚打出的牌
+                                    //具体处理
+                                    game.cb.dispatchEvent(__eh + "sign_out", [op])
+                                    break;
+                                case 3:
+                                    //op位置玩家胡牌
+                                    oData = ___frame.byte.readByte(__hzlzmj_replay_data); //胡牌特效ID 255代表流局
+                                    var huTile;
+                                    if (oData < 255) {
+                                        huTile = ___frame.byte.readByte(__hzlzmj_replay_data); //胡的什么牌
+                                    }
+                                    //具体处理
+
+                                    break;
+                            }
+                            game.server.send(6001, 112) //查询当前是否是在第一局
+                            break;
+                        case 5: //小结算
+                            __data.deskData.roomVo.phase = "result"
+                            resetCalcu = true
+                            this.xiaoJieSuan(false); //处理小结算 函数定义在下面 具体信息详见函数定义
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            game.cb.dispatchEvent(__eh + "show_phase")
+                                //其他处理
+                            break;
+                        case 6: //大结算
+                            trace("大结算")
+                            this.daJieSuan(); //处理大结算 函数定义在下面 具体信息详见函数定义
+                            //其他处理
+
+                            break;
+                        case 21: //薛
+                            trace("薛阶段")
+                            __data.deskData.roomVo.phase = "game"
+
+                            var syps = ___frame.byte.readByte(__hzlzmj_replay_data); //剩余牌数
+                            var nowRound = ___frame.byte.readByte(__hzlzmj_replay_data); //当前圈/局数
+                            var roundCount = ___frame.byte.readByte(__hzlzmj_replay_data); //圈/局总数
+
+                            __data.deskData.roomVo.surplus = syps
+                                //设置圈/局数
+                                // __data.deskData.roomVo.curGame = nowRound
+                                // __data.deskData.roomVo.allGame = roundCount
+
+                            var wfArray = new Array(); //玩法数组
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                wfArray.push(code);
+                            }
+                            var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                            var myPosition; //自己的位置
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var player = new Object();
+                                player.position = code; //玩家位置
+                                player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+                                player.ip = ___frame.byte.readString(__hzlzmj_replay_data); //ip
+                                player.jd = ___frame.byte.readString(__hzlzmj_replay_data); //精度
+                                player.wd = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                player.address = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+
+
+                                var doorValue = ""
+                                player.tileGroupArray = new Array(); //玩家门前牌组数组
+                                while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                    var door = this.menQianPaiChuLi(code2, player.position, false)
+                                    doorValue += (doorValue == "") ? door.comb : ";" + door.comb
+                                    player.tileGroupArray.push(door); //this.menQianPaiChuLi() 函数在下面定义了 type为门前牌组的类型; position为门前牌组增加的玩家位置; xgsp是否修改手牌; 返回牌组对象 详见函数定义部分注释
+                                }
+
+                                var isMe = false; //是不是自己
+                                if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                                    isMe = true;
+                                    myPosition = player.position;
+                                }
+                                if (isMe) {
+                                    player.handTileArray = new Array(); //如果是自己则可以得到手牌数组  没有非自己玩家手牌数量是因为都是13固定值
+                                    while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                        player.handTileArray.push(code2);
+                                    }
+                                } else {
+                                    player.handTileCount = ___frame.byte.readByte(__hzlzmj_replay_data); //如果不是自己则得到手牌数量
+                                }
+
+                                player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+                                player.tuoGuanStat = ___frame.byte.readByte(__hzlzmj_replay_data) == 1; //托管状态 true-false
+                                player.onlineState = ___frame.byte.readByte(__hzlzmj_replay_data) //在线状态
+                                playerArray.push(player);
+
+                                var vo = new __data.deskData.PlayerVo();
+                                vo.id = player.id
+                                vo.position = player.position
+                                vo.ipAddress = player.ip
+                                vo.longitude = player.jd
+                                vo.latitude = player.wd
+                                vo.address = player.address
+                                vo.autoState = player.tuoGuanStat
+                                vo.onlineState = player.onlineState
+                                vo.score = player.score
+                                vo.handNumber = player.handTileCount
+                                vo.handValue = (player.handTileArray) ? player.handTileArray.join(",") : ""
+                                vo.doorValue = doorValue
+                                __data.deskData.roomVo.addPlayer(vo)
+
+                                game.server.send(2005, vo.id)
+                                game.server.send(14003, vo.id)
+
+                                if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+
+                            }
+                            var zhuangPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //庄家位置
+                            __data.deskData.roomVo.bankerPosition = zhuangPosition
+                            __data.deskData.roomVo.operatorPosition = zhuangPosition
+                            __data.deskData.roomVo.roomPlayer = playerArray.length;
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            __data.deskData.roomVo.phase = "game";
+                            __data.deskData.roomVo.deal = false;
+                            __data.deskData.roomVo.islx = true
+                            game.cb.dispatchEvent(__eh + "show_give_card")
+                            game.cb.dispatchEvent(__eh + "update_player_score");
+                            game.cb.dispatchEvent(__eh + "show_lx")
+
+                            var operArray = null; //操作数组
+                            operArray = new Array();
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var oper = this.caoZuoChuLi(code)
+                                this.showOperation(oper)
+                                operArray.push(oper); //this.caoZuoChuLi()函数定义在下面 返回操作对象 详见函数定义里的注释
+                            }
+                            //具体处理
+
+                            break;
+                        case 23: //房间处于准备阶段
+                            trace("房间处于金币场准备阶段")
+                            var a = ___frame.byte.readByte(__hzlzmj_replay_data);
+                            var curGame = ___frame.byte.readByte(__hzlzmj_replay_data);
+                            // __data.deskData.roomVo.phase = (a < 1) ? "result" : "ready"
+                            __data.deskData.roomVo.gameCount = a
+
+                            var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                            var myPosition; //自己的位置
+                            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                                var player = new Object();
+                                player.position = code; //玩家位置
+                                player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+                                player.ip = ___frame.byte.readString(__hzlzmj_replay_data); //ip
+                                player.jd = ___frame.byte.readString(__hzlzmj_replay_data); //精度
+                                player.wd = ___frame.byte.readString(__hzlzmj_replay_data); //纬度
+                                player.address = ___frame.byte.readString(__hzlzmj_replay_data);
+
+                                var isMe = false; //是不是自己
+                                if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                                    isMe = true;
+                                    myPosition = player.position;
+                                }
+                                player.readyStat = ___frame.byte.readByte(__hzlzmj_replay_data); //玩家准备状态 true/false
+                                player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+                                player.onlineState = ___frame.byte.readByte(__hzlzmj_replay_data) //在线状态
+                                playerArray.push(player);
+
+                                resetCalcu = true
+                                var vo = new __data.deskData.PlayerVo();
+                                vo.id = player.id
+                                vo.position = player.position
+                                vo.score = player.score
+                                vo.ipAddress = player.ip
+                                vo.longitude = player.jd
+                                vo.latitude = player.wd
+                                vo.address = player.address
+                                    // vo.readyState = player.readyStat
+                                vo.onlineState = player.onlineState
+                                __data.deskData.roomVo.addPlayer(vo)
+
+                                game.server.send(2005, vo.id)
+                                game.server.send(14003, vo.id)
+
+                                if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+                            }
+
+                            __data.deskData.roomVo.roomPlayer = ___frame.byte.readByte(__hzlzmj_replay_data);
+                            trace("********************************************")
+                            trace("金币场准备阶段玩家数量：", __data.deskData.roomVo.roomPlayer)
+                            trace("********************************************")
+                            __data.deskData.roomVo.calcuPlayerSeat();
+                            //具体处理
+                            if (__data.deskData.roomVo.matchGameType == "") {
+                                game.cb.dispatchEvent(__eh + "show_phase")
+                                game.cb.dispatchEvent(__eh + "update_player_ready")
+                                game.cb.dispatchEvent(__eh + "update_player_score");
+                            } else { __data.deskData.roomVo.phase = "game" }
+                            break;
+                    }
+                    var pos = ___frame.byte.readByte(__hzlzmj_replay_data)
+                    trace("房主位置：" + pos)
+                    var operationPassTime = ___frame.byte.readInt(__hzlzmj_replay_data); //
+                    operationPassTime = 30 - Math.floor(operationPassTime / 1000);
+                    operationPassTime = Math.min(operationPassTime, 30);
+                    operationPassTime = Math.max(operationPassTime, 0);
+                    __data.deskData.roomVo.lastPosition = ___frame.byte.readInt(__hzlzmj_replay_data);
+                    game.cb.event(__eh + 'change_compass', [0, operationPassTime])
+
+                    __data.deskData.roomVo.roomOwner = (__data.deskData.roomVo.getPlayer(pos)) ? __data.deskData.roomVo.getPlayer(pos).id : -1
+                    game.cb.dispatchEvent(__eh + "show_phase")
+                    if (__data.deskData.roomVo.phase == "ready") game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+                        else game.cb.event('start_game');
+                        LookVideoProxy.destroy();
+                    break;
+                case 82: //录像初始化数据
+                    trace("进入录像处理")
+                    __data.deskData.roomVo.roomID = ___frame.byte.readInt(__hzlzmj_replay_data) //房间号
+                    var playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+                    var myPosition; //自己的位置
+                    var findMe = false
+                    while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                        var player = new Object();
+                        player.position = code; //玩家位置
+                        player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+                        var isMe = false; //是不是自己
+                        if (player.id == __data.deskData.roomVo.recordViewerID) { ////////////////////////////////////////////////////////////////////////////////
+                            isMe = true;
+                            myPosition = player.position;
+                        }
+                        player.score = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家积分
+                        playerArray.push(player);
+
+                        var vo = new __data.deskData.PlayerVo();
+                        vo.id = player.id
+                        vo.position = player.position
+                        vo.score = player.score
+                        vo.handNumber = 13
+                        vo.handValue = (player.handTileArray) ? player.handTileArray.join(",") : ""
+                        __data.deskData.roomVo.addPlayer(vo)
+
+                        if (player.id == __data.uid) {
+                            findMe = true
+                            __data.deskData.roomVo.recordViewerID = __data.uid
+                        }
+
+                        game.server.send(2005, vo.id)
+                        game.server.send(14003, vo.id)
+
+                        if (__data.othersVO[vo.id]) { __data.othersVO[vo.id].address = vo.address }
+                    }
+                    if (!findMe) __data.deskData.roomVo.recordViewerID = playerArray[0].id
+                    __data.deskData.roomVo.roomPlayer = playerArray.length
+                        //具体处理
+                    resetCalcu = true
+                    __data.deskData.roomVo.calcuPlayerSeat();
+
+                    game.cb.dispatchEvent(__eh + "update_player_score");
+
+                    var pos = ___frame.byte.readByte(__hzlzmj_replay_data);
+                    __data.deskData.roomVo.roomOwner = (__data.deskData.roomVo.getPlayer(pos)) ? __data.deskData.roomVo.getPlayer(pos).id : -1
+
+                    var bankerPos = ___frame.byte.readByte(__hzlzmj_replay_data)
+                    __data.deskData.roomVo.bankerPosition = bankerPos
+
+                    game.cb.event('update_dailyTask_data');
+                    break;
+                case 83: //剩余牌数 发牌之后告知 产生宝后告知 
+                    var cardCount = ___frame.byte.readByte(__hzlzmj_replay_data); //剩余牌数
+                    //设置剩余牌数
+                    __data.deskData.roomVo.surplus = cardCount
+                    game.cb.dispatchEvent(__eh + "update_desk_info")
+                    break;
+                case 84: //抽风开始
+                    var phase = ___frame.byte.readByte(__hzlzmj_replay_data); //
+                    switch (phase) {
+                        case 1: //抽风
+                            game.cb.dispatchEvent(__eh + "show_ventilation")
+                            break;
+                        case 2: //亮喜开始
+                            __data.deskData.roomVo.islx = true
+                            game.cb.dispatchEvent(__eh + "show_lx")
+                            break;
+                        case 3: //亮喜结束
+                            __data.deskData.roomVo.islx = false
+                            game.cb.dispatchEvent(__eh + "remove_lx")
+                            break;
+                    }
+                    break;
+                case 85: //换宝
+                    var oldBao = ___frame.byte.readByte(__hzlzmj_replay_data); //换掉的宝
+                    //具体处理
+                    game.cb.event(__eh + 'change_bao_effect', [oldBao])
+                    break;
+                case 86: //显示宝
+                    var bao = ___frame.byte.readByte(__hzlzmj_replay_data); //现在的宝
+                    //具体处理
+                    game.cb.dispatchEvent(__eh + "update_desk_info")
+                    game.cb.dispatchEvent(__eh + "show_game_bao", [bao]);
+                    break;
+                case 87: //小结算
+                    __data.deskData.roomVo.phase = "result"
+                    this.xiaoJieSuan(true); //处理小结算 函数定义在下面 具体信息详见函数定义
+                    break;
+                case 88: //大结算
+                    __data.deskData.roomVo.phase = "result"
+                    this.daJieSuan(); //处理大结算 函数定义在下面 具体信息详见函数定义
+                    break;
+                case 89: //听牌
+                    var tingTileArray = new Array(); //听的牌的数组
+                    // while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    //     var obj = {}
+                    //     obj.view = code
+                    //     obj.num = 0
+                    //     tingTileArray.push(obj);
+                    // }
+                    let len = ___frame.byte.readByte(__hzlzmj_replay_data);// 大众经济特殊解析办法
+                    for(let i = 0;i < len;i++){
+                        var obj = {}
+                        obj.view = ___frame.byte.readByte(__hzlzmj_replay_data);
+                        obj.rate = ___frame.byte.readInt(__hzlzmj_replay_data);
+                        obj.num = 0;
+                        tingTileArray.push(obj);
+                    }
+
+                    var vo = __data.deskData.roomVo.getPlayer(__data.uid)
+                    if (vo) vo.hupai = tingTileArray
+                    __data.deskData.isTing = true;
+                        //具体处理
+                    game.cb.dispatchEvent(__eh + "show_hu_tips")
+                    break;
+            }
+        } else {
+            var oper = this.caoZuoChuLi(sign); //函数定义在下面 返回操作对象 详见函数定义里的注释
+            //其他处理
+            this.showOperation(oper)
+        }
+
+        //
+        //重新计算用户排位
+        if (resetCalcu) {
+            game.cb.dispatchEvent(__eh + "update_player_seat")
+            game.cb.dispatchEvent(__eh + "update_user_info");
+        }
+
+
+        //收到操作集合
+        // if(operationValue != ""){
+        //     if(__data.deskData.roomVo.deal){
+        //         Laya.timer.frameOnce(1, this, game.cb.dispatchEvent, [__eh + "show_operation", [operationValue, optionArr, position]])
+        //     }
+        //     else{ 
+        //         game.cb.dispatchEvent(__eh + "show_operation", [operationValue, optionArr, position])
+        //     }
+        // }
+        game.cb.dispatchEvent(__eh + "show_operation", [operationValue, optionArr, position])
+    },
+
+
+
+
+    showOperation: function(oper) {
+        var type = (oper.type == 95) ? 155 : oper.type
+            //其他处理
+        operationValue += (operationValue == "") ? type : "," + type
+        switch (oper.type) {
+            case 90: //可以打特定牌
+                optionArr[90] = oper.canDisTileArray.join(",")
+                break;
+            case 92: //吃
+                optionArr[92] = oper.shunZiFristTileArray.join(";")
+                break;
+            case 93: //碰
+
+                break;
+            case 94: //允许明杠 对应操作发送 6001,94
+
+                break;
+            case 95: //允许听 对应操作发送 6001,95
+
+                break;
+            case 96: //允许胡 对应操作发送 6001,96
+
+                break;
+            case 97:
+                optionArr[97] = oper.canXueArray.join(",")
+                break;
+            case 98:
+                optionArr[98] = oper.shunZiFristTileArray.join(";")
+                break;
+            case 99: //碰
+
+                break;
+            case 100:
+                optionArr[100] = oper.canGangArray.join(",")
+                break;
+            case 102: //杠听
+
+                break;
+            case 103:
+                optionArr[103] = oper.canGangArray.join(",")
+                break;
+            case 113:
+                optionArr[113] = oper.canLxArray.join(",")
+                break;
+            case 114:
+                optionArr[114] = oper.canLzArray.join(",")
+                break;
+        }
+    },
+
+
+    //处理小结算
+    xiaoJieSuan: function(value) {
+        var code, code2
+        __data.deskData.roomVo.gameCount = 2
+        var resultData = {};
+        resultData.surplus = __data.deskData.roomVo.surplus;
+        resultData.cup = 0 //___frame.byte.readInt(__hzlzmj_replay_data); // 当前游戏局输赢奖杯
+        resultData.msp = 0 //___frame.byte.readInt(__hzlzmj_replay_data); // 0 没用    1  使用了
+        resultData.bamboo = 0 //___frame.byte.readInt(__hzlzmj_replay_data); // 0 没用  1 使用了富贵竹
+        resultData.rankLevel = 0 //___frame.byte.readInt(__hzlzmj_replay_data); // 新的排位等级
+        resultData.baseCup = 0 //___frame.byte.readInt(__hzlzmj_replay_data);
+            // let [cup1, cup2] = [__data.hashCityLevelCup[HallPlay.lastCityId].cup, __data.hashCityLevelCup[HallPlay.lastCityId].cup + resultData.cup];
+            // __data.hashCityLevelCup[HallPlay.lastCityId].cup += resultData.cup;
+            // // 雀神段位查询超越前一名所需奖杯
+            // __data.surpassCup = null;
+            // let rd = RankUtils.getRankLvDataByScore(__data.hashCityLevelCup[HallPlay.lastCityId].cup);
+            // if (rd && rd.toNextLevelNeedCup == 0) { game.server.send(14004, HallPlay.lastCityId); }
+            // ___frame.byte.readByte(__hzlzmj_replay_data);
+        resultData.time = ___frame.byte.readByte(__hzlzmj_replay_data); //小结算剩余时间
+        __data.deskData.roomVo.curGame++;
+        resultData.nowRound = ___frame.byte.readByte(__hzlzmj_replay_data); //当前圈/局数
+        resultData.isOver = ___frame.byte.readByte(__hzlzmj_replay_data); //0 未结束  1 全部结束
+        resultData.wfArray = new Array(); //玩法数组
+        while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+            resultData.wfArray.push(code);
+        }
+        resultData.baoCode = ___frame.byte.readByte(__hzlzmj_replay_data); //宝牌code  255代表不显示宝牌
+        resultData.mixed = __data.deskData.roomVo.mixed; // 混
+        resultData.playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+        resultData.myPosition; //自己的位置
+        while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+            var player = new Object();
+            player.position = code; //玩家位置
+            player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+
+            player.tileGroupArray = new Array(); //玩家门前牌组数组
+            player.doorValue = '';
+            while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                var tileGroup = this.menQianPaiChuLi(code2, player.position, false)
+                player.tileGroupArray.push(tileGroup.comb); //this.menQianPaiChuLi() 函数在下面定义了 type为门前牌组的类型; position为门前牌组增加的玩家位置; xgsp是否修改手牌; 返回牌组对象 详见函数定义部分注释
+                player.doorValue += (player.doorValue == "") ? tileGroup.comb : ";" + tileGroup.comb;
+            }
+
+            player.handTileArray = new Array(); //玩家的手牌数组
+            while ((code2 = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                player.handTileArray.push(code2);
+            }
+
+            player.score = ___frame.byte.readString(__hzlzmj_replay_data); //玩家积分
+
+            if (__data.deskData.roomVo.additionals && __data.deskData.roomVo.additionals.length) {
+                for (let i = 0; i < __data.deskData.roomVo.additionals.length; i++) {
+                    if (__data.deskData.roomVo.additionals[i].id == player.id) {
+                        player.realScore = __data.deskData.roomVo.additionals[i].realScore; // 真实应该输掉的分数
+                        player.initScore = __data.deskData.roomVo.additionals[i].initScore; // 应收应付的分数
+                        player.originScore = __data.deskData.roomVo.additionals[i].originScore; // 原始分数
+                        player.isVip = __data.deskData.roomVo.additionals[i].isVip; // 是否为vip
+                        player.isMaxMatch = __data.deskData.roomVo.additionals[i].isMaxMatch; // 是否为封顶开始
+                        break;
+                    }
+                }
+            }
+
+            player.scoreInfo = ___frame.byte.readString(__hzlzmj_replay_data); //计分说明
+            player.allScore = ___frame.byte.readString(__hzlzmj_replay_data); //玩家总积分
+            player.propertyState = ___frame.byte.readInt(__hzlzmj_replay_data); // 0 正常  -1  破产   1 上限
+            if (player.propertyState == -1) {
+                if (Math.abs(player.score) < Math.abs(player.realScore)) {
+                    player.propertyState = 0;
+                }
+            } else if (parseInt(player.score) < 0 && __data.othersVO[player.id]) {
+                if (Math.abs(player.score) >= Math.abs(__data.othersVO[player.id].gold)) {
+                    player.propertyState = -1;
+                }
+            }
+            resultData.playerArray.push(player);
+
+            var isMe = false; //是不是自己
+            if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                isMe = true;
+                resultData.myPosition = player.position;
+                resultData.myScore = player.score;
+                resultData.myScoreInfo = player.scoreInfo;
+                if(__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND)__data.addMoney(1, player.score) // 非好友房增加金币
+
+                // 自己破产了  记录一下破产损失的金币  充值vip或者vip可以返还
+                if (player.propertyState == -1) {
+                    resultData.myPochan = true;
+                    PochanFramework.gold = Math.abs(player.score);
+                }
+            }
+
+            //金币不足
+            var index = player.scoreInfo.indexOf("金币不足")
+            if (index != -1) {
+                player.scoreInfo.replace("金币不足", "")
+            }
+            player.lackGold = (index != -1) ? true : false
+
+            __data.deskData.roomVo.playerArr[player.id] = __data.deskData.roomVo.playerArr[player.id] ? __data.deskData.roomVo.playerArr[player.id] : new __data.deskData.PlayerVo();
+            __data.deskData.roomVo.playerArr[player.id].id = player.id
+            __data.deskData.roomVo.playerArr[player.id].position = player.position
+            __data.deskData.roomVo.playerArr[player.id].score = player.allScore
+            __data.deskData.roomVo.playerArr[player.id].readyState = 0
+            __data.deskData.roomVo.playerArr[player.id].autoState = 0
+
+            if (!__data.othersVO[player.id]) {
+                game.server.send(14003, player.id)
+                game.server.send(2005, player.id)
+            }
+        }
+        resultData.zhuangPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //庄家位置
+
+        // 我的输赢
+        resultData.myResult = 0;
+        if (gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].readMulAnalysis) {
+            //---------------------重新处理胡牌
+            resultData.huPositionArr = []
+            resultData.huPosition = 255
+            while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                resultData.huPosition = 0
+                resultData.huPositionArr.push(code);
+                if (resultData.myPosition == code) { resultData.myResult = 1; };
+            }
+            resultData.huPai = ___frame.byte.readByte(__hzlzmj_replay_data); //胡的是么牌
+        } else {
+            resultData.huPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //胡牌者位置 255代表流局
+            resultData.huPai = ___frame.byte.readByte(__hzlzmj_replay_data); //胡的是么牌
+            resultData.huPositionArr = resultData.huPosition == 255 ? [] : [resultData.huPosition];
+            if (resultData.myPosition == code) { resultData.myResult = 1; };
+        }
+
+        if (resultData.myResult == 1) {
+            resultData.keepWinNumber = window.keepWinNumber;
+        } else {
+            resultData.interrupt = window.keepWinNumber == 0 ? true : false;
+        }
+
+        // 输赢0奖杯且没有使用免输卡且有胡牌人的情况下  视为段位保护
+        // resultData.rankProtect = (__data.hashCityLevelCup[HallPlay.lastCityId].cup >= 190 && resultData.cup == 0 && resultData.msp == 0 && resultData.huPositionArr.length) ? true : false;
+        // resultData.rankProtect = resultData.myResult ? false : resultData.rankProtect;
+
+        trace("小结算接受到的胡牌：" + resultData.huPai)
+        __data.deskData.roomVo.bankerPosition = resultData.zhuangPosition
+            //具体处理
+            // game.scene.add(JmsmjDeskInningResultPanel, [resultData])
+        trace("小结算数据：", resultData)
+        trace("小结算剩余时间：", resultData.time)
+            //混的处理
+        if (resultData.huPositionArr.length > 0) {
+            if (gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].esp) {
+                for (var i = 0; i < resultData.playerArray.length; i++) {
+                    //如果循环当前用户为胡的用户
+                    if (resultData.huPositionArr.indexOf(resultData.playerArray[i].position) > -1) {
+                        //赢的用户混分
+                        resultData.winnerMixedNumber = this.mixedSortHandler(resultData.playerArray[i].handTileArray, resultData.huPai, resultData.wfArray)
+
+                    }
+                }
+                for (i = 0; i < resultData.playerArray.length; i++) {
+                    resultData.playerArray[i].winnerMixedNumber = resultData.winnerMixedNumber
+                }
+            }
+        }
+
+        for (var i = 0; i < resultData.playerArray.length; i++) {
+            resultData.playerArray[i].winPosition = (gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].readMulAnalysis) ? resultData.huPositionArr : [resultData.huPosition]
+            resultData.playerArray[i].huPosition = (gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].readMulAnalysis) ? resultData.huPositionArr : [resultData.huPosition]
+            resultData.playerArray[i].huPai = resultData.huPai
+        }
+
+        __data.deskData.roomVo.smallResultData = resultData;
+
+        game.cb.dispatchEvent(__eh + "update_player_score");
+        game.cb.dispatchEvent(__eh + "update_player_team");
+        game.cb.dispatchEvent(__eh + "update_player_result");
+
+        // 不是vip才有这些说法
+        // resultData.isDrop = RankUtils.rankDrop(cup1, cup2);
+        // if (!__data.vip.isVip) {
+        //     // 胜利的还需要知道次数
+        //     if (resultData.myResult) {
+        //         resultData.adunit = 'adunit-d55dc62bb5256b1d';
+        //         miniApi.video_ready('adunit-d55dc62bb5256b1d');
+        //     } else {
+        //         resultData.adunit = 'adunit-3f69a52bc2f1755f';
+        //         miniApi.video_ready('adunit-3f69a52bc2f1755f');
+        //     }
+        // }
+
+        __data.deskData.roomVo.reset();
+        Laya.timer.once(1500, this, function() {
+            if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND && __data.deskData.roomVo.isRecordPlaying) game.scene.add(FriendMahjongSmallResult);
+            //具体处理
+            // game.scene.add(DeskResultBG);
+            // game.scene.add(MahjongSmallResult);
+            miniApi.hideCustomAd_leftRight('down');
+            //     // game.scene.add(MahjongResultCup, [__data.cup, Math.abs(resultData.cup), resultData.myResult]);
+        });
+        //录像结束
+        __hzlzmj_replay_over = true
+    },
+
+    /**
+     * 混子单独排序出来
+     * @param  {[type]} value [description]
+     * @return {[type]}       [description]
+     */
+    mixedSortHandler: function(value, huPai) {
+        var zArr = []
+        for (var k = 0; k < __data.deskData.roomVo.mixedArr.length; k++) {
+            for (var i = 0; i < value.length; i++) {
+                if (parseInt(__data.deskData.roomVo.mixedArr[k]) == parseInt(value[i])) {
+                    zArr.push(value[i])
+                }
+            }
+        }
+
+        if (__data.deskData.roomVo.mixedArr.indexOf(huPai) != -1) { zArr.push(huPai) }
+
+        if (parseInt(__data.deskData.roomVo.mixed) == 40) {
+            return (zArr.length >= 1) ? zArr.length * 10 : 10
+        } else { return (zArr.length >= 1) ? zArr.length : 10 }
+        return 10
+    },
+
+    //处理大结算
+    daJieSuan: function() {
+        var code, code2
+        __data.deskData.roomVo.phase = "over"
+        var resultData = {}
+        resultData.roomPwd = ___frame.byte.readInt(__hzlzmj_replay_data); //房间号
+        resultData.roomType = ___frame.byte.readByte(__hzlzmj_replay_data); //房间类型
+        resultData.roundCount = ___frame.byte.readByte(__hzlzmj_replay_data); //房间总局/圈数
+        resultData.playerCount = ___frame.byte.readByte(__hzlzmj_replay_data); //房间玩家数
+
+        resultData.playerArray = new Array(); //玩家对象数组 对象属性见下面注释
+        resultData.myPosition; //自己的位置
+        resultData.maxScore = 0; //大赢家
+        resultData.maxDp = 0; //最佳炮手
+        while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+            var player = new Object();
+            player.position = code; //玩家位置
+            player.id = ___frame.byte.readInt(__hzlzmj_replay_data); //玩家ID
+            var isMe = false; //是不是自己
+            if (player.id == __data.uid) { ////////////////////////////////////////////////////////////////////////////////
+                isMe = true;
+                myPosition = player.position;
+            }
+            player.zuoZhuangCount = ___frame.byte.readByte(__hzlzmj_replay_data); //坐庄次数
+            player.huCountCount = ___frame.byte.readByte(__hzlzmj_replay_data); //胡牌次数
+            player.dianPaoCount = ___frame.byte.readByte(__hzlzmj_replay_data); //点炮次数
+            player.moBaoCount = ___frame.byte.readByte(__hzlzmj_replay_data); //摸宝次数
+            player.baoZhongBaoCount = ___frame.byte.readByte(__hzlzmj_replay_data); //宝中宝次数
+            player.score = ___frame.byte.readString(__hzlzmj_replay_data); //总分
+            resultData.playerArray.push(player);
+
+            if (player.score > resultData.maxScore) { resultData.maxScore = player.score }
+            if (player.dianPaoCount > resultData.maxDp) { resultData.maxDp = player.dianPaoCount }
+
+            if (!__data.othersVO[player.id]) {
+                if (player.id > 1000000) game.server.send(2012, player.id)
+                else game.server.send(2005, player.id)
+                game.server.send(14003, player.id)
+            }
+        }
+
+
+        for (i = 0; i < resultData.playerArray.length; i++) {
+            resultData.playerArray[i].maxScore = resultData.maxScore
+            resultData.playerArray[i].maxDp = resultData.maxDp
+        }
+
+        trace("大结算信息：", resultData)
+            //具体处理
+            // game.scene.remove(WcmjDeskInningResultPanel)
+
+        __data.deskData.roomVo.allRoundResult = resultData
+        if (__data.deskData.roomVo.dissolveOver) game.scene.add(WcmjDeskAllResultPanel, [resultData])
+    },
+
+    //处理操作 type操作类型 返回操作对象 oper oper结构详见方法内部注释  另外 发送6001,87-准备/88-取消准备/105-托管/106-取消托管/110-关闭小结算/111-关闭大结算
+    caoZuoChuLi: function(type) {
+        var oper = new Object();
+        var code
+        oper.type = type;
+        switch (type) {
+            case 90: //允许打特定牌
+                oper.canDisTileArray = new Array(); //可以打的牌数组
+                // while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                //     oper.canDisTileArray.push(code);
+                // }
+                MahjongCollectUtils.resetMap();
+                let len = ___frame.byte.readByte(__hzlzmj_replay_data); // 大众经济特殊解析办法
+                for(let i = 0;i < len;i++){
+                    code = ___frame.byte.readByte(__hzlzmj_replay_data);
+                    oper.canDisTileArray.push(code);
+                    let slen = ___frame.byte.readByte(__hzlzmj_replay_data);
+                    let tingTileArray = [];
+                    for(let j = 0;j < slen;j++){
+                        let obj = {};
+                        obj.view = ___frame.byte.readByte(__hzlzmj_replay_data);
+                        obj.rate = ___frame.byte.readInt(__hzlzmj_replay_data);
+                        obj.num = 0;
+                        tingTileArray.push(obj);
+                    }
+                    MahjongCollectUtils.setMap(code, tingTileArray);
+                    // 听牌积分说明
+                    let t_fan_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                    let t_details = { fan:[], jia:[] }
+                    for (let i = 0; i < t_fan_len; i++) {
+                        let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                        let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                        t_details.fan.push([score, detali]);// 为了保证和结算的数据统一  数组前填充2个0
+                    }
+                    let t_jia_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                    for (let i = 0; i < t_jia_len; i++) {
+                        let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                        let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                        t_details.jia.push([score, detali]);
+                    }
+                    MahjongBeforeTingDetailsData.setDetails(code, t_details);// 为了保证和结算的数据统一  数组前填充2个0
+                }
+                //允许打特定牌  对应操作发送 6001,91,打出的牌
+                __data.deskData.isCanPlay = true;
+                break;
+            case 91: //允许打任意手牌牌
+                //允许打任意手牌牌 对应操作发送 6001,91,打出的牌
+                __data.deskData.isCanPlay = true;
+                break;
+            case 92: //允许吃
+                oper.canChi = ___frame.byte.readByte(__hzlzmj_replay_data); //可以吃的牌
+                oper.shunZiFristTileArray = new Array(); //可能形成的顺子的第一张牌组成的数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    // var a = code + "," + (code + 1) + "," + (code + 2) + "," + oper.canChi
+                    oper.shunZiFristTileArray.push(parseInt(code));
+                }
+                oper.shunZiFristTileArray.sort(function(a, b) { return a - b })
+
+                for (var i = 0; i < oper.shunZiFristTileArray.length; i++) {
+                    oper.shunZiFristTileArray[i] = oper.shunZiFristTileArray[i] + "," + (oper.shunZiFristTileArray[i] + 1) + "," + (oper.shunZiFristTileArray[i] + 2) + "," + oper.canChi
+                }
+                //允许吃  对应操作发送 6001,92,吃牌形成的顺子的开头牌
+
+                break;
+            case 93:
+                //允许碰 对应操作发送 6001,93
+                break;
+            case 94:
+                //允许明杠 对应操作发送 6001,94
+                break;
+            case 95:
+                //允许听 对应操作发送 6001,95
+                break;
+            case 96:
+                //允许胡 对应操作发送 6001,96
+
+                break;
+            case 97: //允许薛
+                oper.canXueArray = new Array(); //可以薛的牌数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    oper.canXueArray.push(code);
+                }
+                break;
+            case 98: //吃听
+                oper.canChi = ___frame.byte.readByte(__hzlzmj_replay_data); //可以吃的牌
+                oper.shunZiFristTileArray = new Array(); //可能形成的顺子的第一张牌组成的数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    // var a = code + "," + (code + 1) + "," + (code + 2) + "," + oper.canChi
+                    oper.shunZiFristTileArray.push(parseInt(code));
+                }
+                oper.shunZiFristTileArray.sort(function(a, b) { return a - b })
+
+                for (var i = 0; i < oper.shunZiFristTileArray.length; i++) {
+                    oper.shunZiFristTileArray[i] = oper.shunZiFristTileArray[i] + "," + (oper.shunZiFristTileArray[i] + 1) + "," + (oper.shunZiFristTileArray[i] + 2) + "," + oper.canChi
+                }
+                break;
+            case 99: //碰听
+
+                break;
+            case 100:
+                oper.canGangArray = new Array(); //可以杠的牌数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    oper.canGangArray.push(code);
+                }
+                //允许暗杠杠门前 对应操作发送 6001,100,杠的牌
+
+                break;
+            case 102: //杠听
+
+                break;
+            case 103:
+                oper.canGangArray = new Array(); //可以杠的牌数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    oper.canGangArray.push(code);
+                }
+                //允许暗杠杠门前 对应操作发送 6001,100,杠的牌
+
+                break;
+            case 104:
+                __data.operatorPosition = __data.uid
+                    //允许选风 对应操作发送 6001,90,选的第几张牌 0-3
+                game.cb.dispatchEvent(__eh + "choose_your_ventilation", [10])
+                break;
+            case 105: //托管
+
+                break;
+            case 106: //取消托管
+
+                break;
+            case 112:
+                __data.deskData.roomVo.gameCount = ___frame.byte.readByte(__hzlzmj_replay_data) //1 是第一句   0  不是
+                break;
+            case 113: //亮喜
+                oper.canLxArray = new Array(); //可以杠的牌数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    var x = code + "_" + ___frame.byte.readByte(__hzlzmj_replay_data) + "_" + ___frame.byte.readByte(__hzlzmj_replay_data)
+                    oper.canLxArray.push(x);
+                }
+                break;
+            case 114: //亮掌
+                oper.canLzArray = new Array(); //可以杠的牌数组
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    var x = code
+                    oper.canLzArray.push(x);
+                }
+                break;
+            case 115: //混子
+                __data.deskData.roomVo.mixed = ___frame.byte.readByte(__hzlzmj_replay_data);
+                __data.deskData.roomVo.mixedArr = []
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    __data.deskData.roomVo.mixedArr.push(code)
+                }
+                game.cb.dispatchEvent(__eh + "show_game_bao", [__data.deskData.roomVo.mixed]);
+                break;
+            case 116: //骰子
+
+                var a = ___frame.byte.readByte(__hzlzmj_replay_data)
+                var b = ___frame.byte.readByte(__hzlzmj_replay_data)
+                __data.deskData.roomVo.dice = { a: a, b: b }
+                game.scene.add(WcmjEffectDice, [a, b])
+                break;
+            case 117: //剩余时间
+                __data.deskData.roomVo.playTime = ___frame.byte.readInt(__hzlzmj_replay_data);
+                __data.deskData.roomVo.playTime = (__data.deskData.roomVo.playTime < 0) ? 0 : Math.floor(__data.deskData.roomVo.playTime / 1000)
+                break;
+            case 200:
+                game.cb.event(__eh + 'remove_video_operation')
+                    //操作者的位置
+                var posi = ___frame.byte.readByte(__hzlzmj_replay_data)
+                    //用户操作的集合
+                var opeStr = []
+                while ((code = ___frame.byte.readByte(__hzlzmj_replay_data)) < 255) {
+                    opeStr.push(code)
+                }
+                //用户选择的操作
+                var choice = ___frame.byte.readByte(__hzlzmj_replay_data)
+                game.cb.event(__eh + 'video_operation', [posi, opeStr.toString(), choice])
+                break;
+            case 203: // 结算记分说明
+                let r_fan_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                let r_details = { fan:[], jia:[] }
+                for (let i = 0; i < r_fan_len; i++) {
+                    let payPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //付钱位置
+                    let receivePosition = ___frame.byte.readByte(__hzlzmj_replay_data); //收钱位置
+                    let realPosition = ___frame.byte.readByte(__hzlzmj_replay_data);// 应该付钱的位置
+                    let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                    let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                    r_details.fan.push([payPosition, receivePosition, score, detali]);
+                }
+                let r_jia_len = ___frame.byte.readByte(__hzlzmj_replay_data);
+                for (let i = 0; i < r_jia_len; i++) {
+                    let payPosition = ___frame.byte.readByte(__hzlzmj_replay_data); //付钱位置
+                    let receivePosition = ___frame.byte.readByte(__hzlzmj_replay_data); //收钱位置
+                    let realPosition = ___frame.byte.readByte(__hzlzmj_replay_data);// 应该付钱的位置
+                    let score = ___frame.byte.readString(__hzlzmj_replay_data);  //收钱数 如 10 或 2|5
+                    let detali = ___frame.byte.readString(__hzlzmj_replay_data); //说明
+                    r_details.jia.push([payPosition, receivePosition, score, detali]);
+                }
+                MahjongResultDetailsData.setDetails(r_details);
+                break;
+            case 250:
+                //允许过 对应操作发送 6001,255
+
+                break;
+        }
+        return oper
+    },
+
+    sheZhiZhunBei: function(zb, position) { //设置准备 zb是否准备好true-false; position设置准备状态的玩家位置
+        //处理准备
+        var vo = __data.deskData.roomVo.getPlayer(position)
+        if (vo) vo.readyState = zb
+        game.cb.dispatchEvent(__eh + "update_player_ready")
+    },
+
+    sheZhiFeng: function(feng, fengPosition, position) { //处理选风的显示 feng选择的风 30 - 33 东南西北; fengPosition风的显示位置 0-3; position选风玩家的位置
+        //处理风的显示
+        game.cb.dispatchEvent(__eh + "chooseVentilation", [position, feng, fengPosition])
+    },
+
+    shouPaiZengJian: function(code, count, position) { //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+        //处理手牌增减
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            //在手牌中增加count张code
+            var vo = __data.deskData.roomVo.getPlayer(__data.deskData.roomVo.recordViewerID)
+            if (vo && position == vo.position) { //////////////////////////////////////////////////////////////////////
+                //在手牌中增加count张code
+                //增加手牌数量
+                if (count > 0) {
+                    vo.handValue += (vo.handValue == "") ? code : "," + code
+                } else if (count < 0) { //手牌数量减少
+                    var handArr = vo.handValue.split(",")
+                    var index
+                    for (var i = 0; i < Math.abs(count); i++) {
+                        index = handArr.indexOf(code.toString())
+                        if (index == -1) continue
+                        handArr.splice(index, 1)
+                    }
+                    vo.handValue = handArr.join(",")
+                }
+            } else {
+                //在手牌中增加count张code
+                //增加手牌数量
+                var vo = __data.deskData.roomVo.getPlayer(position)
+                if (vo && count > 0) {
+                    vo.handValue += (vo.handValue == "") ? code : "," + code
+                } else if (vo && count < 0) { //手牌数量减少
+                    var handArr = vo.handValue.split(",")
+                    var index
+                    for (var i = 0; i < Math.abs(count); i++) {
+                        index = handArr.indexOf(code.toString())
+                        if (index == -1) continue
+                        handArr.splice(index, 1)
+                    }
+                    vo.handValue = handArr.join(",")
+                }
+            }
+
+            game.cb.event(__eh + "update_all_handlist_card")
+        } else {
+            var vo = __data.deskData.roomVo.getPlayer(__data.deskData.roomVo.recordViewerID)
+            if (vo && position == vo.position) { //////////////////////////////////////////////////////////////////////
+                //在手牌中增加count张code
+
+                //增加手牌数量
+                if (count > 0) {
+                    vo.handValue += (vo.handValue == "") ? code : "," + code
+                } else if (count < 0) { //手牌数量减少
+                    var handArr = vo.handValue.split(",")
+                    var index
+                    for (var i = 0; i < Math.abs(count); i++) {
+                        index = handArr.indexOf(code.toString())
+                        if (index == -1) continue
+                        handArr.splice(index, 1)
+                    }
+                    vo.handValue = handArr.join(",")
+                }
+            } else {
+                var vo = __data.deskData.roomVo.getPlayer(position)
+                if (!vo) return
+                    //position位置的玩家手牌显示数量增加count张
+                vo.handNumber += count
+
+                game.cb.dispatchEvent(__eh + "update_hand_number", [position, vo.handNumber])
+            }
+        }
+    },
+
+    //返回牌组对象 刻子{srcPosition, code, type = 1} 顺子{srcPosition, code1, code2(吃的牌), code3, type = 2} 明杠{srcPosition, code, type = 3} 暗杠{code, type = 5}
+    menQianPaiChuLi: function(type, position, xgsp, isPlay) { //type为门前牌组的类型; position为门前牌组增加的玩家位置; xgsp是否修改手牌
+        var player = __data.deskData.roomVo.getPlayer(position)
+        var tileGroup = new Object(); //定义一个牌组对象
+        if (type < 80) {
+            var srcPosition = Math.floor(type / 20);
+            var type2 = type - (srcPosition * 20); //真实类型
+
+            srcPosition += 1; //吃/碰/杠的谁的牌(位置) 也就是牌的来源
+            tileGroup.srcPosition = srcPosition; //从哪个位置得到牌
+
+            switch (type2) {
+                case 1: //刻子
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //碰的牌
+                    tileGroup.code = code; //碰的牌
+                    tileGroup.type = 1; //类型1
+                    tileGroup.comb = tileGroup.type + "," + code + "," + tileGroup.srcPosition
+                    tileGroup.cut = 2
+                    tileGroup.deleFlod = code
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -2, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理刻子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/peng", 2)
+                    break;
+                case 2: //顺子
+                    var codeA = ___frame.byte.readByte(__hzlzmj_replay_data); //顺子的第一张牌
+                    var codeB = codeA + 1; //顺子的第二张牌
+                    var codeC = codeA + 2; //顺子的第三张牌
+                    var codeX = ___frame.byte.readByte(__hzlzmj_replay_data); //吃的牌
+                    var codeY1 = 0; //需要在手牌中移除的第一张牌
+                    var codeY2 = 0; //需要在手牌中移除的第二张牌
+
+                    tileGroup.deleFlod = codeX //弃牌堆删除
+
+                    if (codeA == codeX) {
+                        codeY1 = codeA + 1;
+                        codeY2 = codeA + 2;
+                    } else if (codeA + 1 == codeX) {
+                        codeY1 = codeA;
+                        codeY2 = codeA + 2;
+                    } else {
+                        codeY1 = codeA;
+                        codeY2 = codeA + 1;
+                    }
+
+                    tileGroup.code1 = codeY1; //显示顺子的第一张牌
+                    tileGroup.code2 = codeX; //显示顺子的第二张牌
+                    tileGroup.code3 = codeY2; //显示顺子的第三张牌
+                    tileGroup.type = 2; //顺子类型
+                    tileGroup.cut = 2
+                    tileGroup.comb = tileGroup.type + "," + codeA + "," + codeX + "," + tileGroup.srcPosition
+                    if (xgsp) {
+                        this.shouPaiZengJian(codeY1, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                        this.shouPaiZengJian(codeY2, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理顺子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/chi", 2)
+                    break;
+                case 3: //普通杠子
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //杠的牌
+                    tileGroup.code = code; //杠的牌
+                    tileGroup.type = 5; //明杠类型
+                    tileGroup.cut = 3
+                    tileGroup.comb = tileGroup.type + "," + code + "," + tileGroup.srcPosition
+
+                    tileGroup.deleFlod = code //弃牌堆删除
+
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -3, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理杠子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/gang", 2)
+                    break;
+                case 4: //杠门前杠子 门前杠子的srcPosition代表原来的刻子是碰的哪个位置的玩家
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //杠的牌
+                    tileGroup.code = code; //杠的牌
+                    tileGroup.type = 88; //明杠类型 这里不是写错了 而是 3与4代表的牌组类型时一样的 只是在处理扣手牌时不同
+                    tileGroup.cut = 1
+                    tileGroup.comb = tileGroup.type + "," + code + "," + tileGroup.srcPosition
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理杠子 记得删掉门前与code相同的刻子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/gang", 2)
+                    break;
+                case 5: //门前有个两张一样的牌
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //粘的牌
+                    tileGroup.code = code; //粘的牌
+                    tileGroup.type = 3; //粘类型
+                    tileGroup.comb = tileGroup.type + "," + code + "," + tileGroup.srcPosition
+                    tileGroup.deleFlod = code //弃牌堆删除
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    break;
+            }
+
+
+        } else {
+
+            //没有从其他人那里得到牌的类型牌组没有srcPosition属性
+            switch (type) {
+                case 80: //暗杠
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //杠的牌
+                    tileGroup.code = code; //杠的牌
+                    tileGroup.type = 5; //暗杠类型5
+                    tileGroup.comb = tileGroup.type + "," + code + "," + "5"
+                    tileGroup.cut = 4
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -4, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理杠子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/gang", 2)
+                    break;
+                case 81: //亮掌
+                    var code = ___frame.byte.readByte(__hzlzmj_replay_data); //亮掌的牌
+                    tileGroup.code = code; //亮掌的牌
+                    tileGroup.type = 81; //亮掌类型
+                    tileGroup.comb = tileGroup.type + "," + code + "," + __data.deskData.roomVo.recordViewerID
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -2, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/fz_liangzhang")
+                    break;
+                case 82: //亮喜
+                    tileGroup.code1 = ___frame.byte.readByte(__hzlzmj_replay_data); //亮喜的牌
+                    tileGroup.code2 = ___frame.byte.readByte(__hzlzmj_replay_data); //亮喜的牌
+                    tileGroup.code3 = ___frame.byte.readByte(__hzlzmj_replay_data); //亮喜的牌
+                    tileGroup.type = 82; //亮喜类型
+                    tileGroup.comb = tileGroup.type + "," + tileGroup.code1 + "," + tileGroup.code2 + "," + tileGroup.code3
+                    if (xgsp) {
+                        this.shouPaiZengJian(tileGroup.code1, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                        this.shouPaiZengJian(tileGroup.code2, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                        this.shouPaiZengJian(tileGroup.code3, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/fz_liangxi")
+                    break;
+                case 83: //红中杠
+                    var code = 40; //杠的牌
+                    tileGroup.code = code; //杠的牌
+                    tileGroup.type = 83; //暗杠类型5
+                    tileGroup.comb = tileGroup.type + "," + code + "," + "5"
+                    tileGroup.cut = 1
+                    if (xgsp) {
+                        this.shouPaiZengJian(code, -1, position); //处理手牌增减 code为要增减的牌; count为增减的数量(负数为减少手牌); position为减少哪个位置玩家的手牌
+                    }
+                    //处理杠子
+                    player && xgsp && (isPlay == 1) && __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + player.sex + "/gang", 2)
+                    break;
+            }
+        }
+
+        game.cb.event(__eh + 'remove_video_operation')
+        return tileGroup;
+    }
+}

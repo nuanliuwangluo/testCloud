@@ -1,0 +1,218 @@
+class AppBridge{
+    
+    static listener(){
+        this.bridge && this.bridge.callWithBack(function(ret) {
+            ret = JSON.parse(ret);
+            if(ret){
+                if(ret.name == 'pause'){
+                    __heartbeat.reset();
+                    __voiceHeartbeat.reset();
+                    __sound && __sound.pause();
+                    Laya && Laya.stage && (Laya.stage.renderingEnabled = false);
+                }else if(ret.name == 'resume'){
+                    __sound && __sound.working();
+                    Laya && Laya.stage && (Laya.stage.renderingEnabled = true);
+                }
+            }
+        },"listener:", "");
+    }
+
+    static appleLogin(callback){
+        this.bridge && this.bridge.callWithBack(function(ret) {
+            ret = JSON.parse(ret);
+            callback && callback(ret)
+        },"appleLogin:", "");
+    }
+    
+    static wxLogin(callback){
+        this.bridge && this.bridge.callWithBack(function(ret) {
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        },"wxLogin:", "");
+    }
+
+    // {title:"分享标题", desc:"分享内容", url:"https://www.baidu.com", thumb:"share_1"}
+    static wxShare(callback, json){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "wxShare:", JSON.stringify(json));
+    }
+
+    static wxShareTxt(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "wxShareTxt:", "这是文本内容。");
+    }
+
+    static wxShareScreenshot(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "wxShareScreenshot:", "");
+    }
+
+    // {title:"@小程序标题",desc:"@小程序描述",userName:"gh_8948d7f614e2",type:"release",withShareTicket:true,thumb:"share_2"}
+    static wxShareMiniProgram(callback, json){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "wxShareMiniProgram:", JSON.stringify(json));
+    }
+
+    static setClipboard(content,callback){
+        let result = this.bridge ? this.bridge.call("copyToClipboard:", content) : false;
+        callback && callback(result);
+    }
+
+    static getClipboard(callback){
+        let text = this.bridge ? this.bridge.call("getClipboardText:", "") : "";
+        callback && callback(text)
+    }
+
+
+    static setIapListener(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "setIapListener:", "");
+    }
+
+    // ["10001","10014","10201"]
+    static getIapProduces(callback, products){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "getIapProduces:", JSON.stringify( {products} ));
+    }
+
+    static iapPurchase(productId){
+        if(productId){
+            this.bridge && this.bridge.call("iapPurchase:", productId.toString());
+        }
+    }
+    static invest(productId){ this.iapPurchase(productId); }// 兼容一下
+
+    static iapFinishTransaction(transactionId){
+        this.bridge && this.bridge.call("finishTransaction:", transactionId || "");
+    }
+
+
+    static umengInit(){
+        this.bridge && this.bridge.call("umengInit:", "");
+    }
+
+    static umengEvent(eventId, attributes){
+        this.bridge && this.bridge.call("umengEvent:", JSON.stringify({ eventId, attributes}));
+    }
+
+    // 9146328111299007
+    static loadAdVideo(callback, placementId){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "loadAdVideo:", JSON.stringify( {placementId} ));
+    }
+
+    static showAdVideo(){
+        this.bridge && this.bridge.call("showAdVideo:", "");
+    }
+    
+    // "https://apps.apple.com/app/id6744951316"
+    static openMarket(url){
+        this.bridge && this.bridge.call("openAppStore:", url);
+    }
+
+    static rebootApp(){
+        this.bridge && this.bridge.callWithBack(()=>{
+            window.location.reload();
+        }, "rebootApp:", "");
+        // this.bridge && this.bridge.call("rebootApp:", "");
+        // window.location.reload();
+    }
+
+    static closeApp(){
+        this.bridge && this.bridge.call("closeApp:", "");
+    }
+
+    static vibrate(type){
+        this.bridge && this.bridge.call("vibrate:", type);
+    }
+
+    static permission(name, callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "permission:", name);
+    }
+
+    static requestAuth(name, callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "requestAuth:", name);
+    }
+
+    static getLocation(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "getLocation:", "");
+    }
+
+    static startRecoder(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "startRecoder:", "");
+    }
+
+    static stopRecoder(callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "stopRecoder:", "");
+    }
+
+    static uploadRecoder(callback, params){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "uploadRecoder:", JSON.stringify(params));
+    }
+
+    static playVoice(url, callback){
+        this.bridge && this.bridge.callWithBack((ret)=>{
+            ret = JSON.parse(ret);
+            callback && callback(ret);
+        }, "playVoice:", url);
+    }
+
+    static get statusBarHeight(){
+        let statusBarHeight = this.bridge ? this.bridge.call("getStatusBarHeight:", "") : 0;
+        return statusBarHeight;
+    }
+
+    static get screenInfo(){
+        let info = this.bridge ? this.bridge.call("getScreenInfo:", "") : null;
+        info = info ? JSON.parse(info) : null;
+        return info;
+    }
+
+    static get bridge(){ 
+        if(!this._bridge){
+            try{
+                let os = conchConfig.getOS();
+                if(os == "Conch-ios"){
+                    this._bridge = PlatformClass.createClass("JSBridge")
+                }else if(os == "Conch-android"){
+                    this._bridge = PlatformClass.createClass("demo.JSBridge")
+                }
+            }catch(e){
+                this._bridge = null;
+            }
+        }
+        return this._bridge; 
+    }
+}

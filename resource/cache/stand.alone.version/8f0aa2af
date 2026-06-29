@@ -1,0 +1,21 @@
+class S_click_single_select_box extends Laya.Script {
+    onAwake() {
+        // 为 obj 注入 name 属性的 get 和 set 方法
+        Object.defineProperty(this.owner, "isSelect", {
+            get: function () {
+                return this.skin == 'common/bt_g2.png';
+            },
+            set: function (v) {
+                if (v) {
+                    this.skin = 'common/bt_g2.png'
+                } else {
+                    this.skin = 'common/bt_g1.png'
+                }
+            }
+        });
+    }
+    onClick() {
+        this.owner.skin = (this.owner.skin == 'common/bt_g1.png') ? 'common/bt_g2.png' : 'common/bt_g1.png';
+        game.cb.event('update_selectBox_status', [this.owner.isSelect])
+    }
+}

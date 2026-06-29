@@ -1,0 +1,31 @@
+__data.seasonRecord = {
+    // {
+    //     id:0,
+    //     isCur: false,
+    //     get year() { return Math.random() > 0.5 ? 2024 : 2025 },
+    //     get isIng() { return Math.random() > 0.5 ? 1 : 0 },
+    //     startTimeMs: new Date().getTime(),
+    //     endTimeMs: new Date().getTime() + 500000000,
+    //     // season: 1,// 季节 1-4 春-冬
+    //     get season() { return __tool.randomRange(1, 4) },
+    //     // 'area', 'person', 'local'
+    //     area_datas: [
+    //         { rank: 1, cityName: '哈尔滨1麻将', score: 3333 },
+    //         { rank: 2, cityName: '哈尔滨2麻将', score: 2222 },
+    //         { rank: 3, cityName: '哈尔滨3麻将', score: 1111 },
+    //     ],
+    //     area_data_me: { rank: 1, cityName: '哈尔滨1麻将', score: 3333, isMe: true },
+    //     person_datas: [
+    //         { rank: 1, name: '1', cityName: '哈尔滨1麻将', score: 3333 },
+    //         { rank: 2, name: '2', cityName: '哈尔滨2麻将', score: 2222 },
+    //         { rank: 3, name: '3', cityName: '哈尔滨3麻将', score: 1111 },
+    //     ],
+    //     person_data_me: { rank: 1, name: '1', cityName: '哈尔滨1麻将', score: 3333, isMe: true },
+    //     local_datas: [
+    //         { rank: 1, name: '1', cityName: '哈尔滨1麻将', score: 3333 },
+    //         { rank: 2, name: '2', cityName: '哈尔滨2麻将', score: 2222 },
+    //         { rank: 3, name: '3', cityName: '哈尔滨3麻将', score: 1111 },
+    //     ],
+    //     local_data_me: { rank: 1, name: '1', cityName: '哈尔滨1麻将', score: 3333, isMe: true },
+    // }
+}

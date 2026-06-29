@@ -1,0 +1,11 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-05-25 09:37:55
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2020-07-06 15:36:41
+ */
+window.__version = window.__version || {}
+__version.game = '?v=0.0.1'
+__version.src = '?v=' + Date.now()
+__version.res = '?v=' + Date.now()
+__version.res = ''

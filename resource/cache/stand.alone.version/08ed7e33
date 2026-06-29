@@ -1,0 +1,21 @@
+__data.recommend = {
+    isData: false,
+    isRecommend: false,
+    canShow() {
+        return new Promise(async (resolve, reject) => {
+            if (miniApi.clientType == 'app') return resolve(false);
+            let d = miniApi.getItem(__data.uid + ':showRecommendDate')
+            let d1 = parseInt(d)
+            let d2 = Number.isFinite(d1) ? d1 : 0;
+            if ((Date.now() - d2) >= (7 * 24 * 3600 * 1000)) {
+                if (!this.isData) {
+                    await game.server.send(17004)
+                }
+                if (!this.isRecommend) {
+                    resolve(true)
+                }
+            }
+            resolve(false)
+        })
+    },
+}

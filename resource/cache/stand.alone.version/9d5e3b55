@@ -1,0 +1,155 @@
+class GameCommonWait extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game_common/game_common_wait',
+            layer: 'middle'
+        })
+    }
+
+    onAwake() {
+        this.btn_quit.addComponent(GameQuitScript);
+        this.btn_changeRoom.addComponent(GameChangeRoomScript);
+    }
+
+    onEnable() {
+        this.time = 30;
+        TimerUtils.pushAttr(this, 'time');
+        this.update();
+        game.cb.on(TimerUtils.TIMERUTILS_SECOND_EVENT, this, this.update)
+        this.callLater(this.localtion);
+    }
+
+    onDisable() {
+        game.cb.off(TimerUtils.TIMERUTILS_SECOND_EVENT, this, this.update)
+    }
+
+    update() {
+        HtmlTextUtils.text(
+            this.txt_match, {
+            align: 'left',
+            valign: 'top',
+            fontSize: 46,
+            bold: true,
+            width: this.width,
+            color: '#ffffff'
+        },
+            '正在等待开局●●●', {},
+            this.time + '秒', {
+            color: '#fff000'
+        }
+        )
+    }
+
+    localtion() {
+        this.txt_match.x = this.width - this.txt_match.width >> 1;
+    }
+}
+
+
+
+class GameMahjongWait extends GameCommonWait {
+    constructor() {
+        super()
+    }
+
+    onAwake() {
+        super.onAwake();
+        this.txt_match.y = 400;
+    }
+}
+
+
+// 退出游戏
+class GameQuitScript extends Laya.Script {
+    onClick() {
+        __reBack_info.backMain = true;
+        // game.server.send(3321); // 离开房间
+        // __showScene.show_hall();
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        __showScene.show_hall_play(HallPlay.lastCityId)
+        __data.deskData.roomVo.clear();
+    }
+}
+
+// 换桌
+class GameChangeRoomScript extends Laya.Script {
+    async onClick() {
+        await __showScene.load_game_mahjong()
+        __showScene.show_game_mahjong();
+        game.server.send(3321); // 离开房间
+        game.server.send(3322); // 换桌匹配
+        game.scene.add(GameMahjongMatch, [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore]);
+    }
+}
+
+// 继续游戏
+class GameGoonScript extends Laya.Script {
+
+    video(lookVideo) {
+        this.lookVideo = lookVideo;
+    }
+
+    async _videoStartMatch() {
+        // 是否可以匹配  允许后观看视频   然后开始匹配
+        let r = __data.d_match.allowMatch(__data.prev_match_lv, HallPlay.curRuleId, HallPlay.lastCityId, 1)
+        if (r) {
+            let adunitId = 'adunit-24510f2ab8dd04a0'; // 后期可能需要更换广告id
+            // let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+            // miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '胜利额外奖杯', 'Mj_Participation': n })
+            await miniApi.video_ready(adunitId);
+            miniApi.video_show(adunitId, () => {
+                this.startMatch();
+            }, () => {
+                __tips('暂无广告，请稍后再试或开通VIP')
+            }, 0);
+        }
+    }
+
+    async onClick() {
+        if (__data.callback11005 && __data.callback11005()) {
+            return;
+        }
+        if (this.lookVideo) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '封顶开始' });
+            this._videoStartMatch();
+        } else {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '普通开始' });
+            this.startMatch();
+        }
+    }
+
+    async startMatch() {
+        let r = await __data.d_match.startMatch(__data.prev_match_lv, HallPlay.curRuleId, HallPlay.lastCityId, 1)
+        if (!r) return;
+
+        // game.scene.add(GameMahjongWait);
+        game.cb.event(__eh + "show_phase");
+        game.cb.event(__eh + "ready_to_clear");
+        // 如果房间已经解散了
+        // if (__data.deskData.roomVo.close) {
+        //     game.server.send(3321);
+        //     game.server.send(3322);
+        //     game.scene.add(GameMahjongMatch, [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore]);
+        // } else {
+        //     game.server.send(6001, 110, 87);
+        //     game.scene.add(GameCommonWait);
+        // }
+        // __showScene.show_hall();
+
+        let [name, score] = [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore];
+        game.scene.removeAll();
+        __data.deskData.roomVo.clear();
+        __showScene.show_game_mahjong();
+        __data.deskData.roomVo.matchName = name;
+        __data.deskData.roomVo.bottomScore = score;
+        game.server.send(3321);
+        if (this.lookVideo) {
+            game.server.send(14002, __data.prev_match_modelId, __data.prev_match_lv, HallPlay.lastCityId);
+        } else {
+            game.server.send(3303, __data.prev_match_modelId, __data.prev_match_lv, HallPlay.lastCityId);
+        }
+
+        game.scene.add(GameMahjongMatch, [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore]);
+        // game.server.send(3322);
+    }
+}

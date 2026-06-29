@@ -1,0 +1,346 @@
+class GiveupWarnPanel extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/GiveupWarnPanel',
+            layer: 'panel'
+        })
+        this.mouseThrough = true;
+        this.btn_done.on(Laya.Event.CLICK, this, this._onDone);
+        this.btn_giveup.on(Laya.Event.CLICK, this, this._onGiveup);
+    }
+
+    added(done, giveup) {
+        this.done = done;
+        this.giveup = giveup;
+        this.btn_remember.selected = false;
+        HtmlTextUtils.text(
+            this.txt, { align: 'center', valign: 'top', fontSize: 40, bold: false, leading: 25, width: this.width, color: '#000000' },
+            '真的要放弃&nbsp;', {},
+            LookVideoProxy.gold, { color: '#ff2521' },
+            '&nbsp;金币吗？/br放弃特权后今日激励金将减半！', {}
+        )
+        Laya.timer.callLater(this, this._relocationHtml);
+    }
+
+    _relocationHtml() {
+        this.txt.x = this.width - this.txt.displayWidth >> 1;
+    }
+
+    _onDone() {
+        this.done && this.done();
+        if (this.btn_remember.selected) { LocalUtils.saveByToday('TODAY_GIVEUP_RECORD', 'TRUE'); }
+        // this.remove();
+    }
+
+    _onGiveup() {
+        this.giveup && this.giveup();
+        LocalUtils.saveByToday('TODAY_GIVEUP_RECORD', 'TRUE');
+        // this.remove();
+    }
+
+    remove() {
+        game.scene.remove(this);
+    }
+
+    clickMask() { }
+}
+
+
+class GameMainLookVideoWin extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_lookVideo_win',
+            layer: 'panel'
+        })
+        this.btn_giveup.addComponent(S_click_gameMain_lookVideo_win_giveup).serverId(16011)
+        this.btn_video.addComponent(S_click_gameMain_lookVideo_win_video).init('winVideo')
+        this.btn_share.addComponent(S_click_gameMain_lookVideo_win_video).init('winShare')
+    }
+
+    onAwake() {
+        // this.img_bar.getComponent(VideoCountDown).setAfter(this.overtime.bind(this))
+    }
+
+    added() {
+        this.all_add_shareBtnShowNum = true;
+        __sound.playGameYx('get');
+        // __sound.playGameYx('video_gold_win')
+        // 时间埋点
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '胜利激励界面' });
+
+        this._updateTimeTxt();
+        this._updateTxt();
+
+        let adid = 'adunit-32db74247314cde6'
+        this.update_video_ready({ adUnitId: adid, isSuccess: __data.shareVideoRule.ifVideoSuccessUseRule(adid) })
+    }
+    onDisable() {
+        this.all_add_shareBtnShowNum = false;
+        game.scene.remove(GiveupWarnPanel);
+        LookVideoProxy.destroy();
+    }
+
+    update_video_ready(r) {
+        trace('变更激励视频胜利结果');
+        this.videoR = r;
+        this.btn_video.visible = false
+        this.btn_share.visible = false
+        if (!r.isSuccess) {
+            this.all_add_shareBtnShowNum && __data.shareVideoRule.total_shareShowCount(this.btn_share.parent)
+            // miniApi.shareBtnShow(videoR.adUnitId)
+            this.btn_share.visible = true
+        } else {
+            // miniApi.videoBtnShow(videoR.adUnitId)
+            this.btn_video.visible = true
+        }
+    }
+
+    clickMask() { }
+
+    _updateTxt() {
+        try {
+            this.txt_gold1.text = '金币×' + GoldFormatUtils.format(LookVideoProxy.gold, 2);
+            // this.double.visible = LookVideoProxy.gold <= LookVideoProxy.nextDoubleGold;
+        } catch (e) {
+            game.scene.remove(this);
+        }
+    }
+
+    _updateTimeTxt() { }
+
+    /**
+     * 计时结束关闭界面
+     */
+    overtime() {
+        // game.scene.remove(this);
+    }
+
+    clickMask() { }
+}
+class GameMainLookVideoLose extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_lookVideo_lose',
+            layer: 'panel'
+        })
+        this.btn_giveup.addComponent(S_click_gameMain_lookVideo_win_giveup).serverId(16015)
+        this.btn_video.addComponent(S_click_gameMain_lookVideo_win_video).init('loseVideo')
+        this.btn_share.addComponent(S_click_gameMain_lookVideo_win_video).init('loseShare')
+    }
+    onAwake() {
+        // this.img_bar.getComponent(VideoCountDown).setAfter(this.overtime.bind(this))
+    }
+
+    added() {
+        this.all_add_shareBtnShowNum = true
+        __sound.playGameYx('get');
+        // __sound.playGameYx('video_gold_lose')
+        // 时间埋点
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '失败激励界面' });
+
+        this._updateTimeTxt();
+        this._updateTxt();
+
+
+        let adid = 'adunit-cb884ce5e16b6f59'
+        this.update_video_ready({ adUnitId: adid, isSuccess: __data.shareVideoRule.ifVideoSuccessUseRule(adid) })
+    }
+
+    onDisable() {
+        this.all_add_shareBtnShowNum = false;
+        game.scene.remove(GiveupWarnPanel);
+        LookVideoProxy.destroy();
+    }
+
+    update_video_ready(r) {
+        this.videoR = r;
+        this.btn_video.visible = false
+        this.btn_share.visible = false
+        if (!r.isSuccess) {
+            this.all_add_shareBtnShowNum && __data.shareVideoRule.total_shareShowCount(this.btn_share.parent)
+            // miniApi.shareBtnShow(videoR.adUnitId)
+            this.btn_share.visible = true
+        } else {
+            // miniApi.videoBtnShow(videoR.adUnitId)
+            this.btn_video.visible = true
+        }
+    }
+
+    clickMask() { }
+
+    _updateTxt() {
+        try {
+            // this.double.visible = LookVideoProxy.gold <= LookVideoProxy.nextDoubleGold;
+            this.txt_gold1.text = '金币×' + GoldFormatUtils.format(Math.abs(LookVideoProxy.gold), 2);
+        } catch (e) {
+            game.scene.remove(this);
+        }
+    }
+
+    _updateTimeTxt() { }
+
+    /**
+     * 计时结束关闭界面
+     */
+    overtime() {
+        // game.scene.remove(this);
+    }
+
+    clickMask() { }
+}
+class S_click_gameMain_lookVideo_win_giveup extends Laya.Script {
+
+    serverId(value) {
+        this._serverId = value;
+    }
+
+    onClick() {
+        // 3.1.15.8版本修改  放弃就直接放弃了，没有别的
+        LookVideoProxy.lookVideoFail();
+        game.scene.remove(this.owner.parent);
+        return
+
+        // 3.1.15.8版本修改  删除此功能
+        let r = LocalUtils.getByToday('TODAY_GIVEUP_RECORD');
+        // 今天已经不再弹出了
+        if (r) {
+            this.giveup();
+        } else {
+            game.scene.add(GiveupWarnPanel, [() => {
+                game.cb.event('video_reward_done');
+            }, () => {
+                this.giveup();
+            }])
+        }
+    }
+
+    giveup() {
+        trace('点击游戏主页-看视频-胜利-放弃按钮')
+        game.server.send(this._serverId);
+        LookVideoProxy.lookVideoFail();
+        game.scene.remove(this.owner.parent);
+    }
+}
+class S_click_gameMain_lookVideo_win_video extends Laya.Script {
+
+    onEnable() {
+        game.cb.on('video_reward_done', this, this.onClick);
+    }
+
+    onDisable() {
+        game.cb.off('video_reward_done', this, this.onClick);
+    }
+
+    init(type) {
+        this.type = type;
+    }
+    async onClick() {
+        game.server.send(3334)
+        // 增加一个消息 让3331 3333可以生效 否则后台拦截
+        trace('点击游戏主页-看视频-胜利-视频按钮');
+        if (this.type == 'winVideo') {
+
+        } else if (this.type == 'loseVideo') {
+
+        } else if (this.type == 'winShare') {
+
+        } else if (this.type == 'loseShare') {
+
+        }
+        let gr = game.scene.get(this.owner.parent);
+        S_click_gameMain_lookVideo_win_video.videoR = gr.videoR;
+        S_click_gameMain_lookVideo_win_video.type = this.type;
+    }
+}
+S_click_gameMain_lookVideo_win_video.videoR;
+S_click_gameMain_lookVideo_win_video.type;
+window.S_click_gameMain_lookVideo_win_video = S_click_gameMain_lookVideo_win_video;
+
+
+
+/**
+ * 被代理的类必须要实现  除 destroy proxy 以外的所有方法
+ */
+class LookVideoProxy {
+
+    /**
+     * 销毁代理类
+     */
+    static destroy() {
+        this._class = null;
+        this._active = false;
+    }
+
+    /**
+     * 要代理的类
+     */
+    static proxy(_class) {
+        this._class = _class;
+        this.sceneHandle();
+    }
+
+    static get classIsExist() {
+        if (this._class) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    static get active() { return this._active; }
+    static set active(value) {
+        this._active = value;
+        this.sceneHandle();
+    }
+
+    static sceneHandle() {
+        if (this.canBeShow) {
+            if (LookVideoProxy.type == LookVideoProxy.TYPE_WIN)
+                __showScene.show_gameMain_lookVideo_win();
+            else if (LookVideoProxy.type == LookVideoProxy.TYPE_LOSE)
+                __showScene.show_gameMain_lookVideo_lose();
+        }
+    }
+    static get canBeShow() {
+        return this.classIsExist && this.active;
+    }
+
+    static set type(value) { this._type = value; }
+    static get type() { return this._type; }
+
+    static get TYPE_WIN() { return "win"; }
+    static get TYPE_LOSE() { return "lose"; }
+
+    // 上面的方法不需要被代理的类实现  
+    //----------------------------------------------------------------
+    // 下面的方法必须被代理的类实现
+
+    static get time() {
+        return this._class.time;
+    }
+
+    static get gold() {
+        return this._class.gold;
+    }
+
+    static get nextDoubleGold() { return 2300; }
+
+    static get doubleGold() {
+        return this._class.doubleGold;
+    }
+
+    /**
+     * 视频成功调用
+     */
+    static lookVideoSuccess() {
+        if (this.type == this.TYPE_WIN)
+            game.server.send(3331, 1);
+        else if (this.type == this.TYPE_LOSE)
+            game.server.send(3333, 1);
+    }
+
+    /**
+     * 视频失败调用
+     */
+    static lookVideoFail() { }
+}

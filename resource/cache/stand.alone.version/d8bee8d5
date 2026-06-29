@@ -1,0 +1,236 @@
+class FriendRoom_record_main_gameRecord extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_record_main_gameRecord',
+            module: false
+        })
+        this.__list.vScrollBarSkin = ''
+        this.btn_lookReplay.addComponent(S_friendRoom_rm_gr_lookReplay)
+        this.btn_vip.addComponent(S_show_friendRoom_vip).init(FriendRoom_vipSale.save_time)
+        this.btn_lookTotalScore.addComponent(S_show_friendRoom_vip).init(FriendRoom_vipSale.cal_score)
+        this.btn_openVip_7.addComponent(S_show_friendRoom_vip).init(FriendRoom_vipSale.save_time)
+        this.btn_selectDate.addComponent(S_clickBtnShow_clickOtherRemove).init(this.img_selectDate)
+        this.img_selectDate.addComponent(S_stopPropagation_mousedown)
+        this.s_combobox = this.addComponent(S_combobox).init('friend', this.btn_selectDate, this.img_selectDate)
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+        this.__list.addComponent(S_fr_click_list)
+    }
+    async onEnable() {
+        game.cb.on('update_vip_data', this, this.updateVip)
+        game.cb.on('update_friendRoom_game_record_data', this, this.update_friendRoom_game_record_data)
+        game.cb.on('combobox_update_index_' + this.s_combobox.comboboxName, this, this.update_index)
+        this.s_combobox.array = [
+            '今天',
+            '昨天',
+            new Date(Date.now() - 2 * 24 * 3600 * 1000).dateFormat("yyyy.MM.dd"),
+            new Date(Date.now() - 3 * 24 * 3600 * 1000).dateFormat("yyyy.MM.dd"),
+            new Date(Date.now() - 4 * 24 * 3600 * 1000).dateFormat("yyyy.MM.dd"),
+            new Date(Date.now() - 5 * 24 * 3600 * 1000).dateFormat("yyyy.MM.dd"),
+            new Date(Date.now() - 6 * 24 * 3600 * 1000).dateFormat("yyyy.MM.dd"),
+        ]
+        await __tool.await(1)
+        if (FriendRoom_record_main_gameRecord.save) {
+            this.s_combobox.selectedIndex = FriendRoom_record_main_gameRecord.combobox_select_index
+        } else {
+            this.s_combobox.selectedIndex = 0
+        }
+        this.updateVip();
+    }
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.updateVip)
+        game.cb.off('update_friendRoom_game_record_data', this, this.update_friendRoom_game_record_data)
+        game.cb.off('combobox_update_index_' + this.s_combobox.comboboxName, this, this.update_index)
+        __data.friendRoom.clear();
+        FriendRoom_record_main_gameRecord.save = 0;
+    }
+    updateItem(cell, index) {
+        let array = [];
+        for (const key in this.useData) {
+            if (parseInt(key) >= 1) {
+                array.push(...this.useData[key])
+            }
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !this.useData[nextPage]) {
+            game.server.send(14013, __data.uid, this.s_combobox.selectedIndex, nextPage)
+        }
+    }
+    update_friendRoom_game_record_data() {
+        this.useData = __data.friendRoom.gameRecord && __data.friendRoom.gameRecord[this.s_combobox.selectedIndex] || [];
+        this.updateList()
+        this.updateTotalScore()
+    }
+    update_index(index, e) {
+        if (e) {
+            game.server.send(14013, __data.uid, index, 1)
+        }
+        FriendRoom_record_main_gameRecord.combobox_select_index = index;
+        this.update_friendRoom_game_record_data()
+    }
+    updateList() {
+        let n = [];
+        for (const key in this.useData) {
+            if (parseInt(key) >= 1) {
+                n.push(...this.useData[key])
+            }
+        }
+        this.__list.array = n;
+        this.img_noData.visible = n.length == 0;
+
+        if (FriendRoom_record_main_gameRecord.save) {
+            this.__list.scrollTo(FriendRoom_record_main_gameRecord.item_show_index || 0)
+        }
+    }
+    updateTotalScore() {
+        this.updateVip()
+    }
+    updateVip() {
+        if (__data.vip.isVip) {
+            this.btn_lookTotalScore.visible = false
+            this.btn_openVip_7.visible = false
+            this.txt_totalScore.text = this.useData.allScore || 0;
+            this.btn_vip.visible = false
+        } else {
+            this.btn_lookTotalScore.visible = true
+            this.btn_openVip_7.visible = true
+            this.txt_totalScore.text = '?';
+            this.btn_vip.visible = true
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_friendRoom.friendRoom_record_main_gameRecordUI', FriendRoom_record_main_gameRecord);
+
+class S_fr_click_list extends Laya.Script {
+    onMouseDown(e) {
+        FriendRoom_record_main_gameRecord.save = 0
+    }
+}
+
+class S_friendRoom_rm_gr_lookReplay extends Laya.Script {
+    onClick(e) {
+        if (__data.vip.isVip) {
+            __showScene.show_friendRoom_replayId()
+        } else {
+            __showScene.show_friendRoom_vipSale(FriendRoom_vipSale.replay)
+        }
+    }
+}
+
+class FriendRoom_record_main_gameRecord_item extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_record_main_gameRecord_item',
+            module: false
+        })
+        this.btn_info.addComponent(S_FriendRoom_record_main_gameRecord_item_lookInfo)
+    }
+    onEnable() {
+    }
+    onDisable() {
+    }
+    set dataSource(v) {
+        this.vo = v;
+        if (!v) return;
+        let n2 = excelUtils.getPlayIdName(v.ruleId);
+        this.txt_info.text = '【房间号' + v.roomPwd + '】' + n2 + '，' + v.playerNames.length + '人，' + v.roundCount + '局'
+        this.txt_time.text = new Date(v.date).dateFormat("yyyy.MM.dd hh:mm:ss");
+        [1, 2, 3, 4].forEach((e, index) => {
+            try {
+                let pl = this['player' + e];
+                pl.skin = v.playerHeadUrls[index];
+                pl.getChildByName('img_frame').skin = PropIcon.icon[v.playerHeadBorders[index] || 301].skin;
+                LabelHiddenUtils.getAdapterContent(pl.getChildByName('txt_name'), v.playerNames[index])
+                pl.getChildByName('txt_score').text = v.scores[index];
+                if (v.scores[index] > 0) {
+                    pl.getChildByName('txt_score').color = '#7ab704'
+                } else {
+                    pl.getChildByName('txt_score').color = '#e12e2e'
+                }
+            } catch (error) {
+                console.error('FriendRoom_record_main_gameRecord_item', error)
+            }
+        })
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_friendRoom.friendRoom_record_main_gameRecord_itemUI', FriendRoom_record_main_gameRecord_item);
+
+class S_FriendRoom_record_main_gameRecord_item_lookInfo extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.vo.recordId;
+
+        let a = game.scene.get(FriendRoom_record_main).scene_gameRecord
+        a.__list.array
+        let index = a.__list.array.findIndex((e) => {
+            return this.owner.parent.vo.roomId == e.roomId;
+        })
+        FriendRoom_record_main_gameRecord.item_show_index = index;
+        FriendRoom_record_main_gameRecord.friend_room_info_vo = this.owner.parent.vo;
+        __showScene.show_friendRoom_info(this.owner.parent.vo)
+    }
+}
+
+class S_combobox extends Laya.Script {
+    init(comboboxName, btn, list) {
+        this.comboboxName = comboboxName;
+        this.btn = btn;
+        this.list = list;
+        this.son1 = list.getChildByName('son1')
+        game.utils.removeAll(this.son1)
+        this.itemArray = []
+        return this
+    }
+    onEnable() {
+        game.cb.on('combobox_update_index_' + this.comboboxName, this, this.update_index, 0)
+    }
+    onDisable() {
+        game.cb.off('combobox_update_index_' + this.comboboxName, this, this.update_index)
+    }
+    update_index(index) {
+        this.__index = index;
+        this.btn.getChildByName('txt').text = this.data[index];
+        this.list.visible = false;
+    }
+    set selectedIndex(v) {
+        game.cb.event('combobox_update_index_' + this.comboboxName, [v])
+    }
+    get selectedIndex() {
+        return this.__index
+    }
+    set array(v) {
+        this.data = v;
+        for (const iterator of this.itemArray) {
+            game.utils.remove(iterator)
+        }
+        this.itemArray = [];
+        let label;
+        for (let index = 0, length = v.length; index < length; index++) {
+            const element = v[index];
+            label = new Laya.Label();
+            this.itemArray[index] = label;
+            label.fontSize = this.son1.fontSize;
+            label.color = this.son1.color;
+            label.width = this.son1.width;
+            label.height = this.son1.height;
+            label.align = this.son1.align;
+            label.valign = this.son1.valign;
+            label.bold = this.son1.bold;
+            label.text = element;
+            label.x = this.son1.x;
+            label.y = this.son1.y + index * this.son1.height
+            label.index = index;
+            label.comboboxName = this.comboboxName;
+            label.addComponent(Btn_Move).onAwake()
+            label.addComponent(Btn_Sound)
+            label.addComponent(S_combobox_item)
+            this.list.addChildAt(label, 0);
+        };
+        this.list.height = label.y + label.height + this.son1.y
+    }
+}
+
+class S_combobox_item extends Laya.Script {
+    onClick(e) {
+        game.cb.event('combobox_update_index_' + this.owner.comboboxName, [this.owner.index, e])
+    }
+}
+

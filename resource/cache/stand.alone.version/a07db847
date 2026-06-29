@@ -1,0 +1,8 @@
+class FriendRoom_explain extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_explain',
+            layer: 'panel'
+        })
+    }
+}

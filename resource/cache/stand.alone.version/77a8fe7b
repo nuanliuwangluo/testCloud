@@ -1,0 +1,80 @@
+class S_3D_mjMatch extends Laya.Script3D {
+    onAwake() {
+        this.owner.addComponent(S_mm_ray_cast)
+        this.s_create_card = this.owner.addComponent(S_mm_create_card)
+        this.spacePosGameObjectArray = [
+            S_3D_mjMatch.scene.getChildByName('plance1'),
+            S_3D_mjMatch.scene.getChildByName('plance2'),
+            S_3D_mjMatch.scene.getChildByName('plance3'),
+            S_3D_mjMatch.scene.getChildByName('plance4'),
+            S_3D_mjMatch.scene.getChildByName('plance5'),
+            S_3D_mjMatch.scene.getChildByName('plance6'),
+            S_3D_mjMatch.scene.getChildByName('plance7'),
+            S_3D_mjMatch.scene.getChildByName('plance8'),
+        ]
+        // 这里变换坐标 是因为 有时候 2个plance挨着 但是看起来有缝隙
+        this.spacePosGameObjectArray.forEach((e, index) => {
+            let p = e.transform.position;
+            e.transform.position = new Laya.Vector3(p.x - 0.3, p.y, p.z)
+        });
+        let scene = S_3D_mjMatch.scene
+        // 环境光（非常重要！默认可能太亮）
+        scene.ambientColor = new Laya.Vector3(0.15, 0.15, 0.15); // 暗灰色
+        scene.ambientIntensity = 0.5;
+        // 隐藏地面小
+        S_3D_mjMatch.scene.getChildByName('stand').meshFilter.sharedMesh = null;
+        // S_3D_mjMatch.scene.getChildByName('stand11').meshFilter.sharedMesh = null;
+        // 🔑 关键设置：不清理颜色缓冲区，只清理深度（这样就能看到底下的 2D 图）
+        // S_3D_mjMatch.camera.clearFlag = Laya.Camera.CLEARFLAG_DEPTHONLY; // 只清深度，不清颜色
+        // S_3D_mjMatch.camera.clearColor = new Laya.Color(0, 0, 0, 0); // 背景透明（alpha=0）
+
+        let dlight = S_3D_mjMatch.scene.getChildByName('Directional Light')
+        dlight.transform.rotationEuler = new Laya.Vector3(-60, 0, 0)
+        // 设置光线强度（默认通常是 1）
+        dlight.intensity = 0.48; // 越大越亮
+    }
+    onEnable() {
+        let isPad = false;
+        let isPc = false;
+        try {
+            var u = navigator.userAgent;
+            isPad = u.indexOf('Pad') > -1 || u.indexOf('Macintosh') > -1 || game.scale < 1; //pad终端
+            const systemInfo = wx.getSystemInfoSync();
+            if (systemInfo.platform === 'windows' || systemInfo.platform === 'mac') { isPc = true; }
+        } catch (e) { }
+        if (isPad && !isPc) {
+            S_3D_mjMatch.camera.orthographicVerticalSize = 100
+        }
+    }
+    mainScene() {
+        s_mm_sendCardGroup.clearAwait && s_mm_sendCardGroup.clearAwait()
+        if (S_3D_mjMatch.selectCard)
+            S_3D_mjMatch.selectCard.forEach(e => {
+                e.destroy()
+            });
+        if (S_3D_mjMatch.deskCard)
+            S_3D_mjMatch.deskCard.forEach(e => {
+                e.destroy()
+            });
+        this.spacePosGameObjectArray.forEach((e) => {
+            e.active = false;
+        })
+    }
+    gameScene(cardGroupNum) {
+        cardGroupNum = parseInt(cardGroupNum)
+        MjMatch_ui.isGameing = true;
+        let camera = S_3D_mjMatch.camera;
+        S_3D_mjMatch.selectCard = [];
+        S_3D_mjMatch.deskCard = [];
+        game.cb.event('mm_update_prop_use_count')
+        let ui = game.scene.get(MjMatch_ui)
+        ui.sunlock1.resizeOff()
+        ui.sunlock2.resizeOff()
+        this.s_create_card.createCardGroup(cardGroupNum);
+        this.s_create_card.sendCardGroup();
+
+        this.spacePosGameObjectArray.forEach((e) => {
+            e.active = true
+        })
+    }
+}

@@ -1,0 +1,12 @@
+class FriendRoom_hallPlay_leftDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_hallPlay_leftDown',
+            left: true,
+            down: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+    }
+}

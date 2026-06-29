@@ -1,0 +1,130 @@
+
+
+var Loader = Laya.Loader;
+var URL = Laya.URL;
+var EventDispatcher = Laya.EventDispatcher;
+class WorkerUtils extends EventDispatcher {
+    constructor() {
+        super();
+    }
+    static init() {
+        WorkerUtils._preImgLoadFun = Laya.MiniLoader._transformImgUrl;
+        Laya.MiniLoader._transformImgUrl = WorkerUtils._transformImgUrl;
+        WorkerUtils._preLoadFun = Loader["prototype"]["_loadImage"];
+        if (!WorkerUtils.I)
+            WorkerUtils.I = new WorkerUtils();
+        WorkerUtils.I.createWorker();
+    }
+    static _transformImgUrl(url, type, thisLoader) {
+        if (Laya.MiniAdpter.isZiYu || Laya.MiniFileMgr.isLocalNativeFile(url)) {
+            if (Laya.MiniFileMgr.isLocalNativeZipFile(url)) {
+                url = Laya.MiniFileMgr.getFileNativePath(url);
+            }
+            thisLoader._loadImage(url, false);
+            return;
+        }
+        if (!Laya.MiniAdpter.autoCacheFile) {
+            thisLoader._loadImage(url);
+        }
+        else {
+            var tempUrl = Laya.URL.formatURL(url);
+            if (!Laya.MiniFileMgr.isLocalNativeFile(url) && !Laya.MiniFileMgr.getFileInfo(tempUrl)) {
+                if (Laya.MiniFileMgr.isNetFile(tempUrl)) {
+                    WorkerUtils.I.loadImage(tempUrl, thisLoader);
+                }
+                else {
+                    thisLoader._loadImage(url, false);
+                }
+            }
+            else {
+                var fileObj = Laya.MiniFileMgr.getFileInfo(tempUrl);
+                if (fileObj && fileObj.md5) {
+                    tempUrl = fileObj.tempFilePath || Laya.MiniFileMgr.getFileNativePath(fileObj.md5);
+                }
+                thisLoader._loadImage(tempUrl, false);
+            }
+        }
+    }
+    createWorker() {
+        this.worker = Laya.Browser.window.wx.createWorker('worker/request/index.js', {
+            useExperimentalWorker: false
+        });
+        var me = this;
+        this.worker.onProcessKilled(function () {
+            this.Worker = Laya.Browser.window.wx.createWorker('worker/request/index.js', {
+                useExperimentalWorker: false
+            });
+        });
+        this.worker.onMessage(function (data) {
+            me.workerMessage(data);
+        });
+    }
+    workerMessage(data) {
+        if (data) {
+            this.imageLoaded(data);
+        }
+    }
+    imageLoaded(data) {
+        var tempFilePath = null;
+        var readyUrl = data.readyUrl;
+        if (data.errCode == 0) {
+            var fileObj = Laya.MiniFileMgr.getFileInfo(readyUrl);
+            if (!fileObj) {
+                tempFilePath = data.data.tempFilePath;
+                Laya.MiniFileMgr.copyTOCache(tempFilePath, readyUrl, null, "", true);
+            }
+            console.log("load success :", readyUrl);
+        }
+        this.event(readyUrl, tempFilePath);
+    }
+    loadImage(url, thisLoader) {
+        var _this = thisLoader;
+        if (!this.worker) {
+            WorkerUtils._preLoadFun.call(_this, url);
+            return;
+        }
+        url = URL.formatURL(url);
+        function clear() {
+            WorkerUtils.I.off(url, _this, onload);
+        }
+        var onload = function (url) {
+            clear();
+            if (url) {
+                _this["_loadImage"](url);
+            }
+            else {
+                WorkerUtils._preLoadFun.call(_this, url);
+            }
+        };
+        this.worker.postMessage({ url: url });
+        WorkerUtils.I.on(url, _this, onload);
+    }
+    _loadImage(url) {
+        var _this = this;
+        if (!this.worker) {
+            WorkerUtils._preLoadFun.call(_this, url);
+            return;
+        }
+        url = URL.formatURL(url);
+        function clear() {
+            WorkerUtils.I.off(url, _this, onload);
+        }
+        var onload = function (url) {
+            clear();
+            _this["_loadImage"](url);
+        };
+        WorkerUtils.I.on(url, _this, onload);
+        WorkerUtils.I.loadImage(url, _this);
+    }
+    terminate() {
+        if (this.worker) {
+            this.worker.terminate();
+            this.worker = null;
+        }
+    }
+    recover() {
+        this.terminate();
+        Loader["prototype"]["_loadImage"] = WorkerUtils._preLoadFun;
+        Laya.MiniLoader._transformImgUrl = WorkerUtils._preImgLoadFun;
+    }
+}

@@ -1,0 +1,59 @@
+class GameCommonChoicePrompt extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game_common/game_common_choice_prompt',
+            layer: 'panel'
+        })
+    }
+
+    onEnable() {
+        this.btn_blue.on('click', this, this.blueHandler);
+        this.btn_yellow.on('click', this, this.yellowHandler);
+    }
+
+    onDisable() {
+        this._blue = null;
+        this._yellow = null;
+
+        this.btn_blue.off('click', this, this.blueHandler);
+        this.btn_yellow.off('click', this, this.yellowHandler);
+    }
+
+    /**
+     * 
+     * @param {string} tips 
+     * @param {object or function} blue object example {name:'btnName', call:function}
+     * @param {object or function} yellow  object example {name:'btnName', call:function}
+     */
+    added(tips, blue, yellow) {
+        if (tips) {
+            this.txt.text = tips ? tips : '';
+        }
+
+        if (blue instanceof Object) {
+            if ('name' in blue) this.btn_blue.getChildByName('txt').text = blue.name;
+            else this.btn_blue.getChildByName('txt').text = '确认';
+            if ('call' in blue) this._blue = blue.call;
+        } else if (blue instanceof Function) {
+            this._blue = blue;
+        }
+
+        if (yellow instanceof Object) {
+            if ('name' in yellow) this.btn_yellow.getChildByName('txt').text = yellow.name;
+            else this.btn_yellow.getChildByName('txt').text = '取消';
+            if ('call' in yellow) this._yellow = yellow.call;
+        } else if (yellow instanceof Function) {
+            this._yellow = yellow;
+        }
+    }
+
+    blueHandler() {
+        this._blue && this._blue();
+        game.scene.remove(this);
+    }
+
+    yellowHandler() {
+        this._yellow && this._yellow();
+        game.scene.remove(this);
+    }
+}

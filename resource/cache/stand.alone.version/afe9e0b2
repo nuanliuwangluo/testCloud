@@ -1,0 +1,173 @@
+class GameCommonPromoteTips extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game_common/game_common_promoteTips',
+            layer: 'panel'
+        })
+    }
+    onAwake() {
+        let url = {};
+        for (let index = 0, length = 10; index < length; index++)
+            url[index] = 'local/game_common/1/tt' + index + '.png';
+        url['-'] = 'local/game_common/1/tt_h.png';
+        url['第'] = 'local/game_common/1/tt_di.png';
+        url['段'] = 'local/game_common/1/tt_duan.png';
+        url['级'] = 'local/game_common/1/tt_ji.png';
+        url['阶'] = 'local/game_common/1/tt_jie.png';
+        url['晋'] = 'local/game_common/1/tt_jin.png';
+        url['局'] = 'local/game_common/1/tt_ju.png';
+        url['决'] = 'local/game_common/1/tt_jue.png';
+        url['开'] = 'local/game_common/1/tt_kai.png';
+        url['轮'] = 'local/game_common/1/tt_lun.png';
+        url['赛'] = 'local/game_common/1/tt_sai.png';
+        url['始'] = 'local/game_common/1/tt_shi.png';
+        url['预'] = 'local/game_common/1/tt_yu.png';
+        this.txt_left = new game.NumText(url);
+        this.addChild(this.txt_left).align = 'right'
+        this.txt_center = new game.NumText(url);
+        this.addChild(this.txt_center).align = 'center'
+        this.txt_right = new game.NumText(url);
+        this.addChild(this.txt_right).align = 'left'
+        this.txt_left.y = this.txt_center.y = this.txt_right.y = this.img_d.y;
+        game.utils.remove(this.img_d);
+        this.txt_center.x = this.width / 2;
+
+        this.sp_1 = new Laya.Sprite();
+        this.addChild(this.sp_1)
+        this.sp_2 = new Laya.Sprite();
+        this.addChild(this.sp_2)
+
+        this.sp_1.inity = this.img_1.y;
+        this.sp_2.inity = this.txt_1.y;
+    }
+    // ==1 预赛开始 ==2 预赛第x局开始 ==3 晋级赛第x轮 ==4 决赛阶段
+    added(type = 4) {
+        Laya.Tween.clearAll(this.img_light1)
+        Laya.Tween.clearAll(this.img_light2);
+        Laya.Tween.clearAll(this.txt_left);
+        Laya.Tween.clearAll(this.txt_center);
+        Laya.Tween.clearAll(this.txt_right);
+        Laya.Tween.clearAll(this.sp_1)
+        Laya.Tween.clearAll(this.sp_2);
+        this.img_light1.alpha = 0
+        this.img_light2.alpha = 0;
+        Laya.Tween.to(this.img_light1, {
+            alpha: 1
+        }, 300)
+        Laya.Tween.to(this.img_light2, {
+            alpha: 1
+        }, 300, null, null, 50)
+        game.utils.removeAll(this.sp_1)
+        game.utils.removeAll(this.sp_2)
+        this.sp_1.y = this.sp_1.inity + 50
+        this.sp_2.y = this.sp_2.inity + 50
+        this.sp_1.alpha = this.sp_2.alpha = 0;
+        this.txt_left.x = 0;
+        this.txt_left.alpha = 0;
+        // 预赛开始
+        game.utils.remove(this.img_1);
+        game.utils.remove(this.txt_1);
+        // 预赛第x局开始
+        game.utils.remove(this.txt_2);
+        game.utils.remove(this.txt_3);
+        // 晋级赛第x轮
+        game.utils.remove(this.txt_4);
+        game.utils.remove(this.txt_5);
+        game.utils.remove(this.txt_6);
+        game.utils.remove(this.txt_7);
+        game.utils.remove(this.txt_8);
+        // 决赛阶段
+        game.utils.remove(this.txt_9);
+        if (type == 1) {
+            this.txt_left.text = '-预赛'
+            this.txt_center.text = ''
+            this.txt_right.text = '开始-'
+            this.sp_1.addChild(this.img_1)
+            this.sp_2.addChild(this.txt_1)
+            this.img_1.x = 0
+            this.img_1.y = 0
+            this.txt_1.x = 0
+            this.txt_1.y = 0
+            this.sp_1.width = this.img_1.width
+            this.sp_2.width = this.txt_1.width
+        } else if (type == 2) {
+            this.txt_left.text = '-预赛'
+            this.txt_center.text = '第2局'
+            this.txt_right.text = '开始-'
+            this.sp_1.addChild(this.txt_2)
+            this.sp_1.addChild(this.txt_3)
+            this.txt_2.x = 0
+            this.txt_2.y = 0
+            this.txt_3.x = this.txt_2.textField.textWidth
+            this.txt_3.y = 0
+            this.txt_3.text = 255;
+            this.sp_1.width = this.txt_3.x + this.txt_3.textField.textWidth;
+        } else if (type == 3) {
+            this.txt_left.text = '-晋级赛'
+            this.txt_center.text = ''
+            this.txt_right.text = '第1轮-'
+            this.sp_1.addChild(this.txt_4)
+            this.sp_1.addChild(this.txt_5)
+            this.sp_1.addChild(this.txt_6)
+            this.sp_1.addChild(this.txt_7)
+            this.sp_2.addChild(this.txt_8)
+
+            this.txt_4.y = this.txt_5.y = this.txt_6.y = this.txt_7.y = this.txt_8.y = 0
+            this.txt_4.x = 0
+            this.txt_5.x = this.txt_4.x + this.txt_4.textField.textWidth;
+            this.txt_6.x = this.txt_5.x + this.txt_5.textField.textWidth;
+            this.txt_7.x = this.txt_6.x + this.txt_6.textField.textWidth;
+            this.txt_8.x = 0
+
+            this.sp_1.width = this.txt_7.x + this.txt_7.textField.textWidth;
+            this.sp_2.width = this.txt_8.width
+        } else if (type == 4) {
+            this.txt_left.text = '-决赛'
+            this.txt_center.text = ''
+            this.txt_right.text = '阶段-'
+            this.sp_1.addChild(this.txt_4)
+            this.sp_1.addChild(this.txt_5)
+            this.sp_1.addChild(this.txt_6)
+            this.sp_1.addChild(this.txt_7)
+            this.sp_2.addChild(this.txt_9)
+
+            this.txt_4.y = this.txt_5.y = this.txt_6.y = this.txt_7.y = this.txt_9.y = 0
+            this.txt_4.x = 0
+            this.txt_5.x = this.txt_4.x + this.txt_4.textField.textWidth;
+            this.txt_6.x = this.txt_5.x + this.txt_5.textField.textWidth;
+            this.txt_7.x = this.txt_6.x + this.txt_6.textField.textWidth;
+            this.txt_9.x = 0
+
+            this.sp_1.width = this.txt_7.x + this.txt_7.textField.textWidth;
+            this.sp_2.width = this.txt_9.width
+        }
+
+        // 上面的光上面的文字动画
+        Laya.Tween.to(this.txt_left, {
+            x: this.txt_center.x - this.txt_center.width / 2,
+            alpha: 1
+        }, 200, null, null, 1)
+        this.txt_center.alpha = 0;
+        Laya.Tween.to(this.txt_center, {
+            alpha: 1
+        }, 300, null, null, 1)
+        this.txt_right.x = this.width;
+        this.txt_right.alpha = 0;
+        Laya.Tween.to(this.txt_right, {
+            x: this.txt_center.x + this.txt_center.width / 2,
+            alpha: 1
+        }, 200, null, null, 1);
+        // 下面2行文字动画
+        this.sp_1.x = this.width / 2 - this.sp_1.width / 2
+        this.sp_2.x = this.width / 2 - this.sp_2.width / 2
+        Laya.Tween.to(this.sp_1, {
+            y: this.sp_1.inity,
+            alpha: 1
+        }, 200, null, null, 50);
+
+        Laya.Tween.to(this.sp_2, {
+            y: this.sp_2.inity,
+            alpha: 1
+        }, 200, null, null, 150);
+    }
+}

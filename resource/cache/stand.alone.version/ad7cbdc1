@@ -1,0 +1,694 @@
+class GameMainCollect extends game.ModuleBase {
+    static get loadResFolder() {
+        this._r1 = this._r1 ||
+            ['cdn.collect', 'cdn.headFrame'];
+        return this._r1
+    }
+    static get clearResFolder() {
+        this._r2 = this._r2 ||
+            ['cdn.collect', 'cdn.headFrame', 'cdn.collect_delay', 'cdn.collect_gardenDress'];
+        return this._r2
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collect',
+            layer: 'panel',
+        })
+        this.btn_return.addComponent(S_click_GameMainCollect_close)
+        this.__list_headFrame.vScrollBarSkin = ''
+        this.__list_dress.vScrollBarSkin = ''
+        this.__listTheme.vScrollBarSkin = ''
+        this.__tab.selectHandler = new Laya.Handler(this, this.onSelect);
+        this.btn_show_use_headFrame.addComponent(S_click_collect_use_headFrame)
+        this.btn_show_use_gardenDress.addComponent(S_click_collect_use_gardenDress)
+        this.btn_location.addComponent(S_click_collect_use_gardenDress)
+
+        this.btn_filter.addComponent(S_clickBtnShow_clickOtherRemove).init(this.img_filter)
+        this.img_filter.addComponent(S_stopPropagation_mousedown)
+        this.s_combobox = this.addComponent(S_combobox).init('collect', this.btn_filter, this.img_filter)
+
+        this.btn_theme.addComponent(S_collect_theme_open)
+        this.btn_closeTheme.addComponent(S_collect_theme_close)
+
+        this.drawCallOptimize = true;
+    }
+    added(type, shareCardId) {
+        S_click_GameMainCollectHeadFrameItem.lastSelectItem = null;
+        S_click_GameMainCollectGardenDressItem.lastSelectItem = null;
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': `收集界面` })
+
+        game.cb.on('collect_update_headFrameInfo', this, this.collect_update_headFrameInfo)
+        game.cb.on('update_headFrame', this, this.update_headFrame)
+        // this.update_headFrame()
+        game.cb.on('collect_update_gardenDressInfo', this, this.collect_update_gardenDressInfo)
+        game.cb.on('update_gardenDress', this, this.update_gardenDress)
+        game.cb.on('update_garden_unlockDressList', this, this.update_gardenDress)
+        // this.update_gardenDress()
+        game.cb.on('combobox_update_index_' + this.s_combobox.comboboxName, this, this.update_combobox_index)
+        game.cb.on('collect_theme_info', this, this.collect_theme_info)
+
+        this.closeTheme()
+        this.__tab.selectedIndex = -1;
+        if (type == 'headFrame') {
+            this.__tab.selectedIndex = 0
+        } else if (type == 'gardenDress') {
+            this.__tab.selectedIndex = 1
+        }
+    }
+    onDisable() {
+        game.cb.off('collect_update_headFrameInfo', this, this.collect_update_headFrameInfo)
+        game.cb.off('update_headFrame', this, this.update_headFrame)
+        game.cb.off('collect_update_gardenDressInfo', this, this.collect_update_gardenDressInfo)
+        game.cb.off('update_gardenDress', this, this.update_gardenDress)
+        game.cb.off('update_garden_unlockDressList', this, this.update_gardenDress)
+        game.cb.off('combobox_update_index_' + this.s_combobox.comboboxName, this, this.update_combobox_index)
+        game.cb.off('collect_theme_info', this, this.collect_theme_info)
+
+        if (this.__list_dress.visible == true) {
+            __data.garden.newDress = [];
+        }
+        game.cb.event('garden_add_new_dress')
+        ResUtils.clearClassTextureRes(GameMainCollect)
+        ResUtils.clearAtlas('res/atlas/cdn/collect.atlas')
+    }
+    update_combobox_index() {
+        this.update_content()
+    }
+    collect_update_headFrameInfo(vo) {
+        if (!vo) {
+            this.img_show_0.visible = false
+            return
+        }
+        this.img_show_0.visible = true;
+        this.img_show_headFrame.skin = PropIcon.icon[vo.propId].skin;
+        this.txt_show_headFrameName.text = PropIcon.icon[vo.propId].name;
+        this.txt_show_des_headFrame.text = PropIcon.icon[vo.propId].describe;
+
+        if (vo.isLock) {
+            this.img_show_status_headFrame.skin = 'cdn/collect/img_whq.png'
+            this.btn_show_use_headFrame.visible = false
+        } else if (vo.isUseing) {
+            this.img_show_status_headFrame.skin = 'cdn/collect/img_syz.png'
+            this.btn_show_use_headFrame.visible = false
+        } else {
+            this.img_show_status_headFrame.skin = 'cdn/collect/bt_sy.png'
+            this.btn_show_use_headFrame.visible = true;
+        }
+        this.show_vo_headFrame = vo;
+    }
+    update_headFrame() {
+        let curData = __data.othersVO[__data.uid]
+        if (!curData) {
+            this.dd_headFrame_all = []
+            this.dd_headFrame_lock = []
+            this.dd_headFrame_unlock = []
+            this.s_combobox.array = [
+                `全部(${this.dd_headFrame_all.length})`,
+                `已解锁(${this.dd_headFrame_unlock.length})`,
+                `未解锁(${this.dd_headFrame_lock.length})`,
+            ]
+            this.s_combobox.selectedIndex = 0
+            return;
+        }
+        let dd123 = [];
+        for (const key in PropIcon.icon) {
+            if (PropIcon.icon[key].isHeadFrame) {
+                dd123.push({
+                    propId: key,
+                    isUseing: curData.headFrameId == key,
+                    isLock: !curData.haveHeadFrameIds.includes(parseInt(key)),
+                })
+            }
+        }
+        this.img_head.skin = __data.getHeadTestDefault(curData.headUrl)
+
+        this.dd_headFrame_all = dd123;
+        this.dd_headFrame_lock = dd123.filter((e) => {
+            return e.isLock
+        });
+        this.dd_headFrame_unlock = dd123.filter((e) => {
+            return !e.isLock
+        });
+        if (this.__tab.selectedIndex == 0) {
+            this.s_combobox.array = [
+                `全部(${this.dd_headFrame_all.length})`,
+                `已解锁(${this.dd_headFrame_unlock.length})`,
+                `未解锁(${this.dd_headFrame_lock.length})`,
+            ]
+            this.s_combobox.selectedIndex = 0
+        }
+    }
+    collect_update_gardenDressInfo(vos) {
+        let vo = vos && vos[0]
+        if (!vo) {
+            this.img_show_1.visible = false
+            return
+        }
+        if (this.__listTheme.visible == true) {
+            this.img_show_1.visible = false
+            return
+        };
+        this.img_show_1.visible = true;
+        let d1 = __data.excelConfig.hashGardenDress[vo.id]
+        let propId = d1.gardenDressId
+        this.img_show_gardenDress.skin = `cdn/collect_gardenDress/${propId}.png`;
+        this.txt_show_gardenDress_name.text = d1.gardenDressName;
+        this.txt_show_gardenDress_lockDes.text = d1.gardenDressDes2;
+        let name2 = ''
+        let tn = __tool.gdp(__data, `excelConfig.hashGardenTheme[${d1.themeId || 0}].themeName`)
+        if (tn) {
+            name2 = String(tn).toArray('-')[0] + '主题皮肤'
+        }
+        this.txt_theme.text = name2
+        if (vos.length > 1) {
+            this.txt_show_gardenDress_des.text = `共${vos.length}处可用`
+        } else {
+            this.txt_show_gardenDress_des.text = d1.gardenDressDes;
+        }
+        if (__data.garden.isDressLock(vo.id)) {
+            this.img_show_status_gardenDress.skin = 'cdn/collect/img_whq.png'
+            this.btn_show_use_gardenDress.visible = false
+        }
+        else {
+            this.img_show_status_gardenDress.skin = 'cdn/collect/bt_sy.png'
+            this.btn_show_use_gardenDress.visible = true;
+        }
+        this.show_vos_gardenDress = vos;
+        this.txt_buildValue.text = '+' + d1.buildValue;
+        __tool.labelParentCenterAndSetXY(this.sp_buildValue, this.img_show_1.width / 2, 5)
+    }
+    update_gardenDress() {
+        let dd123 = [];
+        let typeArr = {};
+
+        let hgd;
+        if (this.look_theme_vo) {
+            hgd = this.look_theme_vo.compIdArray.map((e) => {
+                return __data.excelConfig.hashGardenDress[e]
+            })
+        } else {
+            hgd = __data.excelConfig.hashGardenDress
+        }
+        for (const key in hgd) {
+            let e = hgd[key];
+
+            if (!this.look_theme_vo) {
+                if (e.gardenDressId >= 100000) continue;
+                if (e.lockConditions != 2 &&
+                    !e.lockConditions.includes('3_') &&
+                    !e.lockConditions.includes('4_') &&
+                    !e.lockConditions.includes('5_')
+                ) continue;
+            }
+
+            if (e.typeId) {
+                // 有分类
+                typeArr[e.typeId] = typeArr[e.typeId] || [];
+                typeArr[e.typeId].push({
+                    typeId: e.typeId,
+                    id: e.compId,
+                    positionId: parseInt(e.positionId),
+                    isLock: __data.garden.isDressLock(e.compId),
+                })
+                if (!dd123.includes(typeArr[e.typeId]))
+                    dd123.push(typeArr[e.typeId])
+            } else {
+                // 没有分类
+                dd123.push([{
+                    id: e.compId,
+                    positionId: parseInt(e.positionId),
+                    isLock: __data.garden.isDressLock(e.compId),
+                }])
+            }
+        }
+        dd123.sort((a, b) => {
+            return a[0].positionId - b[0].positionId
+        })
+        this.dd_dress_all = dd123;
+        this.dd_dress_lock = dd123.filter((e) => {
+            return e[0].isLock
+        });
+        this.dd_dress_unlock = dd123.filter((e) => {
+            return !e[0].isLock
+        });
+        if (this.__tab.selectedIndex == 1) {
+            this.s_combobox.array = [
+                `全部(${this.dd_dress_all.length})`,
+                `已解锁(${this.dd_dress_unlock.length})`,
+                `未解锁(${this.dd_dress_lock.length})`,
+            ]
+            this.s_combobox.selectedIndex = 0
+        }
+    }
+    onSelect(index) {
+        this.__list_headFrame.visible = false;
+        this.__list_dress.visible = false;
+        this.img_show_0.visible = false;
+        this.img_show_1.visible = false;
+        if (this.__tab.selectedIndex == 0) {
+            this.__list_headFrame.visible = true;
+            this.img_show_0.visible = true
+            this.btn_theme.visible = false;
+        } else if (this.__tab.selectedIndex == 1) {
+            this.img_show_1.visible = true
+            this.__list_dress.visible = true;
+            this.btn_theme.visible = true;
+            __data.garden.testNewDress()
+        }
+        if (index == 0) this.update_headFrame()
+        else this.update_gardenDress()
+
+    }
+    update_content() {
+        if (this.__tab.selectedIndex == 0) {
+            let dd123;
+            if (this.s_combobox.selectedIndex == 0) {
+                dd123 = this.dd_headFrame_all
+            }
+            else if (this.s_combobox.selectedIndex == 1) {
+                dd123 = this.dd_headFrame_unlock
+            }
+            else if (this.s_combobox.selectedIndex == 2) {
+                dd123 = this.dd_headFrame_lock
+            }
+            let isHaveSelect
+            for (let index = 0, length = dd123.length; index < length; index++) {
+                const e = dd123[index];
+                if (GameMainCollectHeadFrameItem.selectVO) {
+                    if (GameMainCollectHeadFrameItem.selectVO.propId == e.propId) {
+                        this.collect_update_headFrameInfo(e)
+                        isHaveSelect = 1
+                        break;
+                    }
+                }
+                else if (e.isUseing) {
+                    GameMainCollectHeadFrameItem.selectVO = e;
+                    this.collect_update_headFrameInfo(e)
+                    isHaveSelect = 1
+                    break;
+                }
+            };
+            if (!isHaveSelect) {
+                GameMainCollectHeadFrameItem.selectVO = dd123[0];
+                this.collect_update_headFrameInfo(dd123[0])
+            }
+            this.__list_headFrame.array = dd123
+        } else if (this.__tab.selectedIndex == 1) {
+            let dd123;
+            if (this.s_combobox.selectedIndex == 0) {
+                dd123 = this.dd_dress_all
+            }
+            else if (this.s_combobox.selectedIndex == 1) {
+                dd123 = this.dd_dress_unlock
+            }
+            else if (this.s_combobox.selectedIndex == 2) {
+                dd123 = this.dd_dress_lock
+            }
+            let isHaveSelect;
+            if (GameMainCollectGardenDressItem.selectVO) {
+                for (let index = 0, length = dd123.length; index < length; index++) {
+                    const e = dd123[index];
+                    if (e[0].id == GameMainCollectGardenDressItem.selectVO[0].id) {
+                        // e.isSelect = true;
+                        this.collect_update_gardenDressInfo(e)
+                        isHaveSelect = 1;
+                        break;
+                    }
+                };
+            }
+            if (!isHaveSelect) {
+                // dd123[0].isSelect = true;
+                GameMainCollectGardenDressItem.selectVO = dd123[0]
+                this.collect_update_gardenDressInfo(dd123[0])
+            }
+            this.__list_dress.array = dd123
+        }
+    }
+    collect_theme_info(vo) {
+        this.__listTheme.visible = false
+        this.look_theme_vo = vo;
+        this.__tab.selectedIndex = -1;
+        this.__tab.selectedIndex = 1;
+    }
+    showTheme(t) {
+        this.look_theme_vo = null;
+        this.btn_closeTheme.visible = true;
+        this.btn_theme.visible = false
+        this.__tab.mouseEnabled = false;
+        this.btn_filter.visible = false;
+        this.img_filter_tips.visible = false;
+        this.__listTheme.visible = true;
+
+        this.img_show_0.visible = false
+        this.img_show_1.visible = false
+        this.__list_dress.visible = false;
+        this.__list_headFrame.visible = false;
+
+        let n = Object.values(__data.excelConfig.hashGardenTheme)
+        this.__listTheme.array = n;
+
+        if (t == 2) {
+
+        }
+    }
+    closeTheme(isClick) {
+        if (this.btn_closeTheme.visible == true && isClick && this.__list_dress.visible == true) {
+            // 点击主题显示列表 返回后 需要返回 主题列表
+            this.showTheme()
+            return
+        }
+        this.look_theme_vo = null;
+        this.btn_closeTheme.visible = false;
+        this.btn_theme.visible = true;
+        this.__tab.mouseEnabled = true;
+        this.btn_filter.visible = true;
+        this.img_filter_tips.visible = true;
+        this.__listTheme.visible = false
+        if (isClick) {
+            let index11 = this.s_combobox.selectedIndex
+            this.onSelect(this.__tab.selectedIndex)
+            this.s_combobox.selectedIndex = index11;
+        }
+    }
+}
+
+class S_click_GameMainCollect_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainCollect)
+    }
+}
+
+class S_click_collect_use_headFrame extends Laya.Script {
+    onClick(e) {
+        let a = game.scene.get(GameMainCollect)
+        if (a.show_vo_headFrame.isLock) return;
+        game.server.send(2253, a.show_vo_headFrame.propId)
+    }
+}
+
+class GameMainCollectHeadFrameItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collectHeadFrameItem',
+            module: false
+        })
+        this.vo;
+        this.addComponent(S_click_GameMainCollectHeadFrameItem)
+    }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+
+        this.img_headFrame.skin = PropIcon.icon[vo.propId].skin;
+        this.txt_headFrameName.text = PropIcon.icon[vo.propId].name;
+        this.img_use.visible = vo.isUseing ? true : false;
+        // this.img_bg.gray = vo.isLock ? true : false;
+        this.img_head.gray = vo.isLock ? true : false;
+        this.img_headFrame.gray = vo.isLock ? true : false;
+
+        this.unSelect()
+        if (GameMainCollectHeadFrameItem.selectVO) {
+            if (GameMainCollectHeadFrameItem.selectVO.propId == vo.propId) {
+                this.select();
+            }
+        }
+    }
+    select() {
+        this.img_bg_select.visible = true;
+        S_click_GameMainCollectHeadFrameItem.lastSelectItem = this;
+        // this.img_bg.skin = `cdn/collect/img_txkbox.png`
+        GameMainCollectHeadFrameItem.selectVO = this.vo;
+    }
+    unSelect() {
+        this.img_bg_select.visible = false;
+        if (this.vo.isLock) {
+            this.img_bg.skin = `cdn/collect/img_txkbox2.png`
+        } else {
+            this.img_bg.skin = `cdn/collect/img_syz2.png`
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_collectHeadFrameItemUI', GameMainCollectHeadFrameItem);
+
+class S_click_GameMainCollectHeadFrameItem extends Laya.Script {
+    onClick(e) {
+        game.cb.event('collect_update_headFrameInfo', [this.owner.vo])
+        S_click_GameMainCollectHeadFrameItem.lastSelectItem && S_click_GameMainCollectHeadFrameItem.lastSelectItem.unSelect()
+        this.owner.select()
+    }
+}
+
+class GameMainCollectGardenDressItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collectGardenDressItem',
+            module: false
+        })
+        this.vo;
+        this.addComponent(S_click_GameMainCollectGardenDressItem)
+    }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+
+        let d1 = __data.excelConfig.hashGardenDress[vo[0].id]
+        let propId = d1.gardenDressId
+
+        this.img_dress.skin = `cdn/collect_gardenDress/${propId}.png`;
+        this.txt_name.text = d1.gardenDressName;
+
+        let isuse = __data.garden.useCompId.includes(parseInt(vo[0].id))
+
+        this.img_use.visible = !vo[0].typeId && isuse ? true : false;
+        this.img_dress.gray = __data.garden.isDressLock(vo[0].id) ? true : false;
+
+        if (vo.length > 1) {
+            this.txt_des1.text = `共${vo.length}处可用`
+        } else {
+            this.txt_des1.text = d1.gardenDressDes;
+        }
+
+        this.img_new.visible = false;
+        let a = __data.garden.newDress.find((e) => {
+            return e == vo[0].id
+        })
+        if (a) {
+            this.img_new.visible = true;
+        }
+        this.unSelect()
+        if (vo[0].id == GameMainCollectGardenDressItem.selectVO[0].id) {
+            this.select();
+        }
+    }
+    select() {
+        this.img_bg_select.visible = true;
+        GameMainCollectGardenDressItem.selectVO = this.vo;
+        S_click_GameMainCollectGardenDressItem.lastSelectItem = this;
+        // this.img_bg.skin = `cdn/collect/img_txkboxa.png`
+    }
+    unSelect() {
+        this.img_bg_select.visible = false;
+        if (__data.garden.isDressLock(this.vo[0].id)) {
+            this.img_bg.skin = `cdn/collect/img_txkbox2a.png`
+        } else {
+            this.img_bg.skin = `cdn/collect/img_syz2a.png`
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_collectGardenDressItemUI', GameMainCollectGardenDressItem);
+
+class S_click_GameMainCollectGardenDressItem extends Laya.Script {
+    onClick(e) {
+        game.cb.event('collect_update_gardenDressInfo', [this.owner.vo])
+        S_click_GameMainCollectGardenDressItem.lastSelectItem && S_click_GameMainCollectGardenDressItem.lastSelectItem.unSelect()
+        this.owner.select()
+    }
+}
+
+class S_click_collect_use_gardenDress extends Laya.Script {
+    async onClick(e) {
+        let a = game.scene.get(GameMainCollect)
+        let compId = a.show_vos_gardenDress[0].id
+        let d1 = __data.excelConfig.hashGardenDress[compId]
+        if (d1.typeId) {
+            game.scene.add(GameMainCollectDressSelect, [d1.typeId])
+        } else {
+            S_click_collect_use_gardenDress.changeDress(compId)
+            game.scene.remove(Garden_dailySelect)
+        }
+    }
+}
+S_click_collect_use_gardenDress.changeDress = async (compId) => {
+    // if (__data.garden.isDressLock(compId)) return __tips('装饰尚未解锁');
+    let m = __data.excelConfig.hashGardenDress[compId].positionId;
+    if (__data.garden.task.branchTaskId <= m) {
+        return __tips('装饰所在任务尚未开启')
+    }
+    game.scene.remove(GameMainCollectDressSelect)
+
+    let b = game.scene.get(GardenMainUI_leftUp_res)
+    let taskId;
+    // let m = __data.excelConfig.hashGardenDress[compId].positionId;
+    for (const key in __data.excelConfig.hashGardenTaskBranch) {
+        let e = __data.excelConfig.hashGardenTaskBranch[key]
+        if (e.positionId == m) {
+            taskId = key
+            break;
+        }
+    }
+    if (taskId) {
+        game.scene.remove(GameMainCollect)
+        game.scene.remove(Garden_dailySelect)
+        if (b && b.parent) {
+        } else {
+            __data.lastSceneQueue.push(__showScene.show_hall)
+            await __showScene.show_garden(true)
+        }
+        game.scene.remove(GardenMainUI_leftUp_return)
+        game.scene.remove(GardenMainUI_leftUp_res)
+        game.scene.remove(GardenMainUI_leftDown)
+        game.scene.remove(GardenMainUI_rightDown)
+        game.scene.add(GardenBuildMask);
+        let d132 = __data.excelConfig.hashGardenPositionArea[taskId]
+        await game.scene.get(Garden_groud).moveTo(...d132.centerXY.toArray('_'), true)
+        game.scene.add(GardenBuild, [taskId, 'collect'])
+        game.cb.event('garden_groud_add_filter_ani', [taskId])
+        game.cb.event('garden_groud_scale', ['min', true])
+    }
+}
+
+class S_click_collect_location extends Laya.Script {
+    async onClick(e) {
+        let a = game.scene.get(GameMainCollect)
+        // if (__data.garden.isDressLock(a.show_vos_gardenDress[0].id)) return;
+        let b = game.scene.get(GardenMainUI_leftUp_res)
+        let taskId
+        let m = __data.excelConfig.hashGardenDress[a.show_vos_gardenDress[0].id].positionId;
+        // 对于尚未开始建设的位置，点击“定位”时不应该切换界面，而是应该提示“装饰所在任务尚未开启”
+        if (!__data.garden.hashUsePositionIdCompId[m])
+            return __tips('装饰所在任务尚未开启')
+
+        for (const key in __data.excelConfig.hashGardenTaskBranch) {
+            let e = __data.excelConfig.hashGardenTaskBranch[key]
+            if (e.positionId == m) {
+                taskId = key
+                break;
+            }
+        }
+        if (taskId) {
+            game.scene.remove(GameMainCollect)
+            if (b && b.parent) {
+            } else {
+                __data.lastSceneQueue.push(__showScene.show_hall)
+                await __showScene.show_garden(true)
+            }
+
+            let d132 = __data.excelConfig.hashGardenPositionArea[taskId]
+            game.scene.get(Garden_groud).moveTo(...d132.centerXY.toArray('_'), true)
+        }
+    }
+}
+
+class S_collect_theme_open extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.showTheme()
+    }
+}
+
+class S_collect_theme_close extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.closeTheme(1)
+    }
+}
+
+class GameMainCollectGardenThemeItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collectTheme_item',
+            module: false
+        })
+        this.vo;
+        this.addComponent(S_click_gmcgti_info)
+        this.btn_look.addComponent(S_click_gmcgti_look)
+    }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+        this.txt_name.text = vo.themeName;
+        let n = vo.compIdArray.filter((e) => {
+            return !__data.garden.isDressLock(e)
+        })
+        this.txt_num.text = `${n.length}/${vo.compIdArray.length}`
+        this.img_show.skin = `cdn/themeShowImage/${vo.themeId}.png`;
+        let isLock = vo.compIdArray.some((e) => {
+            return __data.excelConfig.hashGardenDress[e].positionId >= __data.garden.task.branchTaskId
+        })
+        this.img_lock.visible = isLock
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_collectTheme_itemUI', GameMainCollectGardenThemeItem);
+
+class S_click_gmcgti_info extends Laya.Script {
+    onClick(e) {
+        if (this.owner.img_lock.visible) {
+            __tips('区域尚未解锁')
+            return
+        }
+        let v = this.owner.vo;
+        game.cb.event('collect_theme_info', [v])
+    }
+}
+class S_click_gmcgti_look extends Laya.Script {
+    async onClick(e) {
+        e.stopPropagation()
+        if (this.owner.parent.img_lock.visible) {
+            __tips('区域尚未解锁')
+            return
+        }
+        game.scene.remove(GameMainCollect)
+        let lastSceneFunction;
+        if (game.scene.get(Hall) && game.scene.get(Hall).parent) {
+            lastSceneFunction = async () => {
+                await __showScene.show_hall()
+                await __showScene.show_collect('gardenDress')
+                game.scene.get(GameMainCollect).showTheme()
+            }
+        }
+        if (game.scene.get(Garden_groud) && game.scene.get(Garden_groud).parent) {
+            lastSceneFunction = async () => {
+                game.cb.event('garden_groud_toOtherGarden', [__data.uid, __data.garden.hashUsePositionIdCompId]);
+                game.scene.add(GardenMainUI_leftUp_return)
+                game.scene.add(GardenMainUI_leftUp_res)
+                game.scene.add(GardenMainUI_leftDown)
+                game.scene.add(GardenMainUI_rightDown)
+                game.scene.get(GardenOther_centerDown).removeUI()
+                game.scene.remove(GardenBuildMask)
+                await __showScene.show_collect('gardenDress')
+                game.scene.get(GameMainCollect).showTheme(2)
+            }
+        }
+        let v = this.owner.parent.vo;
+        // game.cb.event('collect_theme_look', [v])
+        if (!game.scene.get(Garden_groud) || !game.scene.get(Garden_groud).parent) {
+            __data.lastSceneQueue.push(lastSceneFunction)
+            await __showScene.show_garden(true)
+        }
+        for (const compId of v.compIdArray) {
+            game.cb.event('garden_groud_change_map_compId', [compId]);
+        }
+        game.scene.remove(GardenMainUI_leftUp_return)
+        game.scene.remove(GardenMainUI_leftUp_res)
+        game.scene.remove(GardenMainUI_leftDown)
+        game.scene.remove(GardenMainUI_rightDown)
+        // game.scene.add(GardenBuildMask);
+        game.scene.add(GardenOther_centerDown, ['themeLook'])
+
+        let compId = v.compIdArray[0]
+        let taskId = __data.excelConfig.hashGardenDress[compId].positionId;
+        let d132 = __data.excelConfig.hashGardenPositionArea[taskId]
+        game.scene.get(Garden_groud).moveTo(...d132.centerXY.toArray('_'), true)
+    }
+}

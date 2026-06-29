@@ -1,0 +1,132 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-01-22 09:08:12
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-05-18 14:35:29
+ */
+
+'use strict';
+
+let __socket_msg_sysmj_send = {
+
+    //退出房间
+    3004() {},
+
+
+    //发起解散
+    3005() {},
+
+    //解散投票
+    3006(a) {
+        // int 0 不同意 1同意
+        this.writeInt(a)
+    },
+
+    //给后端发送地址 只能在房间send
+    3012(address) {
+        this.writeString(address)
+    },
+
+    //查询房间房主的id
+    3202(roomid) {
+        this.writeInt(roomid)
+    },
+    //
+    6001() {
+        trace('6001参数：', arguments)
+        game.cb.event(__eh + 'change_compass');
+        if (!arguments) throw new Error("6001 请传入参数")
+            //1 准备
+        switch (parseInt(arguments[0])) {
+            case 87:
+                this.writeByte(arguments[0])
+                break;
+            case 88:
+                this.writeByte(arguments[0])
+                break;
+            case 89:
+                this.writeByte(arguments[0])
+                break;
+            case 90:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 91:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 92:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 93:
+                this.writeByte(arguments[0])
+                break;
+            case 94:
+                this.writeByte(arguments[0])
+                break;
+            case 95:
+                this.writeByte(arguments[0])
+                break;
+            case 96:
+                this.writeByte(arguments[0])
+                break;
+            case 97:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 98:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 99:
+                this.writeByte(arguments[0])
+                break;
+            case 100:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 102:
+                this.writeByte(arguments[0])
+                break;
+            case 103:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 105:
+                this.writeByte(arguments[0])
+                break;
+            case 106:
+                this.writeByte(arguments[0])
+                break;
+            case 110:
+                this.writeByte(arguments[0])
+                if (arguments[1] && arguments[1] == 87) this.writeByte(arguments[1])
+                break;
+            case 111:
+                this.writeByte(arguments[0])
+                break;
+            case 112:
+                this.writeByte(arguments[0])
+                break;
+            case 113:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                this.writeByte(arguments[2])
+                this.writeByte(arguments[3])
+                break;
+            case 114:
+                this.writeByte(arguments[0])
+                this.writeByte(arguments[1])
+                break;
+            case 155:
+                this.writeByte(arguments[0])
+                break;
+            case 250:
+                this.writeByte(arguments[0])
+                break;
+        }
+
+    }
+}
+window.MahjongSend118 = __socket_msg_sysmj_send;

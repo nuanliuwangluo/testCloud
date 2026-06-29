@@ -1,0 +1,419 @@
+/**
+ * 免费获取记牌器
+ */
+class GameMainAd extends game.ModuleBase {
+    static get clearRes() {
+        this._clearRes = this._clearRes ||
+            ['cdn.ad'];
+        return this._clearRes
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_ad',
+            layer: 'panel'
+        })
+    }
+    onAwake() {
+        this.addComponent(GameMainADScript);
+        this.btn_probability.addComponent(ProbabilityScript).tips(this.showTips.bind(this));
+        this.addComponent(AdTimeDownToClose);
+    }
+
+    added(videoR) {
+        this.videoR = videoR;
+        game.cb.on('ad_get_cd', this, this._success);
+        // miniApi.showCustomAd_leftRight('left')
+        this.updateCountdown();
+        Laya.timer.loop(1000, this, this.updateCountdown)
+    }
+
+    onDisable() {
+        game.cb.off('ad_get_cd', this, this._success);
+        miniApi.hideCustomAd_leftRight('left')
+        miniApi.hideCustomAd_leftRight('right')
+        this.clearAwait && this.clearAwait()
+        hallTestShowPanel()
+        ResUtils.clearTextureRes(GameMainAd.clearRes)
+        Laya.timer.clearAll(this)
+    }
+
+    updateCountdown() {
+        let ssm = new Date().setHours(0, 0, 0, 0) - Date.now() + 24 * 3600 * 1000
+        var hour = Math.floor(ssm / 3600 / 1000);
+        var minute = Math.floor(ssm / 60 / 1000) % 60;
+        var miao = Math.floor(ssm / 1000) % 60;
+        let timeStr = (hour > 10 ? hour : '0' + hour) + ':'
+        timeStr += (minute > 10 ? minute : '0' + minute) + ':'
+        timeStr += miao > 10 ? miao : '0' + miao
+        this.txt_countdown.text = timeStr
+        if (ssm <= 0) {
+            game.scene.remove(GameMainAd)
+            game.cb.event('update_ad')
+        }
+    }
+
+    clickMask() { }
+
+    async _success() {
+        if (__data.vip.isVip) {
+
+        } else {
+            // this.btn_get.addComponent(PieCd).start(10 * 1000);
+        }
+
+    }
+
+    /**
+     * 显示概率提示信息
+     */
+    showTips() {
+        this.tips.visible = true;
+    }
+
+    closeTips() {
+        this.tips.visible = false;
+    }
+}
+class GameMainADScript extends Laya.Script {
+    onEnable() {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_adTime', 1)
+        this.setText('');
+        this.queryInfo();
+        game.cb.on('update_ad', this, this.update);
+        this.owner.btn_get.on('click', this, this.getAdHandler);
+    }
+
+    onDisable() {
+        game.cb.off('update_ad', this, this.update);
+        this.owner.btn_get.off('click', this, this.getAdHandler);
+        hallTestShowPanel()
+    }
+
+    queryInfo() {
+        AdData.send()
+    }
+
+    // 初始化按钮状态
+    init() {
+        // 领取次数已经没有了
+        if (AdData.time == 0) {
+            SkinUtils.gray(this.owner.btn_get, true, false);
+        }
+        // 还有领取次数
+        else {
+            SkinUtils.gray(this.owner.btn_get, false, true);
+        }
+        this.owner.tips.visible = false;
+
+        this.setText();
+    }
+
+    /**
+     * 领取奖励
+     */
+    async getAdHandler() {
+        game.cb.event('ad_get_cd');
+        // 视频领取
+        await miniApi.video_ready('adunit-24f34675f1830a6c')
+        miniApi.video_show('adunit-24f34675f1830a6c', () => {
+            game.server.send(2214);
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0)
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '广告时间', 'Mj_Participation': n })
+    }
+    /**
+     * 刷新概率说明
+     */
+    update() {
+        // AdData.list.sort((a, b) => { return a.odds - b.odds; });
+        this.owner.list.array = AdData.list;
+        this.init();
+    }
+
+    /**
+     * 剩余次数
+     */
+    setText() {
+        // this.owner.label_c.visible = false;
+        // this.owner.txt_min_num.text = '×' + this.getNumber(1, 'min');
+        // this.owner.txt_max_num.text = '×' + this.getNumber(1, 'max');
+        // this.owner.txt_msk_num.text = '×' + this.getNumber(3);
+        // // this.owner.txt_sd_num.text = '×' + this.getNumber(8004);
+        this.owner.txt_time.text = '今日剩余' + AdData.time + '次';
+    }
+
+    getNumber(type, st) {
+        let _number = '';
+        for (let i = 0; i < AdData.list.length; i++) {
+            if (AdData.list[i].type == type) {
+                if (!_number) {
+                    _number = AdData.list[i].number;
+                } else if (st == 'min') {
+                    _number = Math.min(_number, AdData.list[i].number);
+                } else if (st == 'max') {
+                    _number = Math.max(_number, AdData.list[i].number);
+                } else {
+                    _number = AdData.list[i].number;
+                }
+            }
+        }
+        return _number;
+    }
+}
+
+
+class GameMainAdOddsItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_adOddsItem',
+            module: false
+        })
+    }
+
+    set dataSource(value) {
+        if (value) {
+            if (PropIcon.icon[value.type]) {
+                let name = PropIcon.icon[value.type].name + '×' + value.number;
+                this.txt_info.text = name;
+                this.txt_odds.text = value.odds + '%';
+            }
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_adOddsItemUI', GameMainAdOddsItem);
+
+
+
+class AdTimeDownToClose extends Laya.Script {
+    onStageMouseDown() {
+        this.owner.closeTips();
+    }
+}
+
+class ProbabilityScript extends Laya.Script {
+
+    tips(callback) {
+        this.callback = callback;
+    }
+
+    onClick() {
+        this.callback && this.callback();
+    }
+}
+
+
+
+
+/**
+ * 免费获取记牌器
+ */
+class GameMainAdReward extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_ad_reward',
+            layer: 'panel'
+        })
+    }
+
+    onEnable() {
+        this.startLightAni();
+        this.startShowAni();
+    }
+
+    onDisable() {
+        Laya.timer.clearAll(this);
+
+        this.lightAni.stop();
+        this.showAni.stop();
+        this.closeAni.stop();
+
+        this.showAni.off('complete', this, this.showComplete);
+        this.closeAni.off('complete', this, this.closeComplete);
+    }
+
+    /**
+     * 
+     * @param {*} type 得到的奖励id
+     * @param {int} number 得到的奖励数量
+     */
+    added(type, number) {
+        this._number = number;
+        let icon = PropIcon.icon[type] && PropIcon.icon[type].skin || '';
+        SkinUtils.setSkin(this.icon, icon);
+        this._setText('');
+    }
+
+    startLightAni() {
+        this.lightAni.play(0, true);
+    }
+
+    startShowAni() {
+        this.showAni.on('complete', this, this.showComplete);
+        this.showAni.play(0, false);
+    }
+
+    startCloseAni() {
+        this._setText('');
+        this.closeAni.on('complete', this, this.closeComplete);
+        this.closeAni.play(0, false);
+    }
+
+    showComplete() {
+        this._setText(this._number);
+        Laya.timer.once(1200, this, this.startCloseAni);
+    }
+
+    closeComplete() {
+        game.scene.remove(this);
+    }
+
+
+    _setText(value) {
+        this.txt_number.text = value;
+    }
+}
+
+
+
+
+class PieCd extends Laya.Script {
+
+    onEnable() {
+        this.backups();
+    }
+
+    // 备份需要还原的数据
+    backups() {
+        this._mouseEnabled = this.owner.mouseEnabled;
+    }
+
+    //  还原数据
+    restore() {
+        this.owner.visible = true;
+    }
+
+    temp() {
+        this.owner.visible = false;
+    }
+
+    /**
+     * 
+     * @param {number} time 时间 单位毫秒
+     */
+    start(time) {
+        this.reset();
+        this.temp();
+
+        this.gray = this.createTexture(true);
+        this.common = this.createTexture();
+
+        this.gray.pivotX = this.common.pivotX = this.owner.pivotX;
+        this.gray.pivotY = this.common.pivotY = this.owner.pivotY;
+        this.gray.centerX = this.common.centerX = this.owner.centerX;
+        this.gray.centerY = this.common.centerY = this.owner.centerY;
+
+        this.owner.parent.addChild(this.common).pos(this.owner.x, this.owner.y);
+        this.owner.parent.addChild(this.gray).pos(this.owner.x, this.owner.y);
+
+        this.rect = new Laya.Sprite();
+        this.gray.mask = this.rect;
+
+        this.radius = this.getRect();
+        if (!time) { throw new Error('please set time in PieCd.') }
+
+        this.end_w = 0;
+        this.tween = new Laya.Tween().to(this, { end_w: this.common.width }, time, null, Laya.Handler.create(this, this.destroySelf));
+        this.tween.update = Laya.Handler.create(this, this._updatePie, null, false);
+
+        this.rect.graphics.drawRect(0, 0, this.common.width, this.common.height, '#ff0000');
+    }
+
+    _updatePie() {
+        this.rect.x = this.end_w;
+    }
+
+    getRect() {
+        let center = this.getCenterPoint(this.owner);
+        let width = this.owner.width / 2;
+        let height = this.owner.height / 2;
+        // 半径
+        return this.distance(center, new Laya.Point(center.x + width, center.y + height));
+    }
+
+    createTexture(gray) {
+        let _sprite = new Laya.Sprite();
+        let center = this.getCenterPoint(this.owner);
+        _sprite.texture = this.owner.drawToTexture(this.owner.width, this.owner.height, center.x + Math.ceil(this.owner.width / 2), center.y + Math.ceil(this.owner.height / 2));
+        gray && SkinUtils.gray(_sprite);
+        return _sprite;
+    }
+
+    reset() {
+        this.restore();
+        this.tween && this.tween.clear();
+        game.utils.remove(this.gray, this.common);
+        if (this.gray) {
+            this.gray.destroy();
+            this.gray = null;
+        }
+        if (this.common) {
+            this.common.destroy();
+            this.common = null;
+        }
+        if (this.circle) {
+            this.circle.destroy();
+            this.circle = null;
+        }
+        this.initAngle = null;
+        this.angle = null;
+        this.radius = null;
+    }
+
+    destroySelf() {
+        this.reset();
+        this.destroy();
+    }
+
+
+    /**
+     * 获取对象的中心点的真实坐标(切记对象需要能回去到宽高，已经设定锚点的对象会设置宽高，没有的sprite对象可能存在宽高为0的情况)
+     * @param {Laya.Image} icon 
+     */
+    getCenterPoint(view) {
+        let point = this.getAnchorPoint(view);
+        // 没有设定锚点返回view 的中心点
+        return new Laya.Point(view.x + view.width / 2 - point.x, view.y + view.height / 2 - point.y);
+    }
+
+    /**
+     * 获取对象的锚点距离
+     * @param {Laya.Image} view 
+     */
+    getAnchorPoint(view) {
+        // 便宜位置  默认0
+        let anchor = new Laya.Point(0, 0);
+        // 已经设定锚点了
+        if (view.pivotX != 0 || view.pivotY != 0) {
+            anchor.x = view.pivotX || 0;
+            anchor.y = view.pivotY || 0;
+        }
+        // 已经设定锚点了
+        else if (!isNaN(view.anchorX) && !isNaN(view.anchorY)) {
+            anchor.x = view.anchorX * view.width;
+            anchor.y = view.anchorY * view.height;
+        }
+        return anchor;
+    }
+
+    /**
+     * a，b两点之间的距离
+     * @param {Laya.Point} a 
+     * @param {Laya.Point} b 
+     */
+    distance(a, b) {
+        let dis = Math.sqrt(Math.pow(Math.abs(a.x - b.x), 2) + Math.pow(Math.abs(a.y - b.y), 2));
+        return dis;
+    }
+}

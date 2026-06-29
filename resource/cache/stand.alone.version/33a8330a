@@ -1,0 +1,233 @@
+class GTU {
+    /**
+     * @param {int} index 
+     * @returns 
+     */
+    static show(index) {
+        let isTalked = this.getStoreRecord(index);
+        let isBegin = (index == 0);
+        // 第一步
+        if (isBegin) {
+            // 没有看过对话 显示对话框
+            if (!isTalked) {
+                this.setStoreRecord(index, true);
+                game.scene.add(GardenTalk);
+                return true;
+            }
+        } else {
+            let hasTalk = this.getTalk(index);
+            if (hasTalk && !isTalked) {
+                this.setStoreRecord(index, true);
+                game.scene.add(GardenTalk, [index]);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 获取对话内容
+     */
+    static getTalk(taskId) {
+        let object = __data.excelConfig.hashGardenTalk[taskId] || __data.excelConfig.hashGardenTalk[0];
+        // 当前阶段没有对话
+        if (!object.chapterId) {
+            return null;
+        } else {
+            let objects = [];
+            let contents = object.chapterId.split('|');
+            for (let i = 0; i < contents.length; i++) {
+                let isSecretaryA = contents[i].indexOf('@小秘书@') != -1;
+                let object = {};
+                if (isSecretaryA) {
+                    object.name = '小秘书';
+                    object.content = contents[i].replace('@小秘书@', '');
+                } else {
+                    object.name = '';
+                    object.content = contents[i];
+                }
+                objects.push(object);
+            }
+            return objects;
+        }
+    }
+
+    static get SecretaryAName() { return "小秘书"; }
+
+    /**
+     * 对话记录
+     * @param {*} index 
+     * @returns 
+     */
+    static getStoreRecord(index) {
+        let value = LocalUtils.get(`garden_talk_${index}_${__data.uid}`);
+        return value;
+    }
+
+    /**
+     * 存储对话记录
+     * @param {*} index 
+     * @param {*} value 
+     */
+    static setStoreRecord(index, value) {
+        let key = `garden_talk_${index}_${__data.uid}`;
+        LocalUtils.save(key, value);
+    }
+}
+
+
+class GardenTalk extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/GardenTalk',
+            down: true,
+            centerx: true,
+            layer: 'icon'
+        });
+
+        this.layer.graphics.drawRect(0, 0, config.gameW * 2, config.gameH * 2, '#0');
+        this.layer.size(config.gameW * 2, config.gameH * 2);
+        this.layer.pos(this.width - this.layer.width >> 1, this.height - this.layer.height);
+        this.layer.alpha = 0.5;
+        this.layer.on(Laya.Event.CLICK, this, this.clickLayer);
+        this.mouseThrough = true;
+
+        this.target_width = this.txt.width;
+
+        this.addComponent(TalkEndScript)
+    }
+
+    clickLayer() { }
+
+    added(index) {
+        this.isEnding = false;
+        this.contentIndex = 0;
+        this.contents = GTU.getTalk(index);
+        this.doTalk();
+        trace(this.contents);
+    }
+
+    onEnable() {
+        Laya.stage.on(Laya.Event.CLICK, this, this.onStageClick);
+        game.cb.on('talk_till_to_end', this, this.toEndTalk);
+        game.cb.event('garden_build_remove_hand')
+    }
+
+    onDisable() {
+        Laya.timer.callLater(this, this._dispatchEvent);
+        Laya.stage.off(Laya.Event.CLICK, this, this.onStageClick);
+        game.cb.off('talk_till_to_end', this, this.toEndTalk);
+    }
+
+    _dispatchEvent() {
+        game.cb.event('garden_talk_done');
+        game.cb.event('garden_build_add_hand')
+    }
+
+    onStageClick() {
+        if (this.talkIng) {
+            this.endTalk();
+        } else {
+            this.nextTalk();
+        }
+    }
+
+    toEndTalk() {
+        this.talkIndex = this.content.length;
+        this.contentIndex = this.contents.length - 1;
+        this.locateTxt();
+        this.endTalk();
+    }
+
+    nextTalk() {
+        this.contentIndex++;
+        if (this.content) {
+            this.doTalk();
+        } else {
+            if (!this.isEnding) {
+                this.isEnding = true;
+                console.log('对话完毕');
+                game.scene.remove(GardenTalk);
+            } else {
+                game.scene.remove(GardenTalk);
+            }
+        }
+    }
+
+    endTalk() {
+        this.stopTimer();
+        this.txt.text = this.content;
+    }
+
+    doTalk() {
+        this.talkIndex = 0;
+        this.locateTxt();
+        this.startTimer();
+        this.changePlayerUI();
+    }
+
+    startTimer() {
+        this.talkIng = true;
+        Laya.timer.loop(50, this, this._textLoop);
+    }
+
+    stopTimer() {
+        this.talkIng = false;
+        Laya.timer.clear(this, this._textLoop);
+    }
+
+    locateTxt() {
+        this.txt.width = this.target_width;
+        this.txt.text = this.content;
+        (this.txt.textField.lines.length <= 1) && (this.txt.width = this.txt.textField.textWidth);
+        this.txt.pos(this.container.width - this.txt.width >> 1, this.container.height - this.txt.height >> 1);
+        this.txt.text = '';
+    }
+
+    _textLoop() {
+        this.talkIndex++;
+        this.txt.text = this.content.substring(0, this.talkIndex);
+        if (this.talkIndex >= this.content.length) {
+            this.stopTimer();
+            // this.toNext();
+        }
+    }
+
+
+    get player() {
+        return this.contents[this.contentIndex].name;
+    }
+
+    get content() {
+        return this.contents[this.contentIndex] ? this.contents[this.contentIndex].content : "";
+    }
+
+    changePlayerUI() {
+        if (this.player == GTU.SecretaryAName)
+            this.secretaryAUI();
+        else
+            this.unSecretaryAUI();
+    }
+
+    secretaryAUI() {
+        // SkinUtils.setSkin(this.playerA, '');
+        SkinUtils.setSkin(this.playerB, 'cdn/garden_ui/ms1.png');
+    }
+
+    unSecretaryAUI() {
+        // SkinUtils.setSkin(this.playerA, '');
+        SkinUtils.setSkin(this.playerB, 'cdn/garden_ui/ms1-1.png');
+    }
+}
+
+
+class TalkEndScript extends Laya.Script {
+    onKeyDown(e) {
+        if (e.keyCode == 27)
+            game.cb.event('talk_till_to_end');
+    }
+
+    onRightClick() {
+        game.cb.event('talk_till_to_end');
+    }
+}

@@ -1,0 +1,24 @@
+/**
+ * 设置LayaNative屏幕方向，可设置以下值
+ * landscape           横屏
+ * portrait            竖屏
+ * sensor_landscape    横屏(双方向)
+ * sensor_portrait     竖屏(双方向)
+ */
+window.screenOrientation = "sensor_landscape";
+
+// 发布app的时候必须要修改此项属性
+window.ORIGIN_APP = 2;
+window.APP_PACKAGE = 2;// 0 其它   1 app平台    2 原生app平台
+
+// ------------基础库-----------
+loadLib('libs/laya.core.js')
+loadLib('libs/laya.ui.js')
+loadLib('libs/laya.ani.js')
+loadLib('libs/laya.html.js')
+loadLib('libs/laya.d3.js')
+loadLib('libs/laya-zip.js')
+loadLib('libs/laya.physics3D.js')
+loadLib('libs/laya.wxmini.js')
+
+loadLib('game.resource.js');

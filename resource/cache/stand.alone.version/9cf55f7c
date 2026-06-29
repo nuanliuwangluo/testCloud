@@ -1,0 +1,15 @@
+class TestContent extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestContent',
+            layer: 'panel'
+        })
+        this.__panel.vScrollBarSkin = '';
+    }
+    added(content) {
+        this.__panel.scrollTo(0)
+        this.txt_content.text = content;
+        this.txt_content.height = this.txt_content.textField.textHeight;
+        this.__panel.refresh();
+    }
+}

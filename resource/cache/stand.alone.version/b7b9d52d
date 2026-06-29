@@ -1,0 +1,88 @@
+class FriendRoom_play_select extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_play_select',
+            module: false
+        })
+    }
+    onAwake() {
+        if (this.name == 'hallPlay') {
+            // this.__play_radioGroup.selectHandler = new Laya.Handler(this, this.onSelect);
+        } else {
+            let a = this.numChildren
+            for (let index = 0, length = a; index < length; index++) {
+                let b = this.getChildAt(index)
+                b.mouseEnabled = false;
+            };
+        }
+    }
+    onEnable() {
+        if (this.name == 'hallPlay') {
+            this.img_11.visible = false
+            this.__play_radioGroup.visible = false
+            this.cityId = HallPlay.lastCityId
+            game.cb.on('update_hallPlay_firend_ruleItemView', this, this.update_playContent001)
+        } else {
+            this.img_11.visible = true
+            this.__play_radioGroup.visible = true
+        }
+    }
+    onDisable() {
+        if (this.name == 'hallPlay') {
+            game.cb.off('update_hallPlay_firend_ruleItemView', this, this.update_playContent001)
+        } else {
+
+        }
+    }
+    update_playContent001() {
+        this.playId = HallPlay.curRuleId;
+        this.update_play_content();
+    }
+    updatePlaySelect(type) {
+        if (this.name != 'hallPlay') {
+            let ud = excelUtils.getPlayOnOff(this.cityId)
+            if (!ud) return;
+            let useIndex = 0
+            let a = ud.friend_allPlay.filter((e) => {
+                return e.playId == this.playId;
+            })
+            let labelsArray = a.map((e) => {
+                return e.playName
+            })
+            let labels = labelsArray.join(',')
+            this.__play_radioGroup.labels = labels;
+            this.__play_radioGroup.selectedIndex = -1
+            this.__play_radioGroup.selectedIndex = 0;
+            // 因为如果name != 'hallPlay' 不会注册onSelect 事件 所以这里需要自己调用
+            this.onSelect(0)
+        }
+    }
+    async onSelect(e) {
+        if (e == -1) return;
+        this.update_play_content();
+    }
+    update_play_content() {
+        trace('玩法选项playId：', this.playId);
+        game.utils.remove(this.playUI);
+        this.playUI = (this.name == 'hallPlay') ? FriendRoomPlays.map[this.playId] : FriendRoomPlays.spareMap[this.playId];
+        this.playUI.playId = this.playId;
+        this.playUI.cityId = this.cityId;
+        this.playUI && this.addChildAt(this.playUI, 0);
+        this.playUI.y = 0;
+        this.playUI.mouseThrough = true
+        if (this.name == 'hallPlay') {
+            this.playUI.y -= 80
+        }
+    }
+    set_play(cityId, playId, players, round, plays) {
+        this.cityId = cityId;
+        this.playId = playId;
+
+        this.players = players,
+            this.round = round;
+        this.plays = plays;
+        this.updatePlaySelect();
+        this.playUI && this.playUI.setPlay(players, round, plays);
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_friendRoom.friendRoom_play_selectUI', FriendRoom_play_select);

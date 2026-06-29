@@ -1,0 +1,191 @@
+class GameMainDailyLogin extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_dailyLogin',
+            layer: 'panel'
+        })
+        this.btn_receive.addComponent(S_dailyLogin_receive)
+        this.rect = new Laya.Rectangle()
+        this.rect.width = this.img_bar.width;
+        this.rect.height = this.img_bar.height;
+        this.img_bar.scrollRect = this.rect;
+        this.btn_videoSelect.addComponent(S_click_dailyLogin_videoSelect)
+        this.btn_close.addComponent(S_click_dailyLogin_close)
+        this.img_sign_1.addComponent(S_click_dailyLogin_lookReward).init(1)
+        this.img_sign_2.addComponent(S_click_dailyLogin_lookReward).init(2)
+        this.img_sign_3.addComponent(S_click_dailyLogin_lookReward).init(3)
+        this.dis1 = this.img_sign_1.x - this.img_day_bg.x
+    }
+    added() {
+        __data.dailyLogin.send(1)
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_dailyLogin', 1)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '每日登录界面' })
+
+        let adid = 'adunit-b83df2d22e66e36b'
+        this.update_video_ready({ adUnitId: adid, isSuccess: __data.shareVideoRule.ifVideoSuccessUseRule(adid) })
+        this.update_dailyLogin_data()
+        // game.cb.event('propItem1_mul_tween_num', [0, this.btn_videoSelect.skin == 'cdn/dailyLogin/bt_g1.png' ? 1 : 5])
+        game.cb.on('update_dailyLogin_data', this, this.update_dailyLogin_data)
+    }
+    onDisable() {
+        game.cb.off('update_dailyLogin_data', this, this.update_dailyLogin_data)
+        hallTestShowPanel()
+        this.img_effect.clipStop()
+        // this.img_effect.stop()
+        ResUtils.clearTextureRes(['cdn.dailyLogin'])
+        ResUtils.clearAtlas('res/atlas/cdn/dailyLogin_effect.atlas')
+        ResUtils.clearAtlas('res/atlas/cdn/dailyLogin.atlas')
+        ResUtils.clearTextureRes(['bag_icon'], [
+            'bag_icon/img_hyzx.png',
+            'bag_icon/img_icon_1.png',
+            'bag_icon/img_icon_2.png',
+        ])
+    }
+    update_video_ready(r) {
+        this.videoR = r;
+        if (!r.isSuccess) {
+            // __data.shareVideoRule.total_shareShowCount(this.img_share.parent)
+            this.img_video.visible = false
+            this.img_share.visible = true
+        } else {
+            this.img_video.visible = true
+            this.img_share.visible = false
+        }
+    }
+    clickMask() { }
+    update_dailyLogin_data(dayNum) {
+        this.img_bar.width = 0;
+        for (let index = 0, length = 3; index < length; index++) {
+            this[`img_sign_${index + 1}`].skin = `cdn/dailyLogin/bt_day${index + 1}a.png`
+        };
+        let realDayNum = __data.dailyLogin.dayNum > 3 ? 3 : __data.dailyLogin.dayNum;
+        realDayNum < 1 && (realDayNum = 1);
+        let paramsDayNum = dayNum || __data.dailyLogin.dayNum;
+        paramsDayNum = __tool.clamp(paramsDayNum, 1, 3);
+        // if (paramsDayNum > 3) paramsDayNum = 3;
+        for (let index = 0, length = realDayNum; index < length; index++) {
+            this[`img_sign_${index + 1}`].skin = `cdn/dailyLogin/bt_day${index + 1}b.png`
+        };
+
+        this.img_bar.width = this[`img_sign_${realDayNum}`].x - this.img_bar.x;
+
+        this.sp_btn.visible = paramsDayNum == realDayNum
+        // this.btn_receive.visible = paramsDayNum == realDayNum
+        // this.btn_videoSelect.visible = paramsDayNum == realDayNum
+        // this.img_tips.visible = paramsDayNum == realDayNum
+        // if (!this.videoR.isSuccess) {
+        //     this.img_share.visible = paramsDayNum == realDayNum
+        // } else {
+        //     this.img_video.visible = paramsDayNum == realDayNum
+        // }
+
+        if (paramsDayNum == realDayNum) {
+            if (!__data.dailyLogin.isReceive) {
+                this.btn_receive.getChildByName('txt').text = '领取'
+                this.btn_receive.disabled = false
+            } else {
+                this.btn_receive.getChildByName('txt').text = '已领取'
+                this.btn_receive.disabled = true
+            }
+        }
+        // if (!__data.dailyLogin.isReceive && paramsDayNum == realDayNum) {
+        //     this.btn_receive.skin = 'cdn/dailyLogin/bt_lq.png'
+        //     this.btn_receive.disabled = false
+        // } else {
+        //     // this.btn_receive.skin = 'cdn/dailyLogin/bt_ylq.png'
+        //     // this.btn_receive.disabled = true
+        // }
+        this.img_effect.x = this[`img_sign_` + paramsDayNum].x + 4
+        this.img_effect.clipPlay()
+        this.img_day.skin = `cdn/dailyLogin/${realDayNum}.png`
+        this.img_day_bg.x = this[`img_sign_` + realDayNum].x - this.dis1;
+        let isVideo = this.btn_videoSelect.skin == 'common/bt_g2.png';
+
+        this.scene_prop0.visible = false;
+        this.scene_prop1.visible = false;
+
+        let reward = isVideo ? __data.dailyLogin.reward.lookVideo : __data.dailyLogin.reward.nolookVideo;
+        let awards = __tool.gdp(reward, `[${paramsDayNum - 1}].awards`)
+        awards = awards || [];
+        let re1 = awards.map((e) => {
+            return {
+                propId: e.id,
+                num: e.count,
+            }
+        })
+        for (let index = 0, length = re1.length; index < length; index++) {
+            const e = re1[index];
+            let s = this['scene_prop' + index]
+            if (s) {
+                s.visible = true;
+                s.vo = e
+            }
+        };
+        // game.cb.event('propItem1_mul_tween_num', [0, this.btn_videoSelect.skin == 'common/bt_g1.png' ? 1 : 5])
+    }
+}
+
+class S_dailyLogin_receive extends Laya.Script {
+    async onClick() {
+        // 能领取
+        let gs = game.scene.get(GameMainDailyLogin)
+        if (gs.btn_videoSelect.skin == 'common/bt_g2.png') {
+            // 视频领取
+            // if (__data.vip.isVip) {
+            //     game.server.send(2219, 1)
+            // } else {
+            if (gs.img_video.visible) {
+                let adunitId = gs.videoR.adUnitId
+                await miniApi.video_ready(adunitId)
+                miniApi.video_show(adunitId, () => {
+                    game.server.send(2219, 1)
+                }, () => {
+                    __tips('暂无广告，请稍后再试或开通VIP')
+                }, 0);
+                let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '每日登录', 'Mj_Participation': n })
+            } else {
+                // __data.shareVideoRule.total_clickShareCount()
+                miniApi.share({
+                    titleId: __tool.randomRange(1, 9),
+                    shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+                    params: `uid=${__data.uid}&myCityId=${__data.myCityId}&shareRewardType=dailyLoginShare`,
+                    shareGroupClickCallback: () => {
+                        game.server.send(2219, 2)
+                        game.scene.remove(GameMainRedPacket_2)
+                    },
+                    shareOnShowCallback: () => {
+                        game.scene.add(GameMainRedPacket_2)
+                    }
+                })
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '每日登录', 'Mj_Participation': '参与分享' })
+            }
+            // }
+        } else {
+            // 直接发送领取
+            game.server.send(2219, 0)
+            miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '每日登录', 'Mj_Participation': '免费领取' })
+        }
+    }
+}
+
+class S_click_dailyLogin_videoSelect extends Laya.Script {
+    onClick() {
+        this.owner.skin = (this.owner.skin == 'common/bt_g1.png') ? 'common/bt_g2.png' : 'common/bt_g1.png';
+        game.cb.event('update_dailyLogin_data')
+        // game.cb.event('propItem1_mul_tween_num', [1, this.owner.skin == 'common/bt_g1.png' ? 1 : 5])
+    }
+}
+class S_click_dailyLogin_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainDailyLogin)
+    }
+}
+class S_click_dailyLogin_lookReward extends Laya.Script {
+    init(e) {
+        this.dayNum = e;
+    }
+    onClick() {
+        game.cb.event('update_dailyLogin_data', [this.dayNum])
+    }
+}

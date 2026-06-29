@@ -1,0 +1,22 @@
+class LoginService extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/LoginService',
+        })
+        this.btn_service.addComponent(S_login_service)
+    }
+    onEnable() {
+
+    }
+}
+class S_login_service extends Laya.Script {
+    onClick() {
+        game.scene.add(LoginQRCode)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '设置界面' })
+        let a = game.scene.get(HallRightDown);
+        a && (a.img_more.visible = false);
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+}

@@ -1,0 +1,106 @@
+__data.friendRoom = {
+    gameRecord: {},
+    infoMain: {},
+    battleResult: {
+        winRate1: 0,
+        winRate2: 0,
+        winRate3: 0,
+        winRate4: 0,
+        gameNum1: 0,
+        gameNum2: 0,
+        gameNum3: 0,
+        gameNum4: 0,
+        score1: 0,
+        score2: 0,
+        score3: 0,
+        score4: 0,
+    },
+    red: {
+        isHaveData: false,
+        //  {uid：uid，s:s, v:v}
+        hashUidRed_room: {
+            // -1活动未开始或已结束； 
+            // -2红包已抢光； 
+            // 0无红包（未领取任务）；
+            // 1有未开启红包（任务已完成）；
+            // 2红包已领取（任务已完成）；
+            // 3任务已领取（未完成）；
+            // 4任务失败（未完成） ；
+            // s: 0,
+        },
+        getRedStatus_room(uid) {
+            return __tool.getDeepProperty(__data, `friendRoom.red.hashUidRed_room[${uid}].s`) || -1;
+        },
+        getRedNum_room(uid) {
+            return __tool.getDeepProperty(__data, `friendRoom.red.hashUidRed_room[${uid}].v`) || 0;
+        },
+        surplusRedNum: 0,
+        redV: 0,
+        status: 0,
+        need: 1, timeStart: 8, timeEnd: 23,
+        name: '在接下来一场至少16局好友房获得大赢家',
+        isTimeEnd() {
+            let a = new Date().getHours()
+            return a >= this.timeEnd;
+        },
+        isTimeIn() {
+            let a = new Date().getHours()
+            return a >= this.timeStart && a < this.timeEnd;
+        },
+        friendRoomDailyFirstShowRedPanel() {
+            if (!__data.redPacket.canShowFriendRedIcon()) return false;
+            let b = __data.excelConfig.hashCityIdVO[__data.myCityId].Red == 1;
+            if (!b) return;
+            let c = __data.friendRoom.red.isTimeIn();
+            if (!c) return;
+            if (__data.friendRoom.red.surplusRedNum <= 0) return false;
+
+            let a1 = this.friendRedPanelDailyFristShow()
+            if (a1 == true) return;
+            let b1 = this.friendRedPanelEveryNewRoomGoinAndTaskFailShow()
+            if (b1 == true) return;
+        },
+        // 每日首次进入好友房弹出
+        friendRedPanelDailyFristShow() {
+            if (__data.deskData.roomVo.isRecordPlaying) return false;
+            let a = miniApi.getItem(__data.uid + '-friendRoomDailyFirstShowRedPanel-' + new Date().toDateString())
+            if (a == 1) return;
+            __showScene.show_friendRoom_redPanel();
+            miniApi.setItem(__data.uid + '-friendRoomDailyFirstShowRedPanel-' + new Date().toDateString(), 1)
+            return true
+        },
+        // 玩家每个新的好友房首次进入房间时，
+        // 如果任务状态为”挑战失败“，
+        // 且有剩余红包，且活动未结束，
+        // 则也主动弹出一次（促进玩家使用复活）
+        // 按照房间号每日弹出一次
+        friendRedPanelEveryNewRoomGoinAndTaskFailShow() {
+            if (__data.deskData.roomVo.isRecordPlaying) return false;
+            if (__data.friendRoom.red.status != 4) return false;
+            let room_id = __data?.deskData?.roomVo?.roomID;
+            let setkey = __data.uid + '-friendRoomDailyFirstShowRedPanel-' + `${room_id}-` + new Date().toDateString()
+            let a = miniApi.getItem(setkey)
+            if (a == 1) return;
+            __showScene.show_friendRoom_redPanel();
+            miniApi.setItem(setkey, 1)
+            return true;
+        },
+        /**
+         * 好友房红包面板失败弹窗提示处理
+         * 
+         * 如果当天未弹过“好友房红包失败炸弹弹窗”，则弹出失败提示并记录已弹，以防重复弹出
+         * @returns {boolean} 如果已弹出/条件不符，则返回false，否则返回true
+         */
+        friendRoomShowRedPanelFailBombBox() {
+            if (__data.deskData.roomVo.isRecordPlaying) return false;
+            let a = miniApi.getItem(__data.uid + ':friendRed_fail_bomb_box:' + new Date().toDateString())
+            if (a == 1) return false;
+            __showScene.show_red_task_fail_lookVideo('friendRed')
+            return true;
+        },
+    },
+    clear() {
+        __data.friendRoom.gameRecord = {};
+        __data.friendRoom.infoMain = {};
+    }
+}

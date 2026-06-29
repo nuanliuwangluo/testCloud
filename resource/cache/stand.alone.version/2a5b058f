@@ -1,0 +1,10 @@
+class PromptRankRule extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/prompt_rankRule',
+            layer: 'panel'
+        })
+    }
+    added() {
+    }
+}

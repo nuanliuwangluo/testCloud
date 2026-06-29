@@ -1,0 +1,12 @@
+__data.dailyMatch = {
+    isHasReceive: 0,
+    curCount: 0,
+    maxCount: 0,
+    reward: [],
+    send_msg_aKeyCom() {
+        game.server.send(10007)
+    },
+    send_msg_receive() {
+        game.server.send(10003)
+    },
+}

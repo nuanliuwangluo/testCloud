@@ -1,0 +1,96 @@
+__data.shareConfig = {
+    getTitleById(id, cityId) {
+        let a = this.titleConfig[id] || this.titleConfig[1];
+        let cityName = excelUtils.getUmEventName(cityId)
+        a = a.replace('XX', cityName);
+        return a
+    },
+    getImgUrlIdById(id) {
+        // if (__data.cdn_config.isAllShareImgUseDefault == 1) {
+        //     return this.imgConfig[1]
+        // }
+        return this.imgConfig[id] || this.imgConfig[1]
+    },
+    titleConfig: {
+        '1': '不是我吹，XX麻将从来不服谁!',
+        '2': 'XX麻将?你们都是弟弟!',
+        '3': '我正式对你发出挑战!',
+        '4': '全国只有1%的人能达到我这水平!',
+        '5': '别老吹牛!有本事来赢我啊!',
+        '6': '急寻XX麻将高手!',
+        '7': '真不容易，可算有正宗XX麻将啦!',
+        '8': '麻将实力哪家强?我们XX就是牛!',
+        // '9': '全国麻将大赛!XX队告急!',
+        '9': '到手就这牌，请问怎么输?!',
+        '11': '不要走！决战到天亮！',
+        '12': '传奇的馈赠，人人有份~',
+        '13': '全民福利已发，手快有，手慢无！',
+    },
+    imgConfig: {
+        '1': { imageUrl: 'share/share.png', imageUrlId: '' },
+        '2': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/mGxwa8xSbqntoHkTNByJZc5wSVISGdeE6W3yvjqYGwwx0N6r9ZDWMc97aBVcfhn5/0', imageUrlId: 'UNQ24PaQTimuBmrRH5wtDw==', localUrl: 'widget://widget/shareImage/9.jpg' },
+        '3': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/80qhIQxj9r0BLMPjoEduNs5Dic5Abfekzs8y7YjEKuPZ0PnDCQPEdjhHA2ribvODy1/0', imageUrlId: 'vlLupcHhTy6tQT0r7BDcHg==', localUrl: 'widget://widget/shareImage/8.jpg' },
+        '4': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/yhrEw6v3F0FREFSehLiaMy7nEo4sjn7fkzMFBkgxSbcTkgHeppsbBpcA2HfibxCwjT/0', imageUrlId: 'HAdrDFoZQeCMeQa/izFmhQ==', localUrl: 'widget://widget/shareImage/21.jpg' },
+        '5': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/liaDCxOwQFYmfY5oUAtswpQGSYXetBH0RdUplSM1ia12eiahwg4MUj3dXISzu7vRmf3/0', imageUrlId: '0cKIMnCUQler05nm0mnVOA==', localUrl: 'widget://widget/shareImage/21.jpg' },
+        '6': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/jB5kywLP1Ky2RPibVHGOouuedsTwGbcNlENJy1Ej6eg7lBMBGgQHNxapHjdibKkcaj/0', imageUrlId: 'e6QY8p9bTfyPy9t1/OLeww==', localUrl: 'widget://widget/shareImage/19.jpg' },
+        '7': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/ZeBWhK48Ul5BPOShib1zzjkWwUxcCoRfaNBia5VNsyGYiaibs98jibVY6H5eqIcVmSuxib/0', imageUrlId: 'rl52O0kETuyXlQIbs0e2uA==', localUrl: 'widget://widget/shareImage/18.jpg' },
+        '8': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/oLZzNcfVq6LyX6v2GPjoyOL6lb5TibUsDn2DuiaVFCavmwHEsl7Sc9xNdNEJIwzNPP/0', imageUrlId: '6T779RD+TrKhAcjdu6z2Pw==', localUrl: 'widget://widget/shareImage/17.jpg' },
+        // '9': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/Gd09uHbaEpvT0bfhMa4hubB4huZiaZS5ZXRx1IWcgTgk0y9eRpncHictfjVH01Xd5k/0', imageUrlId: 'X7FIHn7QSsSMzNit/+J+5Q==', localUrl: 'widget://widget/shareImage/11.jpg' },
+        '9': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/EwEmh9uacdW6rC4QfmfXVxQglcsAtZ28cwTSlUUqpO2pJto2HvIIP47ZSjFrCiayp/0', imageUrlId: '6sZznKrRQ2+VMwYBU7aPyg==', localUrl: 'widget://widget/shareImage/7.jpg' },
+
+        'win3': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/EFgVv9zU2yG7EzKichCicGp8RnFqfRQQIEckdeDDTehTHfL1ibVUeJVjKb7Nk3lgTdr/0', imageUrlId: 'lw/toVh7QSWplJFiwg/VPw==', localUrl: 'widget://widget/shareImage/16.jpg' },
+        'win5': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/jnWO9J1qibcJJyuJdT4StyakAMdOvg2IPIcQ1V9altib1nbptz3E97KMYqCzDicTTED/0', imageUrlId: '8Sc168B5R1SOqRy4euvz1Q==', localUrl: 'widget://widget/shareImage/15.jpg' },
+        'win6': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/jJLjFicPerxplWiaBjVXBoaibDz254HrJ0OYlewbvDjZ1nyREQcRHKGmltTbCVeNx9p/0', imageUrlId: 'WkIdO1HQRr2mebz9iWm8Ug==', localUrl: 'widget://widget/shareImage/14.jpg' },
+        'win7': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/bHUmmwrIuyBq7iaUYxyW51FOuMicefMqkrrCACdJdyza6icYFv1qlltBEoDutUDKTV1/0', imageUrlId: 'dtU2q6ptSFeVWCJmRjTejw==', localUrl: 'widget://widget/shareImage/13.jpg' },
+        'win9': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/JxxCtvtd1uDNk7af5MqqWDibSAfkibEJ14HRuHvLwEgM5x2Y93eQLqwjqy9QD0FhuJ/0', imageUrlId: 'm+MBx+P2TeCdn1leZnTULA==', localUrl: 'widget://widget/shareImage/12.jpg' },
+
+        'uplv1': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/NCquWIIJyytCAw9JIMoYSa0iatSj0cbrxP3KezSwWiac2PtCUuGxCPm8W0zU0mNFAm/0', imageUrlId: '81/ljH+gRPOKz+kTA/iCuQ==', localUrl: 'widget://widget/shareImage/31.jpg' },
+        'uplv2': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/ibGGTOlNOvrgwHEmLOBQb5mUS9icMCvUhvgnXoIUDV2BVp3o4ic3W2hLt7aSAm2kVFn/0', imageUrlId: 'Vi5KZXjxSoG2qiqpXw+KNQ==', localUrl: 'widget://widget/shareImage/30.jpg' },
+        'uplv3': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/9q7up4BGtx53bhwyclOuYYcT2QYB5L4xs18dmEZHUpLHeicoPJZUVQIE33Bx8HH5G/0', imageUrlId: '8FU9fak+RAy8T+MMrxw58w==', localUrl: 'widget://widget/shareImage/29.jpg' },
+        'uplv4': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/dC840wlbCubEcXuW1fU4e4mjOjHxEwyZQp54UOY0mQ7qOM2CZ0QKp5eDep2kmWKr/0', imageUrlId: 'kG5yz3slSzKcTGiVm7mYwg==', localUrl: 'widget://widget/shareImage/28.jpg' },
+        'uplv5': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/NltPc9T4tzzHPFtlBK7f1SOfN1M8ticCKU8iannhdo8LeQr5I38buVHmXUOEC9tBTX/0', imageUrlId: '0FIfZbq/QuWv3boDII4lOw==', localUrl: 'widget://widget/shareImage/27.jpg' },
+        'uplv6': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/oibJrWBN3bahgyicr03NsHiamGdv3rABtMFjrELicapX9VMtZerNVVia3nUbSoaUrq6OZ/0', imageUrlId: 'NxvPhN1XS1mQWraTsgDJdQ==', localUrl: 'widget://widget/shareImage/26.jpg' },
+        'uplv7': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/l3v0LBky4tuEV6V1MeI4lTH0N4xsscRZV8bccd0ZyfmEy9A5Vf8HNNku1Avhj2BN/0', imageUrlId: 'C1l7YxKDRWub5hZhiNwBVQ==', localUrl: 'widget://widget/shareImage/25.jpg' },
+        'uplv8': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/XGgOVp5j8xsbiau7DXuZiclujTRaic5iaicYic9poZweJUY91k55Ial8iaovwcPMOXvBpuE/0', imageUrlId: 'xadNzT7HSAiFl/Glt9fKUg==', localUrl: 'widget://widget/shareImage/24.jpg' },
+        'uplv9': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/ye6vwd9A1mb4VKIPw16o3BptQxVVB39mOjEOMQ5X4fGTrbkYorFAmwibicsibJ1jicHf/0', imageUrlId: '78lQKISzR6aZoTQ1OtZFtQ==', localUrl: 'widget://widget/shareImage/23.jpg' },
+        'uplv10': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/ztPevMzWuWiczUOYCicPhJZIkicCFaeH9hGjkicaZnKqYickKR3hPb0cYenECpIT7Zoot/0', imageUrlId: '5DkkUfpSTlGC+gf98OZeFA==', localUrl: 'widget://widget/shareImage/22.jpg' },
+        'redPacket': { imageUrl: 'https://mmocgame.qpic.cn/wechatgame/iaZfdqnWbHGhoPDofnWZzX5mVgPZoUykpLXUnQ4FCTJfFHFdwWmPl6nU1ibkjDHKZW/0', imageUrlId: 'GtTl+W9/Styn0HBCjaLBDg==', localUrl: '' },
+
+        // 星耀雀神升段
+        'uplv11': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/XIR7m4qvByth0u0LFt0OiahkQ0mjvDD0EBOWNkicUZcmIfFtZJibPQ5oJsqGE4kVBoo/0',
+            imageUrlId: 'RjrTMApeRyK/6c/tX4U7YA==',
+            localUrl: 'widget://widget/shareImage/1.jpg'
+        },
+        // 传奇雀神升段
+        'uplv12': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/2PkFh8j8F5RnpYOWvfQYNByDibOABJEtWNn6HgyIsXNIxWLMDrb9HAhQnkibEEibJmic/0',
+            imageUrlId: 'wrXUUjUETsa7ay0ibHcXjA==',
+            localUrl: 'widget://widget/shareImage/2.jpg'
+        },
+        // 白银宝箱'
+        'boxSilver': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/vewmJJakRd5VvGdo8x5QcYV9qXAPXGenrUtk7QkZqWUPZzUhTk01SW4QqRFTwoH2/0',
+            imageUrlId: 'sWDMEX1/SK+SJ1T/I4nTSQ==',
+            localUrl: 'widget://widget/shareImage/3.jpg'
+        },
+        // 黄金宝箱'
+        'boxGold': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/rInyJ91JyD8RNute3EWGd1y0VksZoV3Sy1W47StYwYd4O57LHbEmkt74qu8dYXBG/0',
+            imageUrlId: '4xfQt19wRZKEQDl4bc0VZg==',
+            localUrl: 'widget://widget/shareImage/4.jpg'
+        },
+        // 好友房战绩分享
+        'friendRoomShareResult': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/Jgdiadwses5G9icIzjHUyOr1mlwMUdAA1fg2YAgrzoIZ6lS6oFXJGoEfWiaUOp9Fu4u/0',
+            imageUrlId: 'gKK+WQdSTp2+5jetTaew4Q==',
+            localUrl: 'widget://widget/shareImage/5.jpg'
+        },
+        // 好友房房间分享(邀请好友)
+        'friendRoomShareRoom': {
+            imageUrl: 'https://mmocgame.qpic.cn/wechatgame/dLsdxbWKpmCQ8wIlzFZ6CB2zwmicoicZliaSicHskIpQibZicF6dqu9Iw6GFbGI0anLLU4/0',
+            imageUrlId: 'J1CQBrclS6KFsi2ymZBEgQ==',
+            localUrl: 'widget://widget/shareImage/6.jpg'
+        }
+    },
+}

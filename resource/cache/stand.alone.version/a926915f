@@ -1,0 +1,58 @@
+class AppVerifyAge extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/AppVerifyAge',
+            layer: 'tips'
+        })
+        this.btn_exit.addComponent(S_verifyage_exit)
+        this.btn_close.addComponent(S_verifyage_exit)
+        this.btn_deleteRealName.addComponent(S_verifyage_btn_deleteRealName)
+    }
+    onEnable() {
+        this.ht.innerHTML = `
+        <span style='color:#000000; font-size: 40'>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;您当前为未成年账号，由于技术能力有限，
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        目前无法满足国家对未成年人相关防沉迷保护规
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        定，故游戏暂时不对未成年人开放。我们会尽快
+        </span><br/>
+        <span style='color:#000000; font-size: 40'>
+        解决技术不足，给您带来的不便深感抱歉！
+        </span><br/>
+        `
+        this.ht.style.leading = 10;
+        this.ht.style.width = 855;
+    }
+}
+class S_verifyage_exit extends Laya.Script {
+    onClick(e) {
+        app_quit_login()
+    }
+}
+class S_verifyage_btn_deleteRealName extends Laya.Script {
+    async onClick(e) {
+        this.owner.mouseEnabled = false
+        let id = miniApi.getItem('appLoginId')
+        let b1 = await miniApi.axios({
+            url: `https://${config.reqIpUrl}:8111/server/remove_auth`,
+            method: 'post',
+            data: {
+                wxId: id
+            }
+        }).catch((e) => { })
+        this.owner.mouseEnabled = true
+        let code = __tool.gdp(b1, 'data.code');
+        if (code == 1) {
+            miniApi.setItem('appRealNameAge', '')
+            game.scene.remove(AppVerifyAge)
+            app_test_show_realName()
+        } else if (code == 2) {
+            __tips('注销失败')
+        } else {
+            __tips('注销服务失败')
+        }
+    }
+}

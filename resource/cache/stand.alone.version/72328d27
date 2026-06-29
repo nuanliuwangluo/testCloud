@@ -1,0 +1,22 @@
+__data.dailyLogin = {
+    isHaveData: false,
+    dayNum: 0,
+    isReceive: 1,
+    reward: {
+        lookVideo: {},
+        nolookVideo: {},
+    },
+    get isRedPoint() {
+        let alwaysDayNum = __data.dailyLogin.dayNum;
+        if (alwaysDayNum > 3) alwaysDayNum = 3;
+        if (__data.dailyLogin.reward.lookVideo[alwaysDayNum - 1] && !__data.dailyLogin.isReceive) {
+            return true
+        } else {
+            return false;
+        }
+    },
+    async send(haveDataSendTest) {
+        await gtool.query([2218], haveDataSendTest, 1)
+        return 1;
+    }
+}

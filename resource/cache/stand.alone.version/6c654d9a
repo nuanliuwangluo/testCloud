@@ -1,0 +1,105 @@
+let s_mm_card_flower_prefab = {}
+let mm_cardGroup = {
+    chi: [],
+    peng: [],
+    gang: [],
+}
+for (let index = 1, length = 10; index < length; index++) {
+    s_mm_card_flower_prefab[index] = `Crak_${index}`
+    if (index <= 7) {
+        mm_cardGroup.chi.push(`${index}.${index + 1}.${index + 2}`)
+    }
+    mm_cardGroup.peng.push(`${index}.${index}.${index}`)
+    mm_cardGroup.gang.push(`${index}.${index}.${index}.${index}`)
+};
+for (let index = 11, length = 20; index < length; index++) {
+    s_mm_card_flower_prefab[index] = `Dot_${index - 10}`
+    if (index <= 17) {
+        mm_cardGroup.chi.push(`${index}.${index + 1}.${index + 2}`)
+    }
+    mm_cardGroup.peng.push(`${index}.${index}.${index}`)
+    mm_cardGroup.gang.push(`${index}.${index}.${index}.${index}`)
+};
+for (let index = 21, length = 30; index < length; index++) {
+    s_mm_card_flower_prefab[index] = `Bam_${index - 20}`
+    if (index <= 27) {
+        mm_cardGroup.chi.push(`${index}.${index + 1}.${index + 2}`)
+    }
+    mm_cardGroup.peng.push(`${index}.${index}.${index}`)
+    mm_cardGroup.gang.push(`${index}.${index}.${index}.${index}`)
+};
+[31, 32, 33, 34, 35, 36, 37, 38, 41, 42, 43, 51, 52, 53, 54].forEach((e) => {
+    mm_cardGroup.peng.push(`${e}.${e}.${e}`)
+    mm_cardGroup.gang.push(`${e}.${e}.${e}.${e}`)
+});
+s_mm_card_flower_prefab[31] = 'Flower_1'
+s_mm_card_flower_prefab[32] = 'Flower_2'
+s_mm_card_flower_prefab[33] = 'Flower_3'
+s_mm_card_flower_prefab[34] = 'Flower_4'
+s_mm_card_flower_prefab[35] = 'Season_1'
+s_mm_card_flower_prefab[36] = 'Season_2'
+s_mm_card_flower_prefab[37] = 'Season_3'
+s_mm_card_flower_prefab[38] = 'Season_4'
+s_mm_card_flower_prefab[41] = 'Dragon_Red'
+s_mm_card_flower_prefab[42] = 'Dragon_Green'
+s_mm_card_flower_prefab[43] = 'Dragon_White'
+s_mm_card_flower_prefab[51] = 'Wind_East'
+s_mm_card_flower_prefab[52] = 'Wind_South'
+s_mm_card_flower_prefab[53] = 'Wind_West'
+s_mm_card_flower_prefab[54] = 'Wind_North'
+
+
+let mm_getCard = (chiNum, pengNum, gangNum) => {
+    let chi = [...mm_cardGroup.chi]
+    let peng = [...mm_cardGroup.peng]
+    let gang = [...mm_cardGroup.gang]
+    let chi1 = game.utils.randomArr(chi)
+    let peng1 = game.utils.randomArr(peng)
+    let gang1 = game.utils.randomArr(gang);
+
+    let hashFlower = {};
+
+    let getFff01 = (arr, num) => {
+        let nk = []
+        for (let index = 0, length = arr.length; index < length; index++) {
+            const e = arr[index];
+            let n = e.toArray('.')
+            // 是否已经随机
+            let isHaveFlower = n.some((e1) => {
+                return hashFlower[e1]
+            })
+            if (isHaveFlower) continue;
+            // 记录移除随机的花色
+            n.forEach(e1 => {
+                hashFlower[e1] = 1
+                if (arr == chi1) {
+                    hashFlower[parseInt(e1) - 1] = 1
+                    hashFlower[parseInt(e1) + 1] = 1
+                }
+            });
+            nk.push(e)
+            if (nk.length == num) break;
+        };
+        if (nk.length < num) {
+            // 重复补充
+            for (let index = 0, length = arr.length; index < length; index++) {
+                const e = arr[index];
+                let n = e.toArray('.')
+                // 记录移除随机的花色
+                n.forEach(e1 => {
+                    hashFlower[e1] = 1
+                });
+                nk.push(e)
+                if (nk.length == num) break;
+            };
+        }
+        return nk
+    }
+    let cc1 = getFff01(chi1, chiNum)
+    let cc2 = getFff01(peng1, pengNum)
+    let cc3 = getFff01(gang1, gangNum)
+
+    return {
+        cc1, cc2, cc3
+    }
+}

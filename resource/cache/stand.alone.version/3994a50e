@@ -1,0 +1,3580 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-13 12:00:33
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-29 19:27:14
+ */
+const GoldMatchMaxRate = 256;
+
+class ToVipPanelCupComponent extends Laya.Script {
+    onClick() {
+        // 显示奖杯特权促销
+        __showScene.show_vipBombbox(2) // 1财产保护 2奖杯特权
+    }
+}
+class ToVipPanelGoldComponent extends Laya.Script {
+    onClick() {
+        // 显示财产保护促销
+        __showScene.show_vipBombbox(1) // 1财产保护 2奖杯特权
+    }
+}
+class ReduceProtectOdds extends Laya.Script {
+    onClick() {
+        let odds = ResultPanelManager.protectOdds;
+        if (odds == 0.5) ResultPanelManager.protectOdds = 0.25;
+        else if (odds == 0.25) ResultPanelManager.protectOdds = 0;
+    }
+}
+
+/**
+ * 结算弹窗
+ */
+class ResultPanelManager {
+
+    static init() {
+        this.pochan_limit_number = 3000;
+        this.compensate_limit_number = 3000;
+        this.isClientShow = false;
+        this.isServerShow = false;
+        this.isJoinCupEvent = false;
+        this.isJoinAnnuityEvent = false;
+        this.gameAdFightNumber = LocalUtils.get(`${__data.uid}_AD_GAME_FIGHT_NUMBERS`) || 0;
+    }
+
+    static addGameAdFightNumber() {
+        this.gameAdFightNumber = parseInt(this.gameAdFightNumber) + 1;
+        LocalUtils.save(`${__data.uid}_AD_GAME_FIGHT_NUMBERS`, this.gameAdFightNumber);
+    }
+
+    static clearGameAdFightNumber() {
+        this.gameAdFightNumber = 0;
+        LocalUtils.save(`${__data.uid}_AD_GAME_FIGHT_NUMBERS`, 0);
+    }
+
+    static adRandom() {
+        let r = Math.random(); // 返回 [0, 1) 之间的浮点数
+        // 33%插屏广告
+        if (r < 0.5) {
+            return this.IAd;
+        }
+        // 33%格子矩阵广告   因为没有遮罩的原因 不使用这个广告了
+        // else if (r < 0.66) {
+        // return this.GAd;
+        // } 
+        // 34%CPS组件
+        else {
+            return this.CAd;
+        }
+    }
+
+    static get IAd() { return { type: 'I', des: '插屏广告', id: 'adunit-827683258ab551b0' } }
+    static get GAd() { return { type: 'G', des: '格子矩阵广告', id: 'adunit-12465e2d6199a2e5' } }
+    static get CAd() { return { type: 'C', des: 'CPS广告', id: 'CpsCBgAAoXkpQY9GAJQS-RB8' } }
+
+    static async show() {
+        // 新人红包
+        let r = this.isClientShow ? false : await ResultPanelManager.show_rookie_red();
+        if (r) { this.isClientShow = true; return; }
+        // 升段炫耀
+        r = this.isClientShow ? false : ResultPanelManager.show_uplv_rewards();
+        if (r) { this.isClientShow = true; return; }
+        // 好评推荐
+        r = this.isClientShow ? false : await ResultPanelManager.show_rating();
+        if (r) { this.isClientShow = true; return; }
+        // 全额保障 3.1.17.1版本已删除
+        // r = this.isClientShow ? false : ResultPanelManager.show_win_all();
+        // if (r) { this.isClientShow = true; return; }
+        // 奖杯多多
+        r = this.isClientShow ? false : await ResultPanelManager.moreCup();
+        if (r) { this.isClientShow = true; return; }
+
+        // 插屏弹窗广告
+        r = this.isClientShow ? false : await ResultPanelManager.show_ad();
+        if (r) { this.isClientShow = true; return; }
+
+        // 插屏广告
+        // r = this.isClientShow ? false : await ResultPanelManager.interstitial();
+        // if (r) { this.isClientShow = true; return; }
+        // 连胜炫耀
+        r = this.isClientShow ? false : CheckUpgradeRank.share();
+        if (r) { this.isClientShow = true; return; }
+
+
+        // 破产保护
+        r = this.isClientShow ? false : ResultPanelManager.pochan();
+        if (r) { this.isClientShow = true; return; }
+        // 红包挑战失败
+        r = this.isClientShow ? false : await ResultPanelManager.show_red_fail();
+        if (r) { this.isClientShow = true; return; }
+        // 救济金
+        r = this.isClientShow ? false : ResultPanelManager.annuity();
+        if (r) { this.isClientShow = true; return; }
+        // 掉段保护
+        r = this.isClientShow ? false : await ResultPanelManager.protectCup();
+        if (r) { this.isClientShow = true; return; }
+
+        // 插屏弹窗广告
+        r = this.isClientShow ? false : await ResultPanelManager.show_ad();
+        if (r) { this.isClientShow = true; return; }
+
+        // 胜利激励
+        r = this.isServerShow || this.isJoinAnnuityEvent || this.isJoinCupEvent ? false : ResultPanelManager.winIncentive();
+        if (r) { this.isServerShow = true; return; }
+        // 失败激励
+        r = this.isServerShow || this.isJoinAnnuityEvent || this.isJoinCupEvent ? false : ResultPanelManager.loseIncentive();
+        if (r) { this.isServerShow = true; return; }
+    }
+
+    // 插屏弹窗广告
+    static async show_ad() {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        // let result = rd.myResult;
+
+        // 211.212.213，无论输赢每5局触发一次，如被其他弹窗耽误，则顺延弹出后重新计数
+        let fives = [211, 212, 213];
+        if (this.gameAdFightNumber >= 5) {
+            let value = fives.find((value) => value == __data.userType);
+            if (value) {// 满足条件，弹出广告
+                miniApi.showPopupAd(this.adRandom());
+                this.clearGameAdFightNumber();
+                return true;
+            }
+        }
+        // 311.312.313，无论输赢每3局触发一次，如被其他弹窗耽误，则顺延，弹出后重新计数
+        let threes = [311, 312, 313];
+        if (this.gameAdFightNumber >= 3) {
+            let value = threes.find((value) => value == __data.userType);
+            if (value) {// 满足条件，弹出广告
+                miniApi.showPopupAd(this.adRandom());
+                this.clearGameAdFightNumber();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 好评推荐
+    static async show_rating() {
+        if (!__data.deskData.roomVo.smallResultData) { return false; }
+        // 触发4连胜
+        if (__data.deskData.roomVo.smallResultData.keepWinNumber == 4) {
+            let a = await __data.recommend.canShow();
+            if (a) {
+                __showScene.show_recommend((r) => {
+                    r && (this.isServerShow = true);
+                })
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 新人红包
+    static async show_rookie_red() {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // // 输赢结果
+        // let result = rd.myResult;
+        // // 输了 不继续处理了
+        // if (!result) { return false; }
+
+        await game.server.send(18001);
+        if (__data.newPlayerRedChallenge.pro >= __data.newPlayerRedChallenge.need && __data.newPlayerRedChallenge.need > 0) {
+            return __showScene.show_newPlayerRedChallenge(2);
+        }
+        return false;
+    }
+
+    // 新人/全民红包失败
+    static async show_red_fail() {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+        // 赢了 不继续处理了
+        if (result) { return false; }
+
+        await game.server.send(18001);
+        await game.server.send(18007);
+        if (__data.newPlayerRedChallenge.testRedTaskFailBombBox) {
+            return __showScene.show_red_task_fail_lookVideo('newPlayer');
+            // return true; 
+        }
+        else if (__data.allPlayerRed.testRedTaskFailBombBox) {
+            return __showScene.show_red_task_fail_lookVideo('allPlayer');
+            // return true; 
+        }
+        return false;
+    }
+
+    // 升段炫耀
+    static show_uplv_rewards(oldCup, newCup) {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+
+        // 输了 不继续处理了
+        if (!result) {
+            return false;
+        }
+
+        // 输赢奖杯
+        let cup = rd.cup;
+
+        // 原始奖杯(未结算前奖杯)
+        let originCup = oldCup ? oldCup : result == 1 ? __data.hashCityLevelCup[HallPlay.lastCityId].cup - cup : __data.hashCityLevelCup[HallPlay.lastCityId].cup + cup;
+        // 当前奖杯
+        let realCup = newCup ? newCup : __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+
+        // 弹出升段炫耀
+        let r = CheckUpgradeRank.checkQs(result, originCup, realCup);
+        return r;
+    }
+
+    // 全额保障  3.1.17.1版本已删除
+    static show_win_all() {
+        return false; // 3.1.17.1 版本已删除
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+        // 输了 不继续处理了
+        if (!result) {
+            return false;
+        }
+
+        // 新手状态
+        let state = rd.playerState;
+
+        // 是否有破产用户
+        let compensateGold = this.compensateGold();
+        let hasPochanPlayer = compensateGold > 0;
+
+        // 不是ios  且 不是vip  且 不是新手状态  且 遇到破产用户
+        if (__data.vip.addUpToLoginDayNum <= 3 && !__data.vip.isVip && state != 0 && compensateGold >= this.compensate_limit_number) {
+            let rs = LocalUtils.getByToday(this.WIN_ALL_PANEL_TODAYISSHOW);
+            // 今日没有弹出过此界面
+            if (!rs) {
+                LocalUtils.saveByToday(this.WIN_ALL_PANEL_TODAYISSHOW, 'true');
+                __showScene.show_allwin(compensateGold);
+                return true;
+            }
+        } else if (__data.vip.addUpToLoginDayNum > 3 && !__data.vip.isVip && state != 0 && compensateGold >= this.compensate_limit_number) {
+            let isHit = this.hitOdds(0.3); // 0.3
+            if (isHit) {
+                __showScene.show_allwin(compensateGold);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 奖杯多多
+    static async moreCup() {
+        let rs = LocalUtils.getByToday(this.RANK_MORE_CUP_TODAYISSHOW);
+
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+
+        // 输了 不继续处理了
+        if (!result) {
+            return false;
+        }
+
+        // 不是vip的情况下  考虑弹窗
+        if (!__data.vip.isVip) {
+
+            // // 今日弹出过此界面
+            // if (rs) { return false; }
+
+            // 赢了  且增加的奖杯 可以升段 弹出提示
+            let cup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let r_d = RankUtils.getRankLvDataByScore(cup);
+
+            // 非VIP有富贵竹：（获得奖杯数/(1+60%)）*50%>=升段所差奖杯，则弹出奖杯多多弹窗
+            if (rd.bamboo) {
+                let upNeed = r_d.toNextLevelNeedCup - (cup - r_d.minCup);
+                if (r_d.toNextLevelNeedCup > 0 && Math.ceil(Math.floor(rd.cup / (1 + 0.6)) * 0.5) >= upNeed) {
+                    if (__data.vip.addUpToLoginDayNum <= 3) {
+                        if (rs) { return false; }
+                        LocalUtils.saveByToday(this.RANK_MORE_CUP_TODAYISSHOW, 'true');
+                        game.scene.add(RankCupMore);
+                        return true;
+                    } else if (__data.vip.addUpToLoginDayNum > 3) {
+                        let isHit = this.hitOdds(0.3); // 0.3
+                        if (isHit) {
+                            game.scene.add(RankCupMore);
+                            return true;
+                        }
+                    }
+                }
+            }
+            // 非VIP无富贵竹：获得奖杯数*50%>=升段所差奖杯，则弹出奖杯多多弹窗
+            else {
+                let upNeed = r_d.toNextLevelNeedCup - (cup - r_d.minCup);
+                if (r_d.toNextLevelNeedCup > 0 && Math.ceil(rd.cup * 0.5) >= upNeed) {
+                    if (__data.vip.addUpToLoginDayNum <= 3) {
+                        if (rs) { return false; }
+                        LocalUtils.saveByToday(this.RANK_MORE_CUP_TODAYISSHOW, 'true');
+                        game.scene.add(RankCupMore);
+                        return true;
+                    } else if (__data.vip.addUpToLoginDayNum > 3) {
+                        let isHit = this.hitOdds(0.3); // 0.3
+                        if (isHit) {
+                            game.scene.add(RankCupMore);
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // 有下一个段位可以升级  且 当前段位升到下一个段位所差的 杯数 <= 10 (3.1.8版本弃用)
+            // if (rd.toNextLevelNeedCup > 0 && rd.toNextLevelNeedCup - (cup - rd.minCup) <= 10) {
+            //     game.scene.add(RankCupMore);
+            //     return true;
+            // }
+        }
+        return false;
+    }
+
+    // 插屏广告
+    static async interstitial() {
+        await game.server.send(16007);
+        let inTest = false;
+        miniApi.getExptInfoSync('expt_1737531883', {
+            '0': () => { },
+            '1': () => { inTest = true; },
+            'fail': () => { }
+        })
+
+        let ratio = __data.lookFinishAd_count_total / __data.game_count_total < 0.03;
+        let isHit = this.hitOdds(0.3); // 0.3
+        if (__data.vip.addUpToLoginDayNum >= 10 && !__data.vip.isVip && !miniApi.isIOS && __data.pay_rmb_total == 0 && ratio && inTest && isHit) {
+            miniApi.showInterstitialAd();
+            return true;
+        }
+        return false;
+    }
+
+    // 升段炫耀（无奖励）
+    static show_uplv() {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+
+        // 输了 不继续处理了
+        if (!result) {
+            return false;
+        }
+
+        // 输赢奖杯
+        let cup = rd.cup;
+
+        // 原始奖杯(未结算前奖杯)
+        let originCup = oldCup ? oldCup : result == 1 ? __data.hashCityLevelCup[HallPlay.lastCityId].cup - cup : __data.hashCityLevelCup[HallPlay.lastCityId].cup + cup;
+        // 当前奖杯
+        let realCup = newCup ? newCup : __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+
+        let r = CheckUpgradeRank.check(result, originCup, realCup);
+        return r;
+    }
+
+
+
+
+
+
+    // 破产保护
+    static pochan() {
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+        // 新手状态
+        let state = rd.playerState;
+
+        // 赢了 不继续处理了
+        if (result) {
+            return false;
+        }
+
+        // 入场金币
+        let demandGold = ResultPanelManager.enterGold;
+
+        // vip 且 有返还次数  直接弹出界面
+        // if (__data.gold < demandGold && ResultPanelManager.pochanGold > 0 && __data.vip.isVip && __data.vip.noGoldProtectCount > 0) {
+        if (__data.gold < demandGold && __data.vip.isVip && __data.vip.noGoldProtectCount > 0) {
+            PochanFramework.gold = ResultPanelManager.pochanGold
+            PochanFramework.active();
+            return true;
+        }
+        // 非vip 非ios  非新手
+        else if (rd.myPochan && !__data.vip.isVip && state != 0 && PochanFramework.gold >= this.pochan_limit_number) {
+            // 今日没有弹出过破产界面
+            let value = LocalUtils.getByToday(this.LOSE_POCHAN);
+            if (__data.vip.addUpToLoginDayNum <= 3 && !value) {
+                LocalUtils.saveByToday(this.LOSE_POCHAN, 'true');
+                PochanFramework.active();
+                return true;
+            } else if (__data.vip.addUpToLoginDayNum > 3) {
+                PochanFramework.active();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static get enterGold() {
+        let arrData = excelUtils.getModelByCityIdRuleId(HallPlay.lastCityId, HallPlay.curRuleId)
+        let e = arrData[__data.deskData.roomVo.indexId - 1];
+        if (e && e.minGold) { return e.minGold; }
+        return 0;
+    }
+    // 补偿的金币
+    static get pochanGold() {
+        let gold = 0;
+        for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+            if (__data.deskData.roomVo.smallResultData.playerArray[i].id == __data.uid) {
+                gold = Math.abs(__data.deskData.roomVo.smallResultData.playerArray[i].score);
+                break;
+            }
+        }
+        return gold;
+    }
+
+    // 救济金
+    static annuity() {
+        if (__data.helpGold_count >= 1 && __bigNumberCal.lt(__data.gold, __data.d_match.showReliefConditionGold)) {
+            ResultPanelManager.isJoinAnnuityEvent = true;
+            __showScene.show_gameMain_relief();
+            return true;
+        }
+        return false;
+    }
+
+    // 掉段保护
+    static async protectCup() {
+
+        let rs = LocalUtils.getByToday(this.RANK_PROTECT_CUP_TODAYISSHOW);
+
+        // 结算数据
+        let rd = __data.deskData.roomVo.smallResultData;
+        if (!rd) { return false; }
+        // 输赢结果
+        let result = rd.myResult;
+
+        // 赢了 不继续处理了
+        if (result) {
+            return false;
+        }
+
+        let odds = this.protectOdds;// 现在的概率
+        if (odds == 0) { return }// 概率为0  今日不再弹出
+
+        // 是否掉段
+        let isDrop = rd.isDrop;
+        // 不是vip的情况下  考虑弹窗
+        if (!__data.vip.isVip) {
+            let cup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let rd = RankUtils.getRankLvDataByScore(cup);
+
+            let rulecup = 500;
+            // 当前输掉的奖杯
+            let lostcup = Math.abs(__data.deskData.roomVo.smallResultData.cup);
+            // 超出段位奖杯
+            let overcup = (cup - rd.minCup);
+            // 
+            let now = Math.floor(overcup / rulecup);
+            let before = Math.floor((overcup + lostcup) / rulecup);
+
+            if (isDrop) {
+                // 今天没有弹出过  必出现
+                if (!rs) {
+                    game.scene.add(RankCupProtect, [rd.toNextLevelNeedCup - (cup - rd.minCup)]);
+                    LocalUtils.saveByToday(this.RANK_PROTECT_CUP_TODAYISSHOW, 'true');
+                    // ResultPanelManager.LAST_PROTECT_STATUS = 'A';
+                    return true;
+                }
+                // 今日已经弹出过
+                else {
+                    // 概率弹出
+                    let isHit = this.hitOdds(odds);
+                    if (isHit) {
+                        game.scene.add(RankCupProtect, [rd.toNextLevelNeedCup - (cup - rd.minCup)]);
+                        return true;
+                    }
+                    // else {
+                    //     // 上一次没有弹出过段位保护
+                    //     if (!ResultPanelManager.LAST_PROTECT_STATUS) {
+                    //         game.scene.add(RankCupProtect, [rd.toNextLevelNeedCup - (cup - rd.minCup)]);
+                    //         ResultPanelManager.LAST_PROTECT_STATUS = 'A';
+                    //         return true;
+                    //     } else {
+                    //         ResultPanelManager.LAST_PROTECT_STATUS = '';
+                    //     }
+                    // }
+                }
+                // if (__data.vip.addUpToLoginDayNum <= 3) {
+                //     // 今日弹出过此界面
+                //     if (rs) { return false; }
+                //     game.scene.add(RankCupProtect, [rd.toNextLevelNeedCup - (cup - rd.minCup)]);
+                //     LocalUtils.saveByToday(this.RANK_PROTECT_CUP_TODAYISSHOW, 'true');
+                //     return true;
+                // } else if (__data.vip.addUpToLoginDayNum > 3) {
+                //     let isHit = this.hitOdds(0.3); // 0.3
+                //     if (isHit) {
+                //         game.scene.add(RankCupProtect, [rd.toNextLevelNeedCup - (cup - rd.minCup)]);
+                //         return true;
+                //     }
+                // }
+            }
+            // 目前段位是雀神 且符合 rulecup 分割规则
+            else if (rd.toNextLevelNeedCup == 0 && now != before) {
+                // 今天没有弹出过  必出现
+                if (!rs) {
+                    game.scene.add(RankCupProtect, [rulecup - overcup % rulecup]);
+                    LocalUtils.saveByToday(this.RANK_PROTECT_CUP_TODAYISSHOW, 'true');
+                    // ResultPanelManager.LAST_PROTECT_STATUS = 'A';
+                    return true;
+                }
+                // 今日已经弹出过
+                else {
+                    // 50% 概率弹出
+                    let isHit = this.hitOdds(odds); // 0.5
+                    if (isHit) {
+                        game.scene.add(RankCupProtect, [rulecup - overcup % rulecup]);
+                        // ResultPanelManager.LAST_PROTECT_STATUS = 'A';
+                        return true;
+                    }
+                    // else {
+                    //     // 上一次没有弹出过段位保护
+                    //     if (!ResultPanelManager.LAST_PROTECT_STATUS) {
+                    //         game.scene.add(RankCupProtect, [rulecup - overcup % rulecup]);
+                    //         ResultPanelManager.LAST_PROTECT_STATUS = 'A';
+                    //         return true;
+                    //     } else {
+                    //         ResultPanelManager.LAST_PROTECT_STATUS = '';
+                    //     }
+                    // }
+                }
+                // if (__data.vip.addUpToLoginDayNum <= 3) {
+                //     // 今日弹出过此界面
+                //     if (rs) { return false; }
+                //     game.scene.add(RankCupProtect, [rulecup - overcup % rulecup]);
+                //     LocalUtils.saveByToday(this.RANK_PROTECT_CUP_TODAYISSHOW, 'true');
+                //     return true;
+                // } else if (__data.vip.addUpToLoginDayNum > 3) {
+                //     let isHit = this.hitOdds(0.3); // 0.3
+                //     if (isHit) {
+                //         game.scene.add(RankCupProtect, [rulecup - overcup % rulecup]);
+                //         return true;
+                //     }
+                // }
+            }
+            return false;
+        }
+        return false;
+    }
+    static resumeProtectOdds() { trace('重置段位保护弹窗概率：', 0.5); LocalUtils.saveByToday(this.RANK_PROTECT_ODDS, 0.5); }
+    static set protectOdds(value) { trace('设置段位保护弹窗概率：', value); LocalUtils.saveByToday(this.RANK_PROTECT_ODDS, value); }
+    static get protectOdds() {
+        let odds = LocalUtils.getByToday(this.RANK_PROTECT_ODDS) || 0.5;
+        trace('获取段位保护弹窗概率：', odds);
+        return Number(odds);
+    }
+
+    // 胜利激励
+    static winIncentive() {
+        // 激励事件 激活
+        LookVideoProxy.active = true;
+        return LookVideoProxy.canBeShow;
+    }
+
+    // 失败激励
+    static loseIncentive() {
+        // 激励事件 激活
+        LookVideoProxy.active = true;
+        return LookVideoProxy.canBeShow;
+    }
+
+    // 补偿的金币
+    static compensateGold() {
+        let gold = 0;
+        for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+            // 真实输掉的 超出了自己拥有的 ( 是负值所以用小于号 )
+            let realScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].realScore);
+            let initScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].initScore);
+            let score = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].score);
+            // 胜利者
+            if (__data.deskData.roomVo.smallResultData.playerArray[i].winPosition.indexOf(__data.deskData.roomVo.smallResultData.playerArray[i].position) != -1) {
+                gold = Math.abs(Math.abs(initScore) - Math.abs(score));
+                break;
+            }
+        }
+
+        // for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+        //     // 真实输掉的 超出了自己拥有的 ( 是负值所以用小于号 )
+        //     let realScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].realScore);
+        //     let initScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].initScore);
+        //     let score = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].score);
+        //     let pochan = __data.deskData.roomVo.smallResultData.playerArray[i].propertyState == -1; // 破产状态
+
+        //     // 赢的金币比 真实的多  （系统补差了）
+        //     if (pochan && Math.abs(initScore) > Math.abs(score)) {
+        //         return gold;
+        //     }
+        // }
+
+        return gold;
+    }
+
+    /**
+     * 
+     * @param {int} odds 1为100%命中
+     */
+    static hitOdds(odds) {
+        odds = odds * 100;
+        let r = Math.random() * 100;
+        if (r < odds)
+            return true;
+        else
+            return false;
+    }
+
+    // 掉段保护上次弹出状态
+    static set LAST_PROTECT_STATUS(value) { this._last_protect_status = value; }
+    static get LAST_PROTECT_STATUS() { return this._last_protect_status; }
+
+    // 全额保障今日弹出
+    static get WIN_ALL_PANEL_TODAYISSHOW() { return 'WIN_ALL_PANEL_TODAYISSHOW'; }
+
+    // 破产界面
+    static get LOSE_POCHAN() { return 'LOSE_POCHAN'; }
+
+    // 奖杯多多今日弹出
+    static get RANK_MORE_CUP_TODAYISSHOW() { return 'RANK_MORE_CUP_TODAYISSHOW'; }
+
+    // 奖杯保护今日弹出
+    static get RANK_PROTECT_CUP_TODAYISSHOW() { return 'RANK_PROTECT_CUP_TODAYISSHOW'; }
+    // 段位保护概率
+    static get RANK_PROTECT_ODDS() { return 'RANK_PROTECT_ODDS'; }
+
+    // 连胜炫耀
+    static get KEEP_WIN_THREE_TIMES() { return 'KEEP_WIN_THREE_TIMES'; }
+}
+
+
+
+class ResultGoldVideoHandle {
+
+    static set time(value) { this._time = value; }
+
+    static get time() { return this._time; }
+
+    static set gold(value) { this._value = value; }
+
+    static get gold() { return this._value; }
+
+    static set type(value) { this._type = value; }
+
+    /**
+     * @return {string} TYPE_WIN|TYPE_LOSE
+     */
+    static get type() { return this._type; }
+
+    // 看激励视频相关方法
+    static get doubleGold() { return this.gold * 2; }
+}
+
+
+
+
+
+
+class MahjongSmallResultTop extends game.ModuleBase {
+    constructor() {
+        super();
+        // {
+        //     map: 'scene_game/result/MahjongSmallResultTop',
+        //     module: false
+        // }
+        this.createView(game.uiMap['scene_game/result/MahjongSmallResultTop']);
+
+        this.numberSkins = [];
+        for (var i = 0; i < 10; i++) this.numberSkins.push("cdn/mahjong_result/mahjong_result/" + i + ".png");
+    }
+
+    /**
+     * 
+     * @param {number} initCup 
+     * @param {number} cup 
+     * @param {number} result 0 输 1 赢
+     * @param {number} msk 0 没有使用  1 使用了
+     * @param {Boolean} protect true 触发保护了  false 没有触发保护
+     */
+    added(initCup, cup, result, msk, protect) {
+        this.result = result;
+        this.msk = msk;
+        this.protect = protect;
+        this.realScore = initCup;
+        this.cup = cup;
+
+        this.initCup = this.result == 1 ? initCup - this.cup : initCup + this.cup;
+        this.originCup = this.initCup;
+
+        this.resultUI.anchorX = 0;
+        this.init();
+    }
+
+    init() {
+        this.rankData = RankUtils.getRankLvDataByScore(this.initCup);
+
+        this.syncData();
+        this.resultAni();
+    }
+
+    resultAni() {
+        game.utils.remove(this.keepText);
+        // this.resultUI.pivot(0, 0);
+        //连胜
+        if (this.result && __data.deskData.roomVo.smallResultData.keepWinNumber >= gameConfig.keepWinRule) {
+            this.keepText = this.keepText || new game.NumText(this.numberSkins, '', -45);
+            SkinUtils.setSkin(this.resultUI, 'cdn/mahjong_result/mahjong_result/img_ls.png');
+            this.keepText.text = __data.deskData.roomVo.smallResultData.keepWinNumber;
+            this.resultUI.addChild(this.keepText);
+            this.keepText.pos(this.resultUI.width / 2 - this.keepText.width - 75, this.resultUI.height - this.keepText.height >> 1);
+            Laya.timer.callLater(this, () => {
+                this.resultUI.pivot(this.keepText.x < 0 ? this.resultUI.width / 2 - Math.abs(this.keepText.x) / 2 : this.resultUI.width / 2, this.resultUI.height / 2);
+            });
+        }
+        // 连胜中断
+        else if (!this.result && __data.deskData.roomVo.smallResultData.interrupt) {
+            SkinUtils.setSkin(this.resultUI, 'cdn/mahjong_result/mahjong_result/img_lszd.png');
+            Laya.timer.callLater(this, () => {
+                this.resultUI.pivot(this.resultUI.width / 2, this.resultUI.height / 2)
+            });
+        } else if (this.result) {
+            SkinUtils.setSkin(this.resultUI, 'cdn/mahjong_result/mahjong_result/img_win.png');
+            Laya.timer.callLater(this, () => {
+                this.resultUI.pivot(this.resultUI.width / 2, this.resultUI.height / 2)
+            });
+        } else {
+            SkinUtils.setSkin(this.resultUI, 'cdn/mahjong_result/mahjong_result/img_lose.png');
+            Laya.timer.callLater(this, () => {
+                this.resultUI.pivot(this.resultUI.width / 2, this.resultUI.height / 2)
+            });
+        }
+        // this.resultUI.x = this.width / 2;
+        // this.resultUI.pos(this.width / 2, this.height / 2);
+        // this._showUI();
+    }
+
+    _showUI() {
+        // this.endAni();
+    }
+
+    syncData() {
+        this.initCup = this.realScore;
+        this.rankData = RankUtils.getRankLvDataByScore(this.initCup);
+    }
+
+    startAni() {
+        console.log('%c 动画开始了：', 'color:#ffcc00');
+    }
+
+    endAni() {
+        // Laya.timer.once(500, this, this._delayToCheck);
+        // Laya.timer.once(450, this, this._animationComplete);
+    }
+
+    _delayToCheck() {
+        // let r = CheckUpgradeRank.check(this.result, this.originCup, this.realScore);
+        // if (!r) CheckUpgradeRank.share();
+    }
+
+    _animationComplete() {
+        // game.scene.get(MahjongSmallResult).showButton();
+    }
+}
+
+
+class MahjongSmallResultWinner extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/MahjongSmallResultWinner']);
+        // this.addComponent(Click_Stage_Remove_UI);
+    }
+
+    onAwake() { }
+
+    get dataSource() { return this.value }
+    set dataSource(value) {
+        if (!value) { return }
+        this.__data = value;
+        //用来计算位置
+        this.__width = 0;
+        //牌距
+        this.__offx = 10;
+        // 缩放
+        this.__scale = 1;
+        //牌的显示容器
+        this.container = this.container || new Laya.Sprite();
+        while (this.container.numChildren) this.container.removeChildAt(0)
+        this.addChild(this.container);
+        //显示牌列表
+        this.updateCardList();
+        this.container.width = this.__width;
+        // this.container.x = this.width - this.container.width * this.__scale >> 1;
+        this.container.scale(this.__scale, this.__scale);
+        this.width = this.bg.width = this.container.x * 2 + this.container.width;
+        // this.fjmj_box.x = this.txt_info.x + this.txt_info.width + 30;
+    }
+
+    set side(value) {
+        if (value == 'left')
+            this.sign.x = 150;
+        else
+            this.sign.x = this.width - 150;
+    }
+
+    get offx() {
+        return this.sign.x;
+    }
+
+    //显示牌
+    updateCardList() {
+        this.showDoor();
+        this.showHand();
+        this.showHu();
+    }
+
+    // 门前忽略信息
+    isMqIgnore(value) {
+        let list = value.split(',');
+        let type = list.shift();
+        if (type == 83)
+            return true;
+        else
+            return false;
+    }
+
+    //显示门前牌
+    showDoor() {
+        let __doordata = this.__data.tileGroupArray
+        for (let i = 0; i < __doordata.length; i++) {
+            if (this.isMqIgnore(__doordata[i])) { continue; }
+            let __v = Laya.Pool.getItemByClass(__cName.udoor, MahjongResultDoor)
+            __v.open = true
+            __v.group = __doordata[i]
+            __v.x = this.__width
+            this.__width += (__v.width + 5)
+            this.container.addChild(__v)
+            // 芜湖
+            ComponentUtils.clearScript(__v, WuhuCompassInfo);
+            if (__v.position != 5 && __v.type != 81 && __v.type != 82 && __v.type != 83) {// position 不能是5 代表暗杠什么的  指向的是自己
+                let targetId = __data.deskData.roomVo.isRecordPlaying ? __data.deskData.recordViewerID : __data.uid;
+                let targetVo = __data.deskData.roomVo.getResultPlayer(targetId);
+                targetVo && __v.addComponent(WuhuCompassInfo).bind(targetVo.position, __v.position, WuhuCompassInfo.DOOR);
+            }
+        }
+    }
+
+    showHand() {
+        let __handdata = __compUtils.sort(this.__data.handTileArray, __data.deskData.roomVo.mixedArr)
+        //富锦特殊处理  胡的人把混单独提出来
+        if (this.__data.winner) {
+            let __handle = this.pickHun(__handdata, __data.deskData.roomVo.mixedArr);
+            this.showHun(__handle.retArr)
+            let __oriArr = __handle.oriArr;
+            for (let i = 0; i < __oriArr.length; i++) {
+                let __v = Laya.Pool.getItemByClass(__cName.rhand, MahjongResultHand)
+                __v.x = this.__width
+                this.__width += __v.width
+                this.container.addChild(__v).skin = __oriArr[i]
+            }
+        } else {
+            for (let i = 0; i < __handdata.length; i++) {
+                let __v = Laya.Pool.getItemByClass(__cName.rhand, MahjongResultHand)
+                __v.x = this.__width
+                this.__width += __v.width
+                this.container.addChild(__v).skin = __handdata[i]
+            }
+        }
+    }
+
+    showHun(hArr) {
+        this.__width += __data.deskData.roomVo.cInterval;
+
+        for (let i = 0; i < hArr.length; i++) {
+            let __v = Laya.Pool.getItemByClass(__cName.rhand, MahjongResultHand)
+            __v.x = this.__width
+            this.__width += __v.width
+            this.container.addChild(__v).skin = hArr[i]
+        }
+    }
+
+    showHu() {
+        //开牌炸 不在继续进行 可能没有胡的牌？
+        if (this.__data.scoreInfo.indexOf("开牌炸") > -1) return;
+        //没有胡牌  流局？
+        if (this.__data.huPai == 255) return;
+
+        if (this.__data.winPosition.indexOf(this.__data.position) > -1) {
+            //赢家
+            let __v = Laya.Pool.getItemByClass(__cName.rhand, MahjongResultHand)
+            __v.x = this.__width + this.__offx
+            this.__width += __v.width
+            this.container.addChild(__v).skin = this.__data.huPai
+        }
+    }
+
+
+    pickHun(originalArr, ruleArr) {
+        trace('混数组：', ruleArr)
+        let __returnArr = [];
+        let __orginalArr = [].concat(originalArr);
+        if (ruleArr && ruleArr.length > 0) {
+            for (let s = 0; s < __orginalArr.length; s++) {
+                for (let i = 0; i < ruleArr.length; i++) {
+                    if (ruleArr[i].toString() == __orginalArr[s].toString()) {
+                        __returnArr.push(__orginalArr[s]);
+                        __orginalArr.splice(s, 1);
+                        s--;
+                        break;
+                    }
+                }
+            }
+        }
+
+        trace('提取出来得混数组：', __returnArr, this.__data)
+
+        trace('原数组：', originalArr, this.__data)
+        return { oriArr: __orginalArr, retArr: __returnArr }
+    }
+}
+
+
+
+
+class MahjongSmallResultItem extends game.ModuleBase {
+    constructor(name, side) {
+        super()
+        this.createView(game.uiMap[`scene_game/result/${name}`]);
+        this.bgSkin = this.bg.texture || this.bg.skin;
+        this.side = side;
+        this.greenArr = [];
+        for (var i = 0; i < 10; i++) this.greenArr.push("local/game_common/1/img_green_" + i + ".png")
+        this.greenArr['+'] = 'local/game_common/1/img_green_increase.png'
+        this.redArr = [];
+        for (var i = 0; i < 10; i++) this.redArr.push("local/game_common/1/img_red_" + i + ".png")
+        this.redArr['-'] = 'local/game_common/1/img_red_reduce.png'
+    }
+
+    onAwake() {
+        this.btn_look.on(Laya.Event.CLICK, this, this._lookPlayer);
+    }
+
+    updateDataHandler() {
+        if (__data.othersVO[this.__data.id]) {
+            // 本家
+            let targetId = __data.deskData.roomVo.isRecordPlaying ? __data.deskData.recordViewerID : __data.uid;
+            let targetVo = __data.deskData.roomVo.getResultPlayer(targetId);
+            SkinUtils.setSkin(this.sign, WuhuCompassInfo.getRes(targetVo ? targetVo.position : 0, this.__data.position));
+
+            LabelHiddenUtils.getAdapterContent(this.txt_name, __data.othersVO[this.__data.id].name);
+            let area = __data.othersVO[this.__data.id].area;
+            let areaRank = __data.othersVO[this.__data.id].areaRank;
+            this.txt_ar.text = `[${excelUtils.getCityName_mj(area)}，${RankUtils.getAreaRankInfo(areaRank)}]`;
+        }
+    }
+
+    get dataSource() { return this.value }
+    set dataSource(value) {
+        if (!value) { return }
+        __data.deskData.roomVo.playArea = (__data.deskData.roomVo.roomPlay.indexOf('99') != -1) ? 99 : 98
+
+        this.__data = value;
+
+        //用户信息
+        this.updateDataHandler();
+
+        if (__data.deskData.roomVo.playArea == 99) {
+            // //得分
+            // this.txtScore = this.txtScore || new game.NumText(this.greenArr)
+            // if (this.__data.score >= 0) {
+            //     this.txtScore.urls__ = this.greenArr;
+            //     this.txtScore.text = '+' + this.__data.score
+            // } else {
+            //     this.txtScore.urls__ = this.redArr;
+            //     this.txtScore.text = this.__data.score
+            // }
+            // this.txtScore.x = this.img_hu.x + this.img_hu.width + 60;
+            // this.txtScore.y = this.height - this.txtScore.height - 10;
+
+            // this.addChild(this.txtScore)
+
+            let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+            if (this.__data.score == 0) {
+                this.txt_score.text = '-0';
+            } else if (this.__data.score > 0) {
+                this.txt_score.text = '+' + formatScore;
+            } else if (this.__data.score < 0) {
+                this.txt_score.text = formatScore;
+            }
+        } else {
+            if (__data.deskData.roomVo.roomPlay.split(",").indexOf("13") > -1) { this.__data.winnerMixedNumber = 0; }
+
+            let __hunScore = 0;
+            let __fanScore = 0;
+            let __baseScore = 0;
+
+            __baseScore = (__data.deskData.roomVo.roomPlay.split(",").indexOf("9") > -1) ? -1 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("10") > -1) ? -2 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("11") > -1) ? -3 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("14") > -1) ? -5 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("15") > -1) ? -10 : 0
+
+            if (this.__data.huPosition.length > 0) {
+                if (this.__data.winPosition.indexOf(this.__data.position) > -1) {
+                    __hunScore = this.__data.winnerMixedNumber * (__data.deskData.roomVo.roomPlayer - 1) * Math.abs(__baseScore)
+                    __fanScore = this.__data.score - __hunScore
+                } else {
+                    __hunScore = this.__data.winnerMixedNumber * __baseScore
+                    __fanScore = this.__data.score - __hunScore
+                }
+            }
+
+            // this.txtScore = this.txtScore || new game.NumText(this.greenArr)
+            // if (this.__data.score >= 0) {
+            //     this.txtScore.urls__ = this.greenArr;
+            //     this.txtScore.text = '+' + this.__data.score.toString()
+            // } else {
+            //     this.txtScore.urls__ = this.redArr;
+            //     this.txtScore.text = this.__data.score.toString()
+            // }
+            // this.txtScore.x = this.img_hu.x + this.img_hu.width + 55;
+            // this.txtScore.y = 40
+
+            // this.addChild(this.txtScore)
+
+            let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+            if (this.__data.score == 0) {
+                this.txt_score.text = '-0';
+            } else if (this.__data.score > 0) {
+                this.txt_score.text = '+' + formatScore;
+            } else if (this.__data.score < 0) {
+                this.txt_score.text = formatScore;
+            }
+        }
+        this.txt_score.color = this._scoreColor(this.__data.score);
+
+
+        let __hunInfo = '';
+        __data.deskData.roomVo.playArea = (__data.deskData.roomVo.roomPlay.indexOf('99') != -1) ? 99 : 98
+        if (__data.gameId.curId == 13 && HallPlay.curRuleId > 0) {
+            if (__data.deskData.roomVo.playArea == 98) {
+                __hunInfo = (this.__data.winnerMixedNumber > 0) ? '混×' + this.__data.winnerMixedNumber : '';
+            }
+        }
+
+
+        var infoStr = '';
+        //胡的说明  具体为后端 提供
+        if (this.__data.scoreInfo) {
+            if (this.__data.winPosition.indexOf(this.__data.position) != -1) {
+                infoStr = this.__data.scoreInfo.endsWith(' ') ? this.__data.scoreInfo + __hunInfo : this.__data.scoreInfo + ' ' + __hunInfo;
+            } else {
+                infoStr = this.__data.scoreInfo;
+            }
+        } else {
+            infoStr = '';
+        }
+        this.txt_info.text = this.autoInfoText(infoStr);
+
+        // this.container.width = this.txt_score.x + this.txt_score.width;
+        // this.container.x = this.width - this.container.width >> 1;
+
+        let url = this.bgSkin;
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        if (this.__data.id == __data.uid) {
+            url = url.replace('player1', 'playerme');
+        } else if (!result) {
+            url = url.replace('player1', 'player2');
+        }
+        SkinUtils.setSkin(this.bg, url);
+
+        //获取当前用户vo
+        let __vo = __data.deskData.roomVo.getPlayer(this.__data.id);
+        //当前用户和庄的位置一致 与不一致 的显示与移除
+        if (__vo && __vo.position == __data.deskData.roomVo.bankerPosition) this.addChild(this.branker)
+        else game.utils.remove(this.branker)
+
+        //胡的位置 显示胡的标志
+        if (this.__data.winPosition.indexOf(this.__data.position) != -1) {
+            this.__data.winner = true;
+            this.addChild(this.img_hu)
+        } else {
+            this.__data.winner = false;
+            game.utils.remove(this.img_hu);
+        }
+
+        if (this.__data.winner) {
+            SkinUtils.setSkin(this.btn_look, 'cdn/mahjong_result/mahjong_result/bt_ck2.png');
+        } else {
+            SkinUtils.setSkin(this.btn_look, 'cdn/mahjong_result/mahjong_result/bt_ck.png');
+        }
+
+        // 头像地址
+        if (__vo) {
+            SkinUtils.setSkin(this.head.getChildByName('frame'), __vo.frameUrl);
+            if (__vo.url) {
+                SkinUtils.setSkin(this.head.getChildByName('head'), __vo.url);
+            } else {
+                SkinUtils.setSkin(this.head.getChildByName('head'), '');
+            }
+        }
+
+        let rate = this.__data.originScore / __data.deskData.roomVo.bottomScore;
+        this.rates.rate = rate || 0;
+        this.rates.winner = this.__data.winner;
+
+        this.showPropertys();
+
+        this.relocationUI();
+    }
+
+
+    autoInfoText(str) {
+        var list = str.split(' ');
+        let returnStr = '';
+        let temp_list = [];
+        for (let i = 0; i < list.length; i++) {
+            list[i] && temp_list.push(list[i]);
+            if (temp_list.join(' ').length > 13) {
+                temp_list.pop();
+                returnStr += temp_list.join(' ') + '\n';
+                temp_list = [];
+                i--;
+            }
+        }
+        returnStr += temp_list.join(' ');
+        return returnStr;
+    }
+
+
+    relocationUI() {
+        if (this.side == 'left') {
+            this.c_img.x = this.txt_score.x + this.txt_score.textField.textWidth + 30;
+            this.c_img.y = this.txt_score.y + (this.txt_score.height - this.c_img.height) / 2;
+        } else if (this.side == 'right') {
+            this.container.x = this.txt_score.x + this.txt_score.width - this.txt_score.textField.textWidth - this.gold.width - 30;
+            this.c_img.x = this.container.x - 30;
+            this.c_img.y = this.txt_score.y + (this.txt_score.height - this.c_img.height) / 2;
+        }
+    }
+
+    showPropertys() {
+        let imgs = [];
+        //  -1  破产   
+        if (this.__data.propertyState == -1) {
+            let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            // SkinUtils.setSkin(img, 'local/game_common/1/ic_pc.png');
+            SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_pc.png' : 'local/game_common/1/img_pc2.png');
+            img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['POCHAN']);
+            imgs.push(img);
+        }
+        //  1 上限  赢家
+        if (this.__data.propertyState == 1) {
+            // let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            // // SkinUtils.setSkin(img, 'local/game_common/1/ic_sx.png');
+            // SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_sx.png' : 'local/game_common/1/img_sx2.png');
+            // img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['SHANGXIAN']);
+            // imgs.push(img);
+        }
+        //  2 封顶  输家
+        if (this.__data.propertyState == -2) {
+            // let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            // // SkinUtils.setSkin(img, 'local/game_common/1/img_fd.png');
+            // SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_sx.png' : 'local/game_common/1/img_sx2.png');
+            // img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['FENGDING']);
+            // imgs.push(img);
+        }
+
+        // 输的人 才显示上限
+        if (!this.__data.winner) {
+            // 如果输的金币超出256倍
+            if (this.rates.rate >= GoldMatchMaxRate) {
+                let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+                SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_sx.png' : 'local/game_common/1/img_sx2.png');
+                img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['SHANGXIAN']);
+                imgs.push(img);
+            }
+        }
+
+
+        // 输了 且  是封顶开始游戏
+        // if (parseInt(this.__data.isMaxMatch) && this.__data.winPosition.indexOf(this.__data.position) == -1) {
+        // 封顶开始匹配  且  是输家  且 输的实际分数 超出结算分数
+        if (this.__data.score < 0) {
+            if (parseInt(this.__data.originScore) > parseInt(this.__data.initScore) && (this.winnerVip() || Math.abs(this.__data.realScore) > Math.abs(this.__data.initScore))) {
+                let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+                SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_fdbz.png' : 'local/game_common/1/img_fdbz2.png');
+                img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['FD']);
+                imgs.push(img);
+            }
+        }
+
+        // 门票补贴
+        if (this.__data.propertyState == 2) {
+            let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_mpbt.png' : 'local/game_common/1/img_mpbt2.png');
+            img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['BT']);
+            imgs.push(img);
+        }
+        // 胡的位置  且是 vip 用户 
+        else if (this.__data.winPosition.indexOf(this.__data.position) != -1 && this.__data.isVip) {
+            // 触发了 全额保障
+            if (ResultPanelManager.compensateGold()) {
+                let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+                SkinUtils.setSkin(img, this.side == 'left' ? 'local/game_common/1/img_qebz.png' : 'local/game_common/1/img_qebz2.png');
+                img.on(Laya.Event.CLICK, this, this._lookBzexplain, ['QE']);
+                imgs.push(img);
+            }
+        }
+
+        while (this.c_img.numChildren) {
+            let node = this.c_img.removeChildAt(0);
+            node.off(Laya.Event.CLICK, this, this._lookBzexplain);
+            Laya.Pool.recover('RESULT_PROPERTYS', node);
+        }
+
+        this.c_img.height = 0;
+        for (let i = 0; i < imgs.length; i++) {
+            this.c_img.addChild(imgs[i]);
+            imgs[i].x = this.side == 'left' ? 0 : -imgs[i].width; // this.c_img.width == 0 ? this.c_img.width : this.c_img.width + 10;
+            imgs[i].y = this.c_img.height == 0 ? 0 : this.c_img.height + 5; // this.c_img.height - imgs[i].height >> 1;
+            this.c_img.height = imgs[i].y + imgs[i].height;
+        }
+    }
+
+
+    // 胜利的用户全额保障
+    winnerVip() {
+        for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+            let player = __data.deskData.roomVo.smallResultData.playerArray[i];
+            if (player.winPosition.indexOf(player.position) != -1) {
+                if (player.isVip) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    // 触发系统补偿用户
+    triggerCompensateGroups() {
+        let list = [];
+        for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+            let pochan = __data.deskData.roomVo.smallResultData.playerArray[i].propertyState == -1; // 破产状态
+            // let realScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].realScore);
+            let initScore = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].initScore);
+            let score = parseInt(__data.deskData.roomVo.smallResultData.playerArray[i].score);
+            // 真实输掉的 超出了自己拥有的
+            if (pochan && Math.abs(initScore) > Math.abs(score))
+                list.push(__data.deskData.roomVo.smallResultData.playerArray[i]);
+        }
+        return list;
+    }
+
+    showSign(position) {
+        if (this.__data.position == position) {
+            game.cb.event('result_player_card', [this.__data]);
+        }
+    }
+
+    _lookPlayer(e) {
+        e && e.stopPropagation();
+        game.cb.event('result_item_look_player', [this.__data, this.side, this.localToGlobal(new Laya.Point(this.btn_look.x, this.btn_look.y + this.btn_look.height / 2))]);
+    }
+
+    _lookBzexplain(type, e) {
+
+        // 破产
+        if (type == 'POCHAN') {
+            let point = this.localToGlobal(new Laya.Point(this.c_img.x + e.currentTarget.x + e.currentTarget.width / 2, this.c_img.y + e.currentTarget.y + e.currentTarget.height));
+            BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+            BagInfoUtils.show('金币都输光了~', point, game.scene.layer['panel'].c);
+        }
+
+        // 上限
+        if (type == 'SHANGXIAN' || type == 'FENGDING') {
+            let point = this.localToGlobal(new Laya.Point(this.c_img.x + e.currentTarget.x + e.currentTarget.width / 2, this.c_img.y + e.currentTarget.y + e.currentTarget.height));
+            BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+            BagInfoUtils.show(`本场失败损失上限${GoldMatchMaxRate}倍`, point, game.scene.layer['panel'].c);
+        }
+
+
+
+        // 封顶开始游戏 且 输了的玩家  
+        // if (parseInt(this.__data.isMaxMatch) && this.__data.winPosition.indexOf(this.__data.position) == -1) {
+        if (type == 'FD') {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '封顶开始说明' });
+            let point = this.localToGlobal(new Laya.Point(this.c_img.x + e.currentTarget.x + e.currentTarget.width / 2, this.c_img.y + e.currentTarget.y + e.currentTarget.height));
+            BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+            BagInfoUtils.show('此玩家已激活封顶保障，损失金币以赢家拥有金币为封顶上限', point, game.scene.layer['panel'].c);
+        }
+
+        // 门票补贴
+        if (type == 'BT') {
+            // miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '封顶开始说明' });
+            let point = this.localToGlobal(new Laya.Point(this.c_img.x + e.currentTarget.x + e.currentTarget.width / 2, this.c_img.y + e.currentTarget.y + e.currentTarget.height));
+            BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+            BagInfoUtils.show('赢家获得金币少于门票时，差额由系统补贴', point, game.scene.layer['panel'].c);
+        }
+
+        // 胡的位置  且是 vip 用户 
+        // if (this.__data.winPosition.indexOf(this.__data.position) != -1 && this.__data.isVip) {
+        if (type == 'QE') {
+            // 触发了 全额保障
+            // if (ResultPanelManager.compensateGold()) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '全额保障说明' });
+            game.scene.add(MahjongResultCompensateExplain, [this.triggerCompensateGroups()])
+            // }
+        }
+    }
+
+    /**
+     * 输赢分数的颜色
+     * @param {int} score 
+     * @returns 
+     */
+    _scoreColor(score) {
+        if (score > 0)
+            return '#6caa01';
+        else
+            return '#ea7779';
+    }
+}
+
+
+class ResultLeftUp extends MahjongSmallResultItem {
+    constructor() {
+        super('ResultLeftUp', 'left');
+    }
+}
+class ResultLeftDown extends MahjongSmallResultItem {
+    constructor() {
+        super('ResultLeftDown', 'left');
+    }
+}
+class ResultRightUp extends MahjongSmallResultItem {
+    constructor() {
+        super('ResultRightUp', 'right');
+    }
+}
+class ResultRightDown extends MahjongSmallResultItem {
+    constructor() {
+        super('ResultRightDown', 'right');
+    }
+}
+
+class MahjongSmallResultHideTestScript extends Laya.Script {
+    onRightClick() {
+        this.owner.parent.visible = false;
+    }
+
+    onStageClick() {
+        if (!this.owner.parent.visible) {
+            this.owner.parent.visible = true;
+        }
+    }
+}
+
+class MahjongSmallResult extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongSmallResult',
+            "layer": 'middle',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.addComponent(MahjongSmallResultHideTestScript);
+
+        MahjongSmallResult.rankUIPoint = this.rankUI.rankUI.parent.localToGlobal(new Laya.Point(this.rankUI.rankUI.x + this.rankUI.rankUI.width * this.rankUI.rankUI.scaleX / 2, this.rankUI.rankUI.y + this.rankUI.rankUI.height * this.rankUI.rankUI.scaleY / 2));
+        MahjongSmallResult.rankUIPoint = this.globalToLocal(MahjongSmallResult.rankUIPoint);
+
+        this.leftup_originx = this.leftup.x;
+        this.leftdown_originx = this.leftdown.x;
+        this.rightup_originx = this.rightup.x;
+        this.rightdown_originx = this.rightdown.x;
+
+        this.score_yellowArr = [];
+        for (var i = 0; i < 10; i++) this.score_yellowArr.push("cdn/mahjong_result/mahjong_result/a" + i + ".png")
+        this.txt_bottom_score = new game.NumText();
+        this.txt_bottom_score.skins = this.score_yellowArr;
+        this.txt_bottom_score.text = '0';
+        this.bg.addChild(this.txt_bottom_score).pos(this.sb.x + this.sb.width + 10, this.sb.y + (this.sb.height - this.txt_bottom_score.height) / 2);
+
+        this.txt_fish_score = new game.NumText();
+        this.txt_fish_score.skins = this.score_yellowArr;
+        this.txt_fish_score.text = '0';
+
+        this.list_m.renderHandler = new Laya.Handler(this, (item) => { item.isHorse = true; })
+
+        // this.riss = this.rankUI.addComponent(ImageScaleScript);
+        // this.tiss = this.topUI.addComponent(ImageScaleScript);
+        this.topcIss = this.topc.addComponent(ImageScaleScript);
+    }
+
+    onAwake() {
+        this.btn_goon.addComponent(GameGoonScript);
+        this.btn_videoMatch.addComponent(GameGoonScript).video(true);
+        this.btn_quit.addComponent(GameQuitScript);
+    }
+
+    getDistance() {
+        return (this.bottom.width - game.width / game.scale) / 2;
+    }
+
+    adapterPlayer() {
+        let safe_area = miniApi.statusBarRatio() * game.width;
+        this.mouseThrough = true;
+
+        this.btn_quit.x = -this.x + 30 + this.btn_quit.width / 2 + safe_area;
+
+        this.bless.x = -this.x + 30 + safe_area;
+        this.gift.x = this.bless.x + this.bless.width + 10;//-this.x + 30 + safe_area;
+        this.bg.x = this.btn_quit.x + this.btn_quit.width / 2 + 50;
+
+        this.c_bao.x = this.maxRight;
+        this.nb_box.x = this.baoFont.x + this.baoFont.width + 10;
+        this.c_bao.width = this.nb_box.x + this.list_bao.width;
+
+        this.c_mp.x = this.c_bao.x + this.c_bao.width + 20;
+        this.c_mp.width = this.c_mp.getChildByName('list').x + this.c_mp.getChildByName('list').width;
+
+        if (HallPlay.curRuleId == FriendRoomPlays.AREA.SHUANGYASHAN) {
+            this.c_bao.visible = true;
+            this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+        }
+        else if (HallPlay.curRuleId == -2 || HallPlay.curRuleId == -3 || !this.areaInfo.haveNb.show) {
+            this.c_bao.visible = false;
+            this.bg.width = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.JIXI) {
+            if (this.__data.mondayPieceCode != 255) {
+                this.bg.width = this.c_mp.x + this.c_mp.getChildByName('list').x + this.c_mp.getChildByName('list').width + 30;
+            } else {
+                this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+            }
+        } else {
+            this.c_bao.visible = true;
+            this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+        }
+
+        this.challengeUI.x = this.width + this.x - safe_area - this.challengeUI.width - 30;
+        this.taskUI.x = this.width + this.x - safe_area - this.taskUI.width - 30;
+        this.jar.x = this.challengeUI.x - this.jar.width - 10;
+
+        this.gdm.x = this.width + this.x - safe_area - this.gdm.width - 30;
+        // left.x = -this.x + 30 + safe_area;
+        // left.y = right.y;
+        // down.x = -this.x + 30 + safe_area;
+        // right.x = this.width + this.x - safe_area - right.width - 30;
+        // up.y = -this.y;
+
+        // let pop_down = this.game.getChildByName('popContainer').getChildByName('pop_down');
+        // let pop_right = this.game.getChildByName('popContainer').getChildByName('pop_right');
+        // let pop_up = this.game.getChildByName('popContainer').getChildByName('pop_up');
+        // let pop_left = this.game.getChildByName('popContainer').getChildByName('pop_left');
+        // pop_down.pos(down.x + down.width / 2, down.y + down.height / 2);
+        // pop_right.pos(right.x + right.width / 2, right.y + right.height / 2);
+        // pop_up.pos(up.x + up.width / 2, up.y + up.height / 2);
+        // pop_left.pos(left.x + left.width / 2, left.y + left.height / 2);
+    }
+
+    get maxRight() {
+        let bottomx = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+        let fishx = this.txt_fish_score.parent ? this.txt_fish_score.x + this.txt_fish_score.width + 30 - this.nb_box.x : 0;
+        return Math.max(bottomx, fishx);
+    }
+
+    onEnable() {
+        MahjongSmallResult.isShow = true;
+        ResultPanelManager.init();
+        ResultPanelManager.addGameAdFightNumber();
+        this.txt_surpass.text = '';
+        this.topUI.visible = false;
+        this.rankUI.rankUI.visible = false;
+        // this.outAni.on(Laya.Event.COMPLETE, this, this.outComplete)
+        // this.outAni.play(0, false);
+        // this.c_score.x = this.getDistance() + (this.playerlist.x - this.getDistance() - this.c_score.width) / 2;
+        // this.c_bao.x = this.playerlist.x + this.playerlist.width + (this.playerlist.x - this.getDistance() - this.c_bao.width) / 2;
+        this.hideButton();
+        game.cb.on('result_item_look_player', this, this.lookPlayer);
+        game.cb.on(__eh + 'update_user_info', this, this.updateDataHandler);
+        game.cb.on('RESULT_RANK_ANI_COMPLETE', this, this.showTopUI);
+        game.cb.on('AdPanelListener', this, this._adHandler);
+        game.cb.on(MahjongResultRankComponent.EXTRA_CUP, this, this.hideSurpass);
+
+        this.__data = __data.deskData.roomVo.smallResultData;
+        //当前大区信息，留存以备不时之需
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+
+        //宝牌 混牌是否需要显示  
+        // this.nb_box.visible = __data.deskData.roomVo.roomPlay.indexOf('98') > -1 ? false : this.areaInfo.haveNb.show
+
+        let lastCityCup = __data.hashCityLevelCup[HallPlay.lastCityId] && __data.hashCityLevelCup[HallPlay.lastCityId].cup ? __data.hashCityLevelCup[HallPlay.lastCityId].cup : 0;
+        // this.topUI.added(lastCityCup - this.__data.cup, Math.abs(this.__data.cup), this.__data.myResult, this.__data.msp, this.__data.rankProtect);
+        this.topUI.added(lastCityCup, Math.abs(this.__data.cup), this.__data.myResult, this.__data.msp, this.__data.rankProtect);
+
+        this.baoCode = 255
+        // 底分
+        this.txt_bottom_score.text = __data.deskData.roomVo.bottomScore;
+        this.yf.visible = false;
+        this.gdm.visible = false;
+        this.c_mp.visible = false;
+        game.utils.remove(this.txt_fish_score);
+        if (__data.gameId.curId == FriendRoomPlays.CITY.FUJIN && HallPlay.curRuleId > 0) {
+            this.baoCode = this.__data.mixed;
+            if (__data.deskData.roomVo.playArea == 98) {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+            }
+        } else if (__data.gameId.curId == FriendRoomPlays.CITY.TANGYUAN && HallPlay.curRuleId > 0) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, '');
+            this.yf.visible = true;
+            this.yf.x = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+            if (this.baoCode == 255 || !__data.deskData.roomVo.getIncludeRule(Play_tangyuan.FISH)) {
+                this.txt_fish_score.text = 0;
+            } else this.txt_fish_score.text = this.baoCode >= 40 ? 10 : (this.baoCode + 1) % 10;
+            this.bg.addChild(this.txt_fish_score).pos(this.yf.x + this.yf.width + 10, this.yf.y + (this.yf.height - this.txt_fish_score.height) / 2);
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.FUYUAN) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_zy.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.TONGJIANG) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.JIXI) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+            if (this.__data.mondayPieceCode != 255) {
+                this.c_mp.visible = true;
+                this.c_mp.getChildByName('list').array = [this.__data.mondayPieceCode];
+            }
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.GUANGDONG) {
+            // baoCode = this.__data.baoCode;
+            this.baoCode = GdGhost.getGhost(this.__data.baoCode)
+            this.gdm.visible = true;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_gp.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.SHUANGYASHAN) {
+            this.baoCode = this.__data.baoCode;
+            let isFish = this.__data.wfArray.find((value) => { return value == Play_shuangyashan.SEA });// 是否为对海洋
+            if (isFish) {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/hy.png');
+            } else {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/zyz.png');
+            }
+        } else {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+        }
+
+        // if (__data.domain == 13) {
+        //     baoCode = this.__data.mixed;
+        //     SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+        // } else {
+        //     baoCode = this.__data.baoCode;
+        //     SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+        // }
+
+        this.baoHandle();
+        // 加数   #fb3b44   减数  #4b9854  
+
+        __data.deskData.roomVo.roomPlayer = this.__data.playerArray.length;
+
+        // 免输卡
+        // this.msp.visible = this.__data.msp ? true : false; // 免输卡
+        // 奖杯输赢  
+        // this.txt_cup.text = this.__data.cup > 0 ? '+' + this.__data.cup : this.__data.cup;
+        // this.txt_cup.color = this.__data.cup > 0 ? '#4b9854' : '#fb3b44';
+
+        //手牌列表
+        // this.playerlist.array = this.__data.playerArray;
+
+        // this.winnerUI.visible = false;
+        // 如果赢了且 邀请红包功能开启，显示邀请红包
+        this.bless.dataSource = this.__data.myResult && __data.redPacket.canShowInviteRedIcon() ? 6 : 1;
+        this.playerlist = [this.leftup, this.rightup, this.leftdown, this.rightdown];
+        this.setPlayer();
+        // this.showAd();
+
+        this.startAni();
+        // // 延迟显示激励事件
+        // Laya.timer.once(1000, this, this.incentive);
+        Laya.timer.callLater(this, this.adapterPlayer);
+        Laya.timer.callLater(this, this.showAd);
+    }
+
+    baoHandle() {
+        let list = typeof this.baoCode == 'number' ? [this.baoCode] : typeof this.baoCode == 'string' ? this.baoCode.split(',') : [255];
+        this.list_bao.array = list;
+        this.list_bao.repeatX = this.list_bao.array.length;
+
+        this.list_m.array = GdHorseInfo.horses.all;
+        this.list_m.repeatX = this.list_m.array.length;
+        this.mFont.x = this.list_m.x + this.list_m.width + 10;
+        this.gdm.width = this.mFont.x + this.mFont.width;
+        this.adapterPlayer();
+    }
+
+    onDisable() {
+        MahjongSmallResult.isShow = false;
+        GdHorseInfo.clear();
+        __data.chuanqi.refresh();
+        LookVideoProxy.destroy();
+        game.cb.off('result_item_look_player', this, this.lookPlayer);
+        game.cb.off(__eh + 'update_user_info', this, this.updateDataHandler)
+        game.cb.off('RESULT_RANK_ANI_COMPLETE', this, this.showTopUI);
+        game.cb.off('AdPanelListener', this, this._adHandler);
+        game.cb.off(MahjongResultRankComponent.EXTRA_CUP, this, this.hideSurpass);
+        Laya.timer.clear(this, this.updateTimeHandler);
+        this.removeGridAd();
+        this.destroyGridAd();
+        this.destroyCPSAd();
+    }
+
+    setPlayer() {
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            this.playerlist[i].dataSource = this.__data.playerArray[i];
+        }
+    }
+
+    startAni() {
+        // let result = __data.deskData.roomVo.smallResultData.myResult;
+        // let cup = __data.deskData.roomVo.smallResultData.cup;
+        // let initcup = result ? __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(cup) : __data.hashCityLevelCup[HallPlay.lastCityId].cup + Math.abs(cup);
+        this.rankUI.useUI();
+        // this.rankUI.initUI(initcup);
+
+        this.leftup.x = this.leftup_originx - 1000;
+        this.leftdown.x = this.leftdown_originx - 1000;
+        this.rightup.x = this.rightup_originx + 1000;
+        this.rightdown.x = this.rightdown_originx + 1000;
+
+        let scaleTime = 300;
+        // this.riss.init(1.3, scaleTime);
+        // this.tiss.init(1.3, scaleTime);
+        // this.riss.start();
+        // this.tiss.start();
+        this.topcIss.init(1, scaleTime);
+        this.topcIss.start();
+        // this.topc.scale(0, 0);
+        // Laya.Tween.to(this.topc, { scaleX: 1, scaleY: 1 }, scaleTime, Laya.Ease.backOut);
+        // Laya.Tween.to(this.topUI, { scaleX: 1, scaleY: 1 }, scaleTime, Laya.Ease.backOut);
+
+
+        let moveTime = 300;
+        let delayTime = 0;
+        Laya.Tween.to(this.leftup, { x: this.leftup_originx }, moveTime, Laya.Ease.expoOut, null, 0 * delayTime);
+        Laya.Tween.to(this.rightup, { x: this.rightup_originx }, moveTime, Laya.Ease.expoOut, null, 1 * delayTime);
+        Laya.Tween.to(this.leftdown, { x: this.leftdown_originx }, moveTime, Laya.Ease.expoOut, null, 2 * delayTime);
+        Laya.Tween.to(this.rightdown, { x: this.rightdown_originx }, moveTime, Laya.Ease.expoOut, null, 3 * delayTime);
+        Laya.timer.once(3 * delayTime + moveTime, this, this._allAniComplete);
+
+        // Laya.timer.once(scaleTime, this, this._playerAni);
+        __sound.gameSound("end");
+    }
+
+    _playerAni() {
+
+    }
+
+    _rankAniComplete() {
+        game.cb.event('RESULT_ANI_RANK_FLY');
+    }
+
+    _allAniComplete() {
+        // Laya.timer.once(500, this, this._rankCupAni);
+        this._rankCupAni();
+        // Laya.timer.callLater(this, this.showAd);
+    }
+
+    _rankCupAni() {
+        this.topUI.endAni();
+        let curCup = Math.max(0, __data.hashCityLevelCup[HallPlay.lastCityId].cup);
+        this.rankUI.to(curCup, () => {
+            this.incentive();
+            game.scene.get(MahjongSmallResult).showButton();
+            // Laya.timer.once(1000, this, this.toResult);
+        });
+    }
+
+    _adHandler(exist, ignore) {
+        // if (exist) {
+        //     if (ignore == 'down') { return; }
+        //     this.removeGridAd();
+        // } else { this.showGridAd(); }
+    }
+
+    showAd() {
+        let random = Math.random();
+        // 3.1.19.3版本第一次修改  100% 格子广告
+        this.showGridAd();
+        // if (random < 0.5) { this.showGridAd(); }
+        // else { this.showCPSAd(); }
+        // this.showCPSAd();
+    }
+
+    showGridAd() {
+        if (!this.parent) { return }
+        miniApi.showCustomAd_leftRight('result', this.leftInhibitLine, this.rightInhibitLine);
+    }
+
+    removeGridAd() {
+        miniApi.hideCustomAd_leftRight('result');
+    }
+
+    destroyGridAd() {
+        // miniApi.reloadCustomAd('result');
+    }
+
+    showCPSAd() {
+        miniApi.showCPS(this.leftInhibitLine, this.rightInhibitLine);
+    }
+
+    destroyCPSAd() {
+        miniApi.destroyCPS();
+    }
+
+    get leftInhibitLine() {
+        let point = this.localToGlobal(new Laya.Point(this.leftup_originx + 500, 0));
+        let left = point.x / Laya.stage.width;
+        return { left };
+    }
+
+    get rightInhibitLine() {
+        let point = this.localToGlobal(new Laya.Point(this.rightdown_originx + 680, 0));
+        let right = point.x / Laya.stage.width;
+        return { right };
+    }
+
+    showTopUI() {
+        this.topUI.visible = true;
+        this.topUI.x = this.width - this.topUI.width >> 1;
+        this.rankUI.rankUI.visible = true;
+        this.showSurpass();
+    }
+
+    showSurpass() {
+        // 雀神之前
+        // 预计再赢x场可升段
+        // X=剩余升段分数/本场实际分数向上取整
+        // 雀神之后
+        // 再赢x场提升本地排名
+        // x=距上一名分数/本场实际分数向上取整，结果小于等于99。特殊：结果为0时按1算
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        // 输了 不显示这个
+        if (!result) { return }
+        let rd = RankUtils.getRankLvDataByScore(__data.hashCityLevelCup[HallPlay.lastCityId].cup, __data.uid, HallPlay.lastCityId);
+        // 雀神
+        if (rd && rd.toNextLevelNeedCup == 0 && __data.surpassCup != null && __data.surpassCup >= 0) {
+            let cup = __data.deskData.roomVo.smallResultData.cup;
+            let x = Math.ceil(__data.surpassCup / cup);
+            x = Math.max(1, x);
+            this.txt_surpass.text = `再赢${x}场提升本地排名`;
+        } else if (rd && rd.toNextLevelNeedCup != 0) {
+            let cup = __data.deskData.roomVo.smallResultData.cup;
+            let uplvneedcup = rd.toNextLevelNeedCup - (__data.hashCityLevelCup[HallPlay.lastCityId].cup - rd.minCup);
+            let x = Math.ceil(uplvneedcup / cup);
+            x = Math.max(1, x);
+            if (x < 100) this.txt_surpass.text = `预计再赢${x}场可升段`;
+        }
+    }
+
+    hideSurpass() {
+        this.txt_surpass.text = ``;
+    }
+
+    outComplete() {
+        game.cb.event('RESULT_OUT_COMPLETE');
+    }
+
+    incentive() {
+        ResultPanelManager.show();
+    }
+
+    hideButton() {
+        this.btn_goon.visible = false;
+        this.btn_videoMatch.visible = false;
+    }
+
+    showButton() {
+        this.btn_goon.visible = true;
+        this.btn_videoMatch.visible = true;
+        this.c_btn.scale(0, 0);
+        Laya.Tween.to(this.c_btn, { scaleX: 1, scaleY: 1 }, 250);
+    }
+
+    lookPlayer(object, side, point) {
+        let position = object ? object.position : null;
+        position = position || this.__data.huPositionArr[0] || this.__data.playerArray[0].position;
+        Laya.timer.callLater(this, this.showSign, [position, side, point])
+    }
+    showSign(position, side, point) {
+        // this.winnerUI.visible = true;
+        point = this.globalToLocal(point);
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            if (this.__data.playerArray[i].position == position) {
+                // this.winnerUI.dataSource = this.__data.playerArray[i];
+                // this.winnerUI.side = side;
+                game.scene.add(MahjongResultDetails, [{
+                    position: this.__data.myPosition,
+                    player: this.__data.playerArray[i],
+                    playerArray: this.__data.playerArray,
+                    winners: this.__data.huPositionArr,
+                    details: MahjongResultDetailsData.getDetails()
+                }]);
+            }
+        }
+        // this.winnerUI.pos(point.x - this.winnerUI.offx, point.y);
+    }
+
+    lookAllResultHandler() {
+        game.utils.remove(this)
+        game.scene.add(DeskResultBG)
+        game.scene.add(MahjongAllResult)
+    }
+
+    updateTimeHandler() {
+        this.__data.time -= 1;
+        this.txtTime.text = this.__data.time.toString();
+        if (this.__data.time <= 0) {
+            game.server.send(6001, 110)
+            game.cb.event(__eh + "show_phase");
+            game.cb.event(__eh + "update_player_ready");
+            game.scene.remove(DeskResultBG)
+            game.utils.remove(this)
+        }
+    }
+
+    updateDataHandler() { this.setPlayer(); }
+
+    getDataByPosition(position) {
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            if (this.__data.playerArray[i].position == position)
+                return this.__data.playerArray[i];
+        }
+    }
+
+    getDataById(id) {
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            if (this.__data.playerArray[i].id == id)
+                return this.__data.playerArray[i];
+        }
+    }
+
+    static set isShow(value) { this._isShow = value; }
+    static get isShow() { return this._isShow; }
+}
+window.MahjongSmallResult = MahjongSmallResult;
+
+
+class MahjongSmallResultCupExplain extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/MahjongSmallResultCupExplain']);
+
+        this.on(Laya.Event.CLICK, this, this._showInfo);
+    }
+
+    set dataSource(value) {
+        if (value) {
+            this.value = value;
+            this.showUI();
+        }
+    }
+
+    showUI() {
+        SkinUtils.setSkin(this.icon, this.getSkin(this.value));
+        // this.icon.scale(0, 0);
+        // Laya.Tween.to(this.icon, { scaleX: 1, scaleY: 1 }, 0);
+    }
+
+    getSkin(value) {
+        if (value == 'ls') {
+            return 'cdn/mahjong_result/mahjong_result/img_lsjl.png';
+        } else if (value == 'protect') {
+            return 'cdn/mahjong_result/mahjong_result/img_duwbh.png';
+        } else if (value == 'bamboo') {
+            return 'cdn/mahjong_result/mahjong_result/img_fgz2.png';
+        } else if (value == 'msk') {
+            return 'cdn/mahjong_result/mahjong_result/img_mskx.png';
+        } else if (value == 'vip') {
+            return 'cdn/mahjong_result/mahjong_result/img_vipjbbh.png';
+        } else if (value == MahjongResultRankComponent.EXTRA_CUP) {
+            return 'cdn/mahjong_result/mahjong_result/img_spjbjc.png';
+        } else if (value == MahjongResultRankComponent.PROTECT_CUP) {
+            return 'cdn/mahjong_result/mahjong_result/img_duwbh.png';
+        }
+        // 3.1.17版本删除
+        // else if (value == 'middleIndex') {
+        //     return 'cdn/mahjong_result/mahjong_result/img_gjcjc1.png';
+        // } else if (value == 'highIndex') {
+        //     return 'cdn/mahjong_result/mahjong_result/img_gjcjc2.png';
+        // } else if (value == 'maxIndex') {
+        //     return 'cdn/mahjong_result/mahjong_result/img_gjcjc3.png';
+        // } 
+        else {
+            return "";
+        }
+    }
+
+    getDescribe(value) {
+        if (value == 'protect') {
+            return '段位保护：返还导致掉段的奖杯';
+        } else if (value == 'bamboo') {
+            return '富贵竹：额外获得60%奖杯';
+        } else if (value == 'vip') {
+            return '奖杯多多：额外获得50%奖杯';
+        } else if (value == MahjongResultRankComponent.EXTRA_CUP) {
+            return '奖杯多多：额外获得50%奖杯';
+        } else if (value == MahjongResultRankComponent.PROTECT_CUP) {
+            return '段位保护：返还导致掉段的奖杯';
+        }
+        // 3.1.17版本删除
+        // else if (value == 'middleIndex') {
+        //     return '中级场奖杯保护：返还10%奖杯损失';
+        // } else if (value == 'highIndex') {
+        //     return '高级场奖杯保护：返还20%奖杯损失';
+        // } else if (value == 'maxIndex') {
+        //     return '至尊场奖杯保护：返还30%奖杯损失';
+        // } 
+        else {
+            return "";
+        }
+    }
+
+    _showInfo() {
+        let describe = this.getDescribe(this.value);
+        BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+        BagInfoUtils.show(describe, this.toGlobal(), game.scene.layer['panel'].c);
+    }
+
+    toGlobal() {
+        return this.localToGlobal(new Laya.Point(this.p.x, this.height));
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+class ResultInfoUtils {
+    static show(tips, data, layer) {
+        ResultInfoUtils.tips = tips;
+        ResultInfoUtils.data = data;
+        ResultInfoUtils.layer = layer || Laya.stage;
+        Laya.loader.load('prefab/ResultPropTips.json', Laya.Handler.create(this, ResultInfoUtils._complete))
+    }
+
+    static close() {
+        if (ResultInfoUtils.dialog) {
+            game.utils.remove(ResultInfoUtils.dialog);
+            ResultInfoUtils.dialog.getComponent(ResultInfoDialogDownToClose) && ResultInfoUtils.dialog.getComponent(ResultInfoDialogDownToClose).destroy();
+        }
+    }
+
+    static _complete(json) {
+        let _prefab = new Laya.Prefab();
+        _prefab.json = json;
+        ResultInfoUtils.dialog = Laya.Pool.getItemByCreateFun('ResultPropTips', _prefab.create, _prefab);
+        ResultInfoUtils.dialog.scale(game.scale, game.scale);
+        ResultInfoUtils.dialog.getChildByName('txt_tips').text = ResultInfoUtils.tips;
+        ResultInfoUtils.layer.addChild(ResultInfoUtils.dialog);
+        ResultInfoUtils.dialog.pos(ResultInfoUtils.data.x, ResultInfoUtils.data.y)
+
+        let ws = ResultInfoUtils.dialog.getChildByName('txt_tips').textField.textWidth / ResultInfoUtils.dialog.getChildByName('txt_tips').width;
+        ResultInfoUtils.dialog.getChildByName('bg').scaleX = ws + 0.1;
+
+        ResultInfoUtils.dialog.addComponent(ResultInfoDialogDownToClose);
+
+
+    }
+}
+
+class ResultInfoDialogDownToClose extends Laya.Script {
+    onStageMouseDown() {
+        ResultInfoUtils.close();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class MahjongResultRankComponent extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/MahjongResultRankComponent']);
+        this.centerx = this.rankUI.x + (this.rankUI.width * this.rankUI.scaleX) / 2;
+        this.mouseThrough = true;
+    }
+
+    onEnable() {
+        this.useUI();
+        this.initUI();
+        game.cb.on(MahjongResultRankComponent.EXTRA_CUP, this, this.extraCupAni);
+        game.cb.on(MahjongResultRankComponent.PROTECT_CUP, this, this.protectCupAni);
+        game.cb.on('RESULT_RANK_ANI_COMPLETE', this, this._showUI);
+    }
+
+    onDisable() {
+        game.cb.off(MahjongResultRankComponent.EXTRA_CUP, this, this.extraCupAni);
+        game.cb.off(MahjongResultRankComponent.PROTECT_CUP, this, this.protectCupAni);
+        game.cb.off('RESULT_RANK_ANI_COMPLETE', this, this._showUI);
+    }
+
+    _showUI() {
+        // this.container.visible = true;
+    }
+
+    initUI(initCup) {
+        // this.container.visible = false;
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        let cup = __data.deskData.roomVo.smallResultData.cup;
+
+        initCup = initCup || __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+        this.rankUI.ready(result);
+        this.rankUI.init(initCup, result ? Math.abs(cup) : -Math.abs(cup));
+
+        // 赢了  算出最开始的时候的奖杯  如果有进度条就一直显示
+        if (result) {
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(cup);
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        } else { // 输了  看当前奖杯是否有进度条    如果有进度条就一直显示
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        }
+
+        this.rankUI.showInfo();
+        // this.rankUI.updateWords(result ? Math.abs(cup) : -Math.abs(cup));
+        // this.rankUI.updateIcons();
+    }
+
+
+    useUI() {
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        SkinUtils.setSkin(this.bg, result ? 'cdn/mahjong_br/mahjong_br/bg_js1a.png' : 'cdn/mahjong_br/mahjong_br/bg_js2a.png');
+        this.light.visible = result ? true : false;
+        // this.frame.visible = false;
+    }
+
+    /**
+     * 
+     * @param {*} cup 
+     */
+    extraCupAni(cup, oldCup, newCup) {
+        game.scene.remove(RankCupMore);
+        this.rankUI.init(oldCup, cup + __data.deskData.roomVo.smallResultData.cup);
+        this.rankUI.updateIcons(MahjongResultRankComponent.EXTRA_CUP);
+        this.rankUI.updateWords(cup + __data.deskData.roomVo.smallResultData.cup);
+        this.rankUI.to(newCup, () => {
+            // CheckUpgradeRank.check(1, oldCup, newCup);
+            ResultPanelManager.show_uplv_rewards(oldCup, newCup);
+        });
+    }
+
+    /**
+     * 段位保护 
+     * @param {*} cup 
+     */
+    protectCupAni(cup, oldCup, newCup) {
+        ResultPanelManager.resumeProtectOdds();
+        game.scene.remove(RankCupProtect);
+        // let lostCup = Math.abs(rankData.toNextLevelNeedCup - (oldCup - rankData.minCup)) - Math.abs(__data.deskData.roomVo.smallResultData.cup);
+        let lostCup = newCup - (oldCup + Math.abs(__data.deskData.roomVo.smallResultData.cup));
+        this.rankUI.init(oldCup, lostCup);
+        this.rankUI.updateIcons(MahjongResultRankComponent.PROTECT_CUP);
+        this.rankUI.updateWords(lostCup);
+        this.rankUI.to(newCup);
+    }
+
+    to(cup, complete) {
+        this.rankUI.to(cup, complete);
+    }
+
+    /**
+     * 额外奖杯
+     */
+    static get EXTRA_CUP() { return "EXTRA_CUP"; }
+
+    /**
+     * 受保护
+     */
+    static get PROTECT_CUP() { return "PROTECT_CUP" }
+}
+
+
+
+
+class MahjongRankAni extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongRankAni',
+            "layer": 'icon',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+
+        this.rankInitPos = new Laya.Point(this.rankUI.x, this.rankUI.y);
+
+        this.rankInitScale = { scaleX: this.rankUI.scaleX, scaleY: this.rankUI.scaleY };
+
+        this.numberSkins = [];
+        for (var i = 0; i < 10; i++) this.numberSkins.push("cdn/mahjong_result/mahjong_result/" + i + ".png");
+    }
+
+    onEnable() {
+        Laya.timer.once(1000, this, () => { __sound.stopMusic(); })// 3.1.18.1版本修改
+        // game.cb.on('RESULT_ANI_RANK_FLY', this, this.flyRankAni);
+    }
+
+    onDisable() {
+        // game.cb.off('RESULT_ANI_RANK_FLY', this, this.flyRankAni);
+
+        this.winAni.off(Laya.Event.COMPLETE, this, this.aniComplete);
+        this.loseAni.off(Laya.Event.COMPLETE, this, this.aniComplete);
+    }
+
+    /**
+     * 重置状态
+     */
+    reset() {
+        this.titleUI.alpha = 0;
+        this.titleUI.y = 65;
+        this.bg.alpha = 0.5;
+        this.flowerUI.alpha = 0;
+        this.rankUI.alpha = 0;
+        this.rankUI.pos(this.rankInitPos.x, this.rankInitPos.y);
+        this.rankUI.scale(this.rankInitScale.scaleX, this.rankInitScale.scaleY);
+
+        game.utils.remove(this.keepText);
+
+        this.winAni.gotoAndStop(0);
+        this.loseAni.gotoAndStop(0);
+    }
+
+    /**
+     * 标题动画
+     */
+    titleAni() {
+        let rd = __data.deskData.roomVo.smallResultData;
+        let lastCityCup = __data.hashCityLevelCup[HallPlay.lastCityId] && __data.hashCityLevelCup[HallPlay.lastCityId].cup ? __data.hashCityLevelCup[HallPlay.lastCityId].cup : 0;
+        this.titleUI.added(lastCityCup, Math.abs(rd.cup), rd.myResult, rd.msp, rd.rankProtect);
+    }
+
+
+    setText() {
+        // this.titleUI.anchorX = 0;
+        this.keepText.text = Math.floor(this.initWinNumber);
+        // this.titleUI.addChild(this.keepText).pos(this.titleUI.width / 2 - this.keepText.width - 75, this.titleUI.height - this.keepText.height >> 1);
+        // this.titleUI.pivot(this.keepText.x < 0 ? this.titleUI.width / 2 - Math.abs(this.keepText.x) / 2 : this.titleUI.width / 2, this.titleUI.height / 2);
+        // this.titleUI.x = this.width / 2;
+    }
+
+    setTextComplete() {
+
+    }
+
+
+    rankAni() {
+        Laya.Tween.to(this.rankUI, { alpha: 1 }, 1000, null, Laya.Handler.create(this, this._startRankAni));
+        Laya.Tween.to(this.titleUI, { alpha: 1 }, 1000);
+    }
+
+    _startRankAni() {
+        this.rankUI.to(this.getCurCup(), () => {
+            Laya.timer.once(1000, this, this.toResult);
+        });
+    }
+
+    added() {
+        this.reset();
+        this._data = __data.deskData.roomVo.smallResultData;
+
+        // 胜利失败音效
+        if (this._data.huPositionArr.indexOf(this._data.myPosition) != -1) {
+            __sound.gameSound("win");
+        } else {
+            __sound.gameSound("lose");
+        }
+
+        this.result = __data.deskData.roomVo.smallResultData.myResult;
+        this.cup = __data.deskData.roomVo.smallResultData.cup;
+
+        let aniType = this.checkAniType();
+        if (aniType == this.WIN) {
+            this.winAni.play(0, false);
+            this.winAni.on(Laya.Event.COMPLETE, this, this.aniComplete);
+        } else if (aniType == this.LOSE) {
+            this.loseAni.play(0, false);
+            this.loseAni.on(Laya.Event.COMPLETE, this, this.aniComplete);
+        }
+
+        this.rankUI.ready(this.result);
+        this.rankUI.init(this.getLastCup(), this.result == 1 ? Math.abs(this.cup) : -Math.abs(this.cup));
+        this.rankUI.relocationTxt(this.getCurCup());
+        // 赢了  算出最开始的时候的奖杯  如果有进度条就一直显示
+        if (this.result) {
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(this.cup);
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId, true);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        } else { // 输了  看当前奖杯是否有进度条    如果有进度条就一直显示
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId, true);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        }
+
+        // 和帧动画 出现的时间同步
+        // Laya.timer.frameOnce(10, this, () => {
+
+        // });
+        this.rankAni();
+        this.titleAni();
+        // this.rankAni();
+    }
+
+    /**
+     * 出结果之前的奖杯数
+     * @returns 
+     */
+    getLastCup() {
+        if (this.result) {
+            return __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(this.cup);
+        } else {
+            return __data.hashCityLevelCup[HallPlay.lastCityId].cup + Math.abs(this.cup);
+        }
+    }
+
+    getCurCup() {
+        return Math.max(0, __data.hashCityLevelCup[HallPlay.lastCityId].cup);
+    }
+
+    aniComplete() {
+        // this.toResult();
+    }
+
+    toResult() {
+        this.showResult();
+        this.flyAni();
+        // Laya.timer.once(500, this, this.flyAni);
+    }
+
+    showResult() {
+        //具体处理
+        game.scene.add(DeskResultBG);
+        game.scene.add(MahjongSmallResult);
+    }
+
+    flyAni() {
+        Laya.Tween.to(this.bg, { alpha: 0 }, 500, Laya.Ease.quintOut);
+        Laya.Tween.to(this.flowerUI, { alpha: 0 }, 500);
+        Laya.Tween.to(this.titleUI, { y: 20 }, 200, Laya.Ease.quintOut, Laya.Handler.create(this, this._titleAniComplete));
+
+        Laya.Tween.to(this.rankUI, { x: MahjongSmallResult.rankUIPoint.x, y: MahjongSmallResult.rankUIPoint.y, scaleX: 1.2, scaleY: 1.2, alpha: 1 }, 500, Laya.Ease.quintOut, Laya.Handler.create(this, this._moveComplete));
+        // Laya.Tween.to(this.rankUI, { scaleX: 1.2, scaleY: 1.2, alpha: 1 }, 500, Laya.Ease.quintOut, Laya.Handler.create(this, this._moveComplete));
+    }
+
+    flyRankAni() {
+        // Laya.Tween.to(this.rankUI, { x: MahjongSmallResult.rankUIPoint.x, y: MahjongSmallResult.rankUIPoint.y, scaleX: 1, scaleY: 1, alpha: 1 }, 500, Laya.Ease.quintOut, Laya.Handler.create(this, this._moveComplete));
+    }
+
+    _titleAniComplete() { }
+
+    _moveComplete() {
+        game.cb.event('RESULT_RANK_ANI_COMPLETE');
+        game.scene.remove(MahjongRankAni);
+        // this.showResult();
+    }
+
+    checkAniType() {
+        // 必须胜利才有  失败没有
+        if (this.result) {
+            return this.WIN;
+        } else {
+            return this.LOSE;
+        }
+    }
+
+    get WIN() { return "win"; }
+    get LOSE() { return "lose"; }
+}
+
+
+class RankLineComponent extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/RankLineComponent']);
+
+        this.rect = new Laya.Rectangle(0, 0, this.bar.width, this.bar.height);
+        this.bar.scrollRect = this.rect;
+    }
+
+    setProgress(cur, max) {
+        cur = cur > max ? max : cur;
+        this.rect.width = (cur / max) * this.bar.width;
+        this.txt_progress.text = `${cur}/${max}`;
+    }
+
+    setCup(value) {
+        value = parseInt(value);
+        let txt = value > 0 ? `+${Math.abs(value)}` : `-${Math.abs(value)}`
+        this.txt_get_cup.text = txt;
+    }
+
+    setLine(value) {
+        if (value) {
+            this.line.visible = true;
+            this.txt_get_cup.x = this.width + 15;
+        } else {
+            this.line.visible = false;
+            this.txt_get_cup.x = this.width - this.txt_get_cup.width >> 1;
+        }
+    }
+}
+
+class MahjongResultRates extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/MahjongResultRates']);
+    }
+
+    set rate(value) { this._rate = value; this.update(); }
+    get rate() { return this._rate; }
+
+    set winner(value) {
+        this._winner = value;
+        if (value) {
+            SkinUtils.setSkin(this.bg, `cdn/mahjong_result/mahjong_result/img_bsbox1.png`);
+        } else {
+            SkinUtils.setSkin(this.bg, `cdn/mahjong_result/mahjong_result/img_bsbox2.png`);
+        }
+    }
+
+    update() {
+        this.txt_rate.text = this.rate;
+    }
+}
+
+
+class RankComponent extends game.ModuleBase {
+    constructor() {
+        super()
+        this.mouseThrough = true;
+        this.createView(game.uiMap['scene_game/result/RankComponent']);
+
+        // this.centerx = this.icon.x + (this.icon.width * this.icon.scaleX) / 2;
+        this.centerx = this.width / 2;
+
+        this.barRect = new Laya.Rectangle(0, 0, 0, this.lineBar.height);
+        this.lineBar.scrollRect = this.barRect;
+        // this.rect = new Laya.Rectangle(0, 0, 0, 0);
+        // this.cup_c.scrollRect = this.rect;
+    }
+
+    hideInfo() {
+        this.frame_info.visible = false;
+    }
+
+    showInfo() {
+        this.frame_info.visible = true;
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        let cup = __data.deskData.roomVo.smallResultData.cup;
+        // SkinUtils.setSkin(this.frame_info, result ? 'cdn/mahjong_result/mahjong_result/img_r_dw1.png' : 'cdn/mahjong_result/mahjong_result/img_r_dw2.png');
+        this.updateWords(result ? Math.abs(cup) : -Math.abs(cup));
+        this.updateIcons();
+        this.frame_info.size(this.frame_info.width, this.frame_info.height);
+    }
+
+    getIcons(additional) {
+        let _array = [];
+        // if (this.showPv()) {
+        //     _array.push('ls');
+        // } else 
+        if (this.showProtect()) {
+            _array.push('protect');
+        }
+        if (this.showMsk()) {
+            _array.push('msk');
+        }
+        if (this.showBamboo()) {
+            _array.push('bamboo');
+        }
+
+        if (__data.deskData.roomVo.smallResultData.myResult != 1) {
+            // if (__data.deskData.roomVo.indexId == 2)
+            //     _array.push('middleIndex');
+            // else if (__data.deskData.roomVo.indexId == 3)
+            //     _array.push('highIndex');
+            // else if (__data.deskData.roomVo.indexId == 4)
+            //     _array.push('maxIndex');
+        }
+
+        if (additional) {
+            _array.push(additional);
+        } else if (__data.vip.isVip && __data.deskData.roomVo.smallResultData.myResult == 1) {
+            _array.push('vip');
+        }
+
+        return _array;
+    }
+
+    showPv() {
+        if (__data.deskData.roomVo.smallResultData.keepWinNumber >= gameConfig.keepWinRule) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    showProtect() {
+        if (__data.deskData.roomVo.smallResultData.msp == 2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    showMsk() {
+        if (__data.deskData.roomVo.smallResultData.msp == 1) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    showBamboo() {
+        if (__data.deskData.roomVo.smallResultData.bamboo) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    updateIcons(additional) {
+        let icons = this.getIcons(additional);
+        this.list.array = icons
+        this.list.repeatX = icons.length;
+        this.list.x = this.centerx - this.list.width / 2;
+
+        if (icons.length) {
+            this.txt_base_cup.text = `(${__data.deskData.roomVo.smallResultData.baseCup}`;
+            this.txt_end.text = `)`;
+        } else {
+            this.txt_base_cup.text = ``;
+            this.txt_end.text = ``;
+        }
+        Laya.timer.callLater(this, this.relocationUI);
+    }
+
+    updateWords(cups) {
+
+        let rd = RankUtils.getRankLvDataByScore(__data.hashCityLevelCup[HallPlay.lastCityId].cup, __data.uid, HallPlay.lastCityId);
+        if (cups > 0) {
+            this.txt_tt_cup.text = `本局+${Math.abs(cups)}`;
+            this.txt_tt_cup.color = '#ffd922';
+            // HtmlTextUtils.text(
+            //     this.txt_uplv_info, { align: 'center', valign: 'top', stroke: 4, strokeColor: '#000000', fontSize: 30, bold: true, width: this.frame_info.width, color: '#ffffff' },
+            //     '再赢&nbsp;', { color: '#e8ce72' },
+            //     rd.toNextLevelNeedCup - (__data.hashCityLevelCup[HallPlay.lastCityId].cup - rd.minCup), { color: '#fe7f7f' },
+            //     '&nbsp;奖杯升段', { color: '#e8ce72' }
+            // )
+        } else {
+            this.txt_tt_cup.text = `本局-${Math.abs(cups)}`;
+            this.txt_tt_cup.color = '#aaaebe';
+            // HtmlTextUtils.text(
+            //     this.txt_uplv_info, { align: 'center', valign: 'top', stroke: 4, strokeColor: '#000000', fontSize: 30, bold: true, width: this.frame_info.width, color: '#ffffff' },
+            //     '再输&nbsp;', { color: '#e8ce72' },
+            //     __data.hashCityLevelCup[HallPlay.lastCityId].cup - rd.minCup + 1, { color: '#fe7f7f' },
+            //     '&nbsp;奖杯降段', { color: '#e8ce72' }
+            // )
+        }
+        // 不能升段 或者掉段了
+        if (rd.toNextLevelNeedCup == 0 || (rd.minCup == 0 && cups <= 0)) {
+            // HtmlTextUtils.text(
+            //     this.txt_uplv_info, { align: 'center', valign: 'top', fontSize: 30, bold: true, width: this.frame_info.width, color: '#ffffff' },
+            //     '', { color: '#e8ce72' }
+            // )
+        }
+        Laya.timer.callLater(this, this.relocationUI);
+    }
+
+    relocationUI() {
+        let space = 20;
+        let list_w = this.list.array.length ? this.list.width : 0
+        let w = this.txt_tt_cup.width + this.txt_base_cup.width + list_w + this.txt_end.width + 8;
+
+        let start_x = this.width - w >> 1;
+        this.txt_tt_cup.x = start_x;
+        this.txt_base_cup.x = this.txt_tt_cup.x + this.txt_tt_cup.width + 8;
+        this.list.x = this.txt_base_cup.x + this.txt_base_cup.width;
+        this.txt_end.x = this.list.x + this.list.width;
+
+        this.txt_uplv_info.x = this.width - this.txt_uplv_info.displayWidth >> 1;
+    }
+
+    initText() {
+        if (!this.txt_cup) {
+            let numbers = {};
+            for (var i = 0; i < 10; i++) numbers[i] = "local/cupNum/cupNum/" + i + ".png";
+
+            this.txt_cup = new ImageFont(numbers, 'center', 'center', -2);
+            this.cup_c.addChild(this.txt_cup);
+        }
+    }
+
+    onEnable() {
+        this.initUI();
+    }
+
+    initUI() {
+        this.dropAni.gotoAndStop(0);
+        this.upgradings = [];
+        this.initText();
+        // this.hideInfo();
+        this.showInfo();
+        game.utils.remove(this._sprite);
+        SkinUtils.setSkin(this.signUI, '');
+        SkinUtils.setSkin(this.low_signUI, '');
+        this.light.alpha = 0;
+
+        this.mk = this.mk || new Laya.Sprite();
+        this.mk.graphics.drawRect(0, 0, 420, 400, '#0');
+        this.mk.size(420, 400);
+        this.ui.mask = null;
+    }
+
+
+    ready(result) {
+        SkinUtils.setSkin(this.frame, result ? 'cdn/mahjong_result/mahjong_result/img_r_dwa.png' : 'cdn/mahjong_result/mahjong_result/img_r_dwb.png');
+    }
+
+    init(cup, getCup) {
+        this.initUI();
+        this.clearTween();
+
+        this.initCup = cup;
+        // 排位数据
+        this.rankData = RankUtils.getRankLvDataByScore(cup, __data.uid, HallPlay.lastCityId);
+
+        this.upCupText(cup, this.rankData);
+        // this.rect.setTo(0, 0, this.cup_c.width, this.cup_c.height);
+
+        this.updatelocation();
+
+        // this.lineComponent.setCup(getCup, this.rankData.toNextLevelNeedCup == 0);
+        // this.lineComponent.setProgress(cup - this.rankData.minCup, this.rankData.toNextLevelNeedCup);
+
+        this.updateRankIcons(this.rankData);
+
+        this.channelUI();
+    }
+
+
+    clearTween() {
+        this.tween && this.tween.clear();
+        this.dropTween && this.dropTween.clear();
+        this.spTween && this.spTween.clear();
+        this.iconTween && this.iconTween.clear();
+    }
+
+    upCupText(cup, data) {
+        data = data || RankUtils.getRankLvDataByScore(cup, __data.uid, HallPlay.lastCityId);
+        this.txt_cup_line.text = `${cup - data.minCup}/${data.toNextLevelNeedCup}`;
+        this.barRect.width = (cup - data.minCup) / data.toNextLevelNeedCup * this.lineBar.width;
+        this.txt_cup.text = cup - data.minCup;
+        this.updatelocation();
+    }
+
+    channelUI(rd) {
+        rd = rd || this.rankData;
+        this.low_cup_c.visible = false;
+        this.frame.visible = false;
+        this.cup_c.visible = false;
+        // 已经雀神了
+        if (rd.toNextLevelNeedCup == 0) {
+            this.frame.visible = true;
+            this.cup_c.visible = true;
+        } else {
+            this.low_cup_c.visible = true;
+            // this.low_signUI.visible = false;
+        }
+    }
+
+    to(cup, complete) {
+        this._complete = complete;
+        this.targetCup = cup;
+        this.tweenCup = this.initCup;
+        this.tween = this.tween || new Laya.Tween();
+        this.dropTween = this.dropTween || new Laya.Tween();
+        this.channelAni();
+        // this._enlargeComplete();
+    }
+
+    channelAni() {
+        // 增长 减少音效
+        if (this.targetCup > this.initCup) {
+            // 已经雀神了
+            if (this.rankData.toNextLevelNeedCup == 0) {
+                Laya.Tween.to(this.cupUI, { scaleX: 1.2, scaleY: 1.2 }, 100);
+                this.tween.to(this.txt_cup, { scaleX: 1.2, scaleY: 1.2 }, 100, null, Laya.Handler.create(this, this._enlargeComplete));
+            } else {
+                this._enlargeComplete();
+            }
+        } else if (this.targetCup == this.initCup) {
+            this._enlargeComplete();
+        } else {
+            // 已经雀神了
+            if (this.rankData.toNextLevelNeedCup == 0) {
+                SkinUtils.setSkin(this.signUI, 'cdn/mahjong_result/mahjong_result/img_jt22.png');
+                this._enlargeComplete();
+                // this.tween.to(this.txt_cup, { y: 50, alpha: 0 }, 300, Laya.Ease.expoIn, Laya.Handler.create(this, this._enlargeComplete));
+            } else {
+                this._enlargeComplete();
+            }
+        }
+    }
+
+    _enlargeComplete() {
+        // 增长 减少音效
+        if (this.targetCup > this.initCup) {
+            __sound.gameSound("cupup");
+            this.tween.to(this, { tweenCup: this.targetCup }, 1500, null, new Laya.Handler(this, this._toComplete));
+            this.tween.update = Laya.Handler.create(this, this._onUpdateCup, null, false);
+        } else if (this.targetCup == this.initCup) {
+            this.tweenCup = this.targetCup;
+            this._onUpdateCup();
+            this._toComplete();
+        } else if (this.targetCup < this.initCup) {
+            __sound.gameSound("cupdown");
+            // this.tweenCup = this.targetCup;
+            this.dropTween.to(this, { tweenCup: this.targetCup }, 1500, null, new Laya.Handler(this, this._toComplete));
+            this.dropTween.update = Laya.Handler.create(this, this._onUpdateCup, null, false);
+            // this._onUpdateCup();
+            // this.txt_cup.y = this.cup_c.height / 2 - 50;
+            // this.tween.to(this.txt_cup, { y: this.cup_c.height / 2, alpha: 1 }, 100, Laya.Ease.expoIn, Laya.Handler.create(this, this._downComplete));
+        }
+    }
+
+    _toComplete() {
+        this.clearSignSkin();
+        Laya.Tween.to(this.cupUI, { scaleX: 1, scaleY: 1 }, 100);
+        this.tween.to(this.txt_cup, { scaleX: 1, scaleY: 1 }, 100, Laya.Ease.expoOut, Laya.Handler.create(this, this._growComplete));
+    }
+
+    _downComplete() {
+        // this.clearSignSkin();
+        // Laya.timer.once(200, this, this.clearSignSkin);
+        Laya.Tween.to(this.cupUI, { scaleX: 1, scaleY: 1 }, 100);
+        this.tween.to(this.txt_cup, { scaleX: 1, scaleY: 1 }, 100, Laya.Ease.expoOut, Laya.Handler.create(this, this._growComplete));
+    }
+
+    _growComplete() {
+        this.updatelocation();
+        Laya.timer.once(300, this, this._doComplete);
+    }
+
+    _doComplete() {
+        this._complete && this._complete();
+    }
+
+    clearSignSkin() {
+        SkinUtils.setSkin(this.signUI, '');
+        SkinUtils.setSkin(this.low_signUI, '');
+    }
+
+    updateSignSkin() {
+        if (this.tweenCup > this.initCup) {
+            SkinUtils.setSkin(this.signUI, 'cdn/mahjong_result/mahjong_result/img_jt11.png');
+            SkinUtils.setSkin(this.low_signUI, 'cdn/mahjong_result/mahjong_result/img_jt11.png');
+        } else if (this.tweenCup == this.initCup) {
+            SkinUtils.setSkin(this.signUI, '');
+            SkinUtils.setSkin(this.low_signUI, '');
+        } else {
+            SkinUtils.setSkin(this.signUI, 'cdn/mahjong_result/mahjong_result/img_jt22.png');
+            SkinUtils.setSkin(this.low_signUI, 'cdn/mahjong_result/mahjong_result/img_jt22.png');
+        }
+    }
+
+    _onUpdateCup() {
+        this.tweenCup = Math.floor(this.tweenCup);
+        let rankData = RankUtils.getRankLvDataByScore(this.tweenCup, __data.uid, HallPlay.lastCityId);
+        this.upCupText(this.tweenCup, rankData);
+
+        // this.lineComponent.setProgress(this.tweenCup - rankData.minCup, rankData.toNextLevelNeedCup);
+        // this.lineComponent.setLine(this.lineState);
+        this.updateSignSkin();
+        if (rankData.name != this.rankData.name && this.upgradings.indexOf(rankData.name) == -1) {
+            this.upgradings.push(rankData.name);
+            this.upgradingRank(rankData);
+            this.channelUI(rankData);
+        }
+    }
+
+    updatelocation() {
+        this.txt_cup.x = this.cupUI.x + this.cupUI.width / 2 * this.cupUI.scaleX + this.txt_cup.width / 2 + 5;
+        this.txt_cup.y = this.cup_c.height / 2;
+        this.cup_c.width = this.txt_cup.x + this.txt_cup.width / 2;
+        this.cup_c.x = this.centerx - this.cup_c.width / 2;
+        try {
+            let _signW = Laya.loader.getRes('cdn/mahjong_result/mahjong_result/img_jt11.png').width;
+            this.signUI.x = this.txt_cup.x + this.txt_cup.width / 2 + _signW / 2;
+        } catch (e) { }
+    }
+
+    relocationTxt(cup) {
+        this.upCupText(cup);
+        this.upCupText(this.initCup);
+    }
+
+    upgradingRank(rankData) {
+        if (this.isUpgrading) { return }
+        if (this.targetCup > this.initCup) { // 增长
+            __sound.gameSound("levelup");
+            this.light.alpha = 1;
+            this.isUpgrading = true;
+            this.lightAni.play(0, false);
+            this.lightAni.on(Laya.Event.COMPLETE, this, this._lightAniComplete);
+            this.updateRankIcons(rankData);
+        } else if (this.targetCup < this.initCup) { // 减少音效
+            __sound.gameSound("regret");
+            this.ui.mask = this.mk;
+            this._sprite = this._sprite || new Laya.Sprite();
+            this._sprite.texture = this.icons.drawToTexture(this.mk.width, this.mk.height, 0, 0);
+            this.icons.parent.addChild(this._sprite).pos(0, 0);
+            this.icons.pos(0, -this.mk.height);
+            this.spTween = this.spTween || new Laya.Tween();
+            this.iconTween = this.iconTween || new Laya.Tween();
+            this.spTween.to(this._sprite, { y: this.mk.height }, 200);
+            this.iconTween.to(this.icons, { y: 0 }, 200, null, Laya.Handler.create(this, this._dropComplete));
+            this.updateRankIcons(rankData);
+
+            // this.updateRankIconsCopy(rankData);
+            // this.dropAni.play(0, false);
+            // this.dropAni.on(Laya.Event.COMPLETE, this, this._dropComplete);
+        }
+    }
+
+    _dropComplete() {
+        this.ui.mask = null;
+        game.utils.remove(this._sprite);
+        this.dropAni.gotoAndStop(0);
+        let rankData = RankUtils.getRankLvDataByScore(this.tweenCup, __data.uid, HallPlay.lastCityId);
+        this.updateRankIcons(rankData);
+        this._downComplete();
+    }
+
+    _lightAniComplete() {
+        this.light.alpha = 0;
+        this.isUpgrading = false;
+    }
+
+    updateRankIcons(rankData) {
+        // icon
+        SkinUtils.setSkin(this.icon, `cdn/rank_sign/img_rank_sign_${rankData.iconIndex}.png`);
+        SkinUtils.setSkin(this.rankBg, `local/lvNameBg/1/rank_${rankData.iconIndex}.png`);
+        this.txt_rankName.text = rankData.name;
+        // 雀神不显示这个
+        if (rankData.toNextLevelNeedCup == 0) {
+            SkinUtils.setSkin(this.cupUI, `local/lvNameBg/1/img_qsjb.png`);
+            SkinUtils.setSkin(this.low_cupUI, `local/lvNameBg/1/img_qsjb.png`);
+            this.txt_rankLevel.text = '';
+            this.crown.visible = true;
+        } else {
+            SkinUtils.setSkin(this.cupUI, `cdn/mahjong_result/mahjong_result/img_jb.png`);
+            SkinUtils.setSkin(this.low_cupUI, `cdn/mahjong_result/mahjong_result/img_jb.png`);
+            this.txt_rankLevel.text = rankData.level;
+            this.crown.visible = false;
+        }
+    }
+
+    updateRankIconsCopy(rankData) {
+        // icon
+        SkinUtils.setSkin(this.icon_copy, `cdn/rank_sign/img_rank_sign_${rankData.iconIndex}.png`);
+        SkinUtils.setSkin(this.rankBg_copy, `local/lvNameBg/1/rank_${rankData.iconIndex}.png`);
+        this.txt_rankName_copy.text = rankData.name;
+        // 雀神不显示这个
+        if (rankData.toNextLevelNeedCup == 0) {
+            SkinUtils.setSkin(this.cupUI, `local/lvNameBg/1/img_qsjb.png`);
+            SkinUtils.setSkin(this.low_cupUI, `local/lvNameBg/1/img_qsjb.png`);
+            this.txt_rankLevel_copy.text = '';
+            this.crown_copy.visible = true;
+        } else {
+            SkinUtils.setSkin(this.cupUI, `cdn/mahjong_result/mahjong_result/img_jb.png`);
+            SkinUtils.setSkin(this.low_cupUI, `cdn/mahjong_result/mahjong_result/img_jb.png`);
+            this.txt_rankLevel_copy.text = rankData.level;
+            this.crown_copy.visible = false;
+        }
+    }
+
+    set lineState(value) {
+        this._lineState = value;
+        // this.lineComponent.setLine(this.lineState);
+    }
+    get lineState() { return this._lineState; }
+}
+
+class FlowAniScript extends Laya.Script {
+    start(point, callback) {
+        this.callback = callback;
+        this.owner.visible = true;
+        Laya.Tween.to(this.owner, { x: point.x, y: point.y }, 200, null, Laya.Handler.create(this, this._moveComplete));
+    }
+
+    _moveComplete() {
+        Laya.Tween.to(this.owner, { alpha: 0 }, 100, null, Laya.Handler.create(this, this._disappearComplete));
+    }
+
+    _disappearComplete() {
+        this.callback && this.callback();
+        this.owner.alpha = 1;
+        this.owner.visible = false;
+    }
+}
+
+class ChallengeBoxComponent extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/ChallengeBoxComponent',
+            module: false
+        })
+
+        // this.s_box = this.btn_box.addComponent(S_click_show_des_set).prefab('prefab/ChallengeBoxTips.json').init(__lang.des_goldBox)
+        this.btn_vipReceive.on(Laya.Event.CLICK, this, this._onVipReceive);
+        this.btn_receive.on(Laya.Event.CLICK, this, this._onReceive);
+
+        this.light = this.frame.addComponent(RoundLight);
+
+        this.btn_receive.addComponent(BreathScript);
+        this.btn_vipReceive.addComponent(BreathScript);
+    }
+    onEnable() {
+        // game.server.send(10005);
+        this.update_daliyMatch_data();
+        // this.udpate_collect_data();
+        game.cb.on('update_daliyMatch_data', this, this.update_daliyMatch_data);
+        // game.cb.on('udpate_collect_data', this, this.udpate_collect_data);
+    }
+    onDisable() {
+        game.cb.off('update_daliyMatch_data', this, this.update_daliyMatch_data);
+        // game.cb.off('udpate_collect_data', this, this.udpate_collect_data);
+    }
+    // udpate_collect_data() {
+    //     let a = Object.values(__data.collect)
+    //     if (a.length == 0) {
+    //         this.s_box.init(__lang.des_goldBox)
+    //         return
+    //     }
+    //     for (const key in __data.collect) {
+    //         if (__data.collect[key].num == 0) {
+    //             this.s_box.init(__lang.des_goldBox)
+    //             return
+    //         }
+    //     }
+    //     this.s_box.init(__lang.des_goldBox_full)
+    // }
+    update_daliyMatch_data() {
+        let data = __data.dailyMatch;
+
+        // 已经领取过奖励了 看不见
+        if (data.isHasReceive) { this.visible = false; } else { this.visible = true; }
+
+        let maxCount = data.maxCount;
+        let curCount = data.curCount;
+
+        this.txt_num.text = __data.dailyMatch.reward[0] ? '×' + __data.dailyMatch.reward[0].count : '×0';
+
+        this.rs.visible = false;
+
+        if (curCount >= maxCount) {
+            this.light.play();
+            this.btn_vipReceive.visible = false
+            this.btn_receive.visible = true
+            this.txt_tips.text = '已完成';
+            this.rs.visible = true;
+            this.btn_receive.disabled = data.isHasReceive == 1;
+        } else {
+            this.light.stop();
+            this.txt_tips.text = `再赢${maxCount - curCount}局`
+            this.btn_vipReceive.visible = true
+            this.btn_receive.visible = false
+        }
+    }
+
+    _onVipReceive() {
+        if (!__data.vip.isVip)
+            __showScene.show_vip();
+
+        if (__data.vip.isVip && __data.dailyMatch.curCount < __data.dailyMatch.maxCount && !__data.dailyMatch.isHasReceive) {
+            __data.dailyMatch.send_msg_aKeyCom()
+        }
+    }
+
+    _onReceive() {
+        __data.dailyMatch.send_msg_receive();
+    }
+}
+
+class DailyTaskComponent extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/DailyTaskComponent',
+            module: false
+        })
+
+        this.btn_receive.addComponent(GameQuitScript);
+        this.btn_receive.addComponent(BreathScript);
+        this.light = this.frame.addComponent(RoundLight);
+    }
+    onEnable() {
+        this.update_dailyTask_data()
+        game.cb.on('update_dailyTask_data', this, this.update_dailyTask_data)
+    }
+    onDisable() {
+        // game.cb.off('update_daliyMatch_data', this, this.update_daliyMatch_data)
+        game.cb.off('update_dailyTask_data', this, this.update_dailyTask_data)
+    }
+
+    update_dailyTask_data() {
+        this.visible = false;
+        let data = __data.dailyTask;
+        if (!data.des || data.des.includes('未完成') || data.isFinalTask) {
+            this.light.stop();
+            return;
+        }
+        game.cb.event('daliyMatch_visible_false')
+        this.visible = true;
+
+        this.txt_num.text = '×' + data.reward[0].count;
+        // 已完成
+        if (data.pro >= data.need) {
+            this.txt_tips.text = "";
+            this.btn_receive.visible = true;
+            this.title.y = 10;
+            this.light.play(0);
+        } else {
+            this.btn_receive.visible = false;
+            this.txt_tips.text = data.simpleDes;
+            this.title.y = 15;
+            this.light.stop();
+        }
+    }
+}
+
+
+class CheckUpgradeRank {
+    static check(result, oldCup, newCup) {
+        if (!result) { return false; }
+        // 必须胜利才有  失败没有
+        let oldRank = RankUtils.getRankLvDataByScore(oldCup, __data.uid, HallPlay.lastCityId);
+        let newRank = RankUtils.getRankLvDataByScore(newCup, __data.uid, HallPlay.lastCityId);
+
+        let oldName = RankUtils.getCnReg(oldRank.name);
+        let newName = RankUtils.getCnReg(newRank.name);
+
+        // 确实提升段位了， 今天还没有弹出
+        if (oldName != newName && !RankUtils.getTodayRecord(newName)) {
+            __showScene.show_gameMain_uplv(newRank, HallPlay.lastCityId);
+            RankUtils.setTodayRecord(newName);
+            return true;
+        }
+
+        return false;
+    }
+
+
+    static checkQs(result, oldCup, newCup) {
+        if (!result) { return false; }
+        // 必须胜利才有  失败没有
+        let oldRank = RankUtils.getRankLvDataByScore(oldCup, __data.uid, HallPlay.lastCityId);
+        let newRank = RankUtils.getRankLvDataByScore(newCup, __data.uid, HallPlay.lastCityId);
+
+        let oldName = RankUtils.getCnReg(oldRank.name);
+        let newName = RankUtils.getCnReg(newRank.name);
+
+        // 提升段位了  且可以领取雀神之路奖励
+        if (oldName != newName && __data.queShenRoad.isRed) {
+            __showScene.show_gameMain_uplv(newRank, HallPlay.lastCityId, true);
+            RankUtils.setTodayRecord(newName);
+            return true;
+        }
+
+        return false;
+    }
+
+
+    static share() {
+        if (!__data.deskData.roomVo.smallResultData) { return false; }
+        // 触发3倍数连胜分享
+        if (__data.deskData.roomVo.smallResultData.keepWinNumber >= gameConfig.keepWinRule) {
+            if (__data.deskData.roomVo.smallResultData.keepWinNumber == 3 && !LocalUtils.getByToday(ResultPanelManager.KEEP_WIN_THREE_TIMES)) {
+                LocalUtils.saveByToday(ResultPanelManager.KEEP_WIN_THREE_TIMES, 'true');
+                game.scene.add(MahjongResultShare, [__data.deskData.roomVo.smallResultData.keepWinNumber])
+                return true;
+            } else if (__data.deskData.roomVo.smallResultData.keepWinNumber == 5) {
+                game.scene.add(MahjongResultShare, [__data.deskData.roomVo.smallResultData.keepWinNumber])
+                return true;
+            } else if (__data.deskData.roomVo.smallResultData.keepWinNumber == 7) {
+                game.scene.add(MahjongResultShare, [__data.deskData.roomVo.smallResultData.keepWinNumber])
+                return true;
+            } else if (__data.deskData.roomVo.smallResultData.keepWinNumber == 9) {
+                game.scene.add(MahjongResultShare, [__data.deskData.roomVo.smallResultData.keepWinNumber])
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+
+class MahjongResultCompensateExplain extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultCompensateExplain',
+            layer: 'panel'
+        })
+        // this.btn_buy.addComponent(ToVipPanelGoldComponent)
+    }
+
+    onEnable() {
+        SkinUtils.gray(this.btn_buy, true, true);
+        this.btn_buy.on(Laya.Event.CLICK, this, this._onClickBuy);
+        game.cb.on(__eh + 'update_user_info', this, this.refresh);
+    }
+
+    onDisable() {
+        this.btn_buy.off(Laya.Event.CLICK, this, this._onClickBuy);
+        game.cb.off(__eh + 'update_user_info', this, this.refresh);
+    }
+
+    added(list) {
+        this.list = list;
+        this.refresh();
+        // if (__data.vip.isVip) { SkinUtils.gray(this.btn_buy, true, false); }
+    }
+
+    refresh() {
+        if (this.list) {
+            let ts = this.transformString(this.list);
+            this.txt_explain.text = ts;
+            this.btn_buy.y = this.txt_explain.y + this.txt_explain.height + this.btn_buy.height / 2 + 30;
+            this.height = this.bg.height = this.btn_buy.y + this.btn_buy.height / 2 + 60;
+
+            this.comp_addedParams_updatePosition.updatePosition();
+        }
+    }
+
+    transformString(list) {
+        let strs = [];
+
+        let index = 0;
+        for (let i = 0; i < list.length; i++) {
+            index++;
+            let name = __data.othersVO[list[i].id] ? __data.othersVO[list[i].id].name : '';
+            // let realScore = Math.abs(list[i].realScore);
+            let initScore = Math.abs(list[i].initScore);
+            let score = Math.abs(list[i].score);
+            strs.push(`${index}、玩家[${name}]应输${initScore}金币，由于破产，故只能支付${score}金币，剩余${initScore - score}金币由系统补足。`);
+        }
+        return strs.length ? strs.join('\n\n') : '';
+    }
+
+    _onClickBuy() {
+        __tips('全额保障特权已停止开通');
+    }
+}
+
+
+class MahjongResultAllWin extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultAllWin',
+            layer: 'panel'
+        })
+
+        // this.btn_buy.addComponent(ToVipPanelGoldComponent);
+    }
+
+    onEnable() {
+        game.cb.on('update_vip_data', this, this.openVipHandle);
+        this.btn_next.on(Laya.Event.CLICK, this, this._toNext);
+    }
+
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.openVipHandle);
+        this.btn_next.off(Laya.Event.CLICK, this, this._toNext);
+
+        ResultPanelManager.show();
+    }
+
+    added(gold) {
+        this.txt_num.text = GoldFormatUtils.format(gold, 2);
+    }
+
+    _toNext() {
+        game.scene.remove(this);
+    }
+
+    // 全额保障返还金币
+    openVipHandle() {
+        if (__data.vip.isVip) {
+            game.server.send(10009, 3);
+        }
+    }
+
+    clickMask() { }
+}
+
+
+class RankCupMore extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/RankCupMore',
+            layer: 'panel'
+        })
+
+        this.btnSpace = 50;
+        this.adunitId = 'adunit-d55dc62bb5256b1d';
+
+        this.btn_vip.addComponent(ToVipPanelCupComponent);
+
+        this.cursorScript = this.cursor.addComponent(PlayComponent);
+        this.cursorParams = { startIndex: 0, endIndex: 3, frame: 5, loop: true, delayFrame: 10, prefix: 'cdn/mahjong_result/mahjong_result/img_jt', tail: 'png' };
+    }
+
+    onEnable() {
+        this.cursorScript.start(this.cursorParams);
+        this.clearBtns();
+        this.initRank();
+        game.cb.on('update_video_ready', this, this.update_video_ready);
+        game.cb.on('update_vip_data', this, this.openVipHandle);
+        this.btn_share.on(Laya.Event.CLICK, this, this.clickShareGet);
+        this.btn_video.on(Laya.Event.CLICK, this, this.clickVideoGet);
+    }
+
+    onDisable() {
+        this.cursorScript.stop();
+        game.cb.off('update_video_ready', this, this.update_video_ready);
+        game.cb.off('update_vip_data', this, this.openVipHandle);
+        this.btn_share.on(Laya.Event.CLICK, this, this.clickShareGet);
+        this.btn_video.on(Laya.Event.CLICK, this, this.clickVideoGet);
+
+        ResultPanelManager.show();
+    }
+
+    added(more_cup) {
+        this.update_video_ready({ adUnitId: this.adunitId, isSuccess: 1 })
+        // this.txt.text = `${more_cup}%`;
+        this.txt.text = `+50%`;
+    }
+
+    initRank() {
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        let cup = __data.deskData.roomVo.smallResultData.cup;
+        let initCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+        this.rankUI.ready(result);
+        this.rankUI.init(initCup, result ? Math.abs(cup) : -Math.abs(cup));
+        // 赢了  算出最开始的时候的奖杯  如果有进度条就一直显示
+        if (result) {
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(cup);
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        } else { // 输了  看当前奖杯是否有进度条    如果有进度条就一直显示
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        }
+        this.rankUI.frame_info.y = 465;
+        this.rankUI.frame.y = this.rankUI.low_cup_c.y = this.rankUI.cup_c.y = 400;
+        this.rankUI.showInfo();
+    }
+
+    clearBtns() {
+        this.btn_video.visible = false;
+        this.btn_share.visible = false;
+        this.btn_vip.visible = false;
+    }
+
+    update_video_ready(r) {
+        this.vr = r;
+        this.updateBtns();
+    }
+
+    updateBtns() {
+        this.clearBtns();
+
+        if (this.vr.isSuccess) {
+            // 胜利  看视频额外奖励 今日已观看次数 < 今日需要观看次数（）
+            this.btn_video.visible = true;
+        } else {
+            this.btn_share.visible = true;
+            // __data.shareVideoRule.total_shareShowCount(this.btn_share.parent);
+        }
+        this.btn_vip.visible = true;
+    }
+
+    clickShareGet() {
+        //@Test
+        // game.cb.event(MahjongResultRankComponent.PROTECT_CUP, [5, 1000, 1500]);
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '胜利额外奖杯', 'Mj_Participation': '参与分享' })
+        // __data.shareVideoRule.total_clickShareCount();
+        miniApi.share({
+            titleId: __tool.randomRange(1, 9),
+            cityId: HallPlay.lastCityId,
+            shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+            params: `uid=${__data.uid}&shareRewardType=resultGetShare&myCityId=${__data.myCityId}`,
+            shareGroupClickCallback: () => {
+                game.server.send(10001, 2);
+                game.scene.remove(GameMainRedPacket_2)
+            },
+            shareOnShowCallback: () => {
+                game.scene.add(GameMainRedPacket_2)
+            }
+        })
+    }
+    async clickVideoGet() {
+        //@Test
+        // game.cb.event(MahjongResultRankComponent.EXTRA_CUP, [5, 1000, 1500]);
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '胜利额外奖杯', 'Mj_Participation': n })
+        let adunitId = this.vr.adUnitId
+        await miniApi.video_ready(adunitId)
+        miniApi.video_show(adunitId, () => {
+            game.server.send(10001, 1);
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0);
+    }
+
+    openVipHandle() {
+        if (__data.vip.isVip) {
+            game.server.send(10001, 3);
+        }
+    }
+
+    clickMask() { }
+}
+
+
+
+class RankCupProtect extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/RankCupProtect',
+            layer: 'panel'
+        })
+
+        this.btnSpace = 50;
+        this.adunitId = 'adunit-3f69a52bc2f1755f';
+
+        this.btn_vip.addComponent(ToVipPanelCupComponent);
+        this.btn_close.addComponent(ReduceProtectOdds);
+
+        this.cursorScript = this.cursor.addComponent(PlayComponent);
+        this.cursorParams = { startIndex: 0, endIndex: 3, frame: 5, loop: true, delayFrame: 10, prefix: 'cdn/mahjong_result/mahjong_result/img_jt', tail: 'png' };
+    }
+
+    onEnable() {
+        this.cursorScript.start(this.cursorParams);
+        this.clearBtns();
+        this.initRank();
+        game.cb.on('update_video_ready', this, this.update_video_ready);
+        game.cb.on('update_vip_data', this, this.openVipHandle);
+        this.btn_share.on(Laya.Event.CLICK, this, this.clickShareProtect);
+        this.btn_video.on(Laya.Event.CLICK, this, this.clickVideoProtect);
+    }
+
+    onDisable() {
+        this.cursorScript.stop();
+        game.cb.off('update_video_ready', this, this.update_video_ready);
+        game.cb.off('update_vip_data', this, this.openVipHandle);
+        this.btn_share.on(Laya.Event.CLICK, this, this.clickShareProtect);
+        this.btn_video.on(Laya.Event.CLICK, this, this.clickVideoProtect);
+
+        ResultPanelManager.show();
+    }
+
+    added(compensate_cup) {
+        this.update_video_ready({ adUnitId: this.adunitId, isSuccess: 1 })
+        this.txt.text = `+${compensate_cup}`;
+    }
+
+    initRank() {
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        let cup = __data.deskData.roomVo.smallResultData.cup;
+        let initCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+        this.rankUI.ready(result);
+        this.rankUI.init(initCup, result ? Math.abs(cup) : -Math.abs(cup));
+        // 赢了  算出最开始的时候的奖杯  如果有进度条就一直显示
+        if (result) {
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup - Math.abs(cup);
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        } else { // 输了  看当前奖杯是否有进度条    如果有进度条就一直显示
+            let lastCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+            let lastRankData = RankUtils.getRankLvDataByScore(lastCup, __data.uid, HallPlay.lastCityId);
+            let haveLine = lastRankData.toNextLevelNeedCup != 0 ? true : false;
+            this.rankUI.lineState = haveLine;
+        }
+        this.rankUI.frame_info.y = 465;
+        this.rankUI.frame.y = this.rankUI.low_cup_c.y = this.rankUI.cup_c.y = 400;
+        this.rankUI.showInfo();
+    }
+
+    clearBtns() {
+        this.btn_video.visible = false;
+        this.btn_share.visible = false;
+        this.btn_vip.visible = false;
+    }
+
+    update_video_ready(r) {
+        this.vr = r;
+        this.updateBtns();
+    }
+
+    updateBtns() {
+        this.clearBtns();
+
+        if (this.vr.isSuccess) {
+            // 胜利  看视频额外奖励 今日已观看次数 < 今日需要观看次数（）
+            this.btn_video.visible = true;
+        } else {
+            this.btn_share.visible = true;
+            // __data.shareVideoRule.total_shareShowCount(this.btn_share.parent);
+        }
+        this.btn_vip.visible = true;
+    }
+
+    clickShareProtect() {
+        //@Test
+        // game.cb.event(MahjongResultRankComponent.PROTECT_CUP, [15, 1000, 1500]);
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '失败段位保护', 'Mj_Participation': '参与分享' })
+        // __data.shareVideoRule.total_clickShareCount();
+        miniApi.share({
+            titleId: __tool.randomRange(1, 9),
+            cityId: HallPlay.lastCityId,
+            shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+            params: `uid=${__data.uid}&shareRewardType=resultProtectShare&myCityId=${__data.myCityId}`,
+            shareGroupClickCallback: () => {
+                game.server.send(10004, 2);
+                game.scene.remove(GameMainRedPacket_2)
+            },
+            shareOnShowCallback: () => {
+                game.scene.add(GameMainRedPacket_2)
+            }
+        })
+    }
+    async clickVideoProtect() {
+        //@Test
+        // game.cb.event(MahjongResultRankComponent.EXTRA_CUP, [5, 1000, 1500]);
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '失败段位保护', 'Mj_Participation': n })
+        let adunitId = this.vr.adUnitId
+        await miniApi.video_ready(adunitId)
+        miniApi.video_show(adunitId, () => {
+            game.server.send(10004, 1);
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0);
+    }
+
+    openVipHandle() {
+        if (__data.vip.isVip) {
+            game.server.send(10004, 3);
+        }
+    }
+
+    clickMask() { }
+}
+
+
+class BaoItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/BaoItem',
+            module: false
+        })
+    }
+
+    set isHorse(value) { this._isHorse = value; if (value) this._updateUI(); }
+
+    set dataSource(value) {
+        this._value = value;
+        this._updateUI();
+    }
+
+    _updateUI() {
+        if (parseInt(this._value) >= 0) {
+            //设置宝的皮肤
+            let __custom = __data.mahjong_set.modelIndex.toString() === '0' ? __data.mahjong_set.cardIndex : __data.mahjong_set.cardIndex + 2
+            let __skin = this._value == 255 ? 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_ag.png' : Mahjong2DRes.getRes('own', this._value)
+            this.baoImg.texture = __skin
+            this.mark.visible = false;
+            // 广东处理一下中的马
+            if (this._isHorse) { this.horseHandle(); }
+        }
+    }
+
+    horseHandle() {
+        let bingo = GdHorseInfo.horses.get.some(value => value == this._value);
+        if (bingo) { this.mark.visible = false; }// 中了
+        else { this.mark.visible = true; }// 没中
+    }
+
+    _onClickFlag() {
+        if (this._value) {
+            this._value.clickDo && this._value.clickDo();
+        }
+    }
+}
+
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongSmallResultCupExplainUI', MahjongSmallResultCupExplain);
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongSmallResultTopUI', MahjongSmallResultTop);
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongRankAniUI', MahjongRankAni);
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongResultRankComponentUI', MahjongResultRankComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongSmallResultWinnerUI', MahjongSmallResultWinner);
+Laya.ClassUtils.regClass('ui.scene_game.result.ResultLeftUpUI', ResultLeftUp);
+Laya.ClassUtils.regClass('ui.scene_game.result.ResultLeftDownUI', ResultLeftDown);
+Laya.ClassUtils.regClass('ui.scene_game.result.ResultRightUpUI', ResultRightUp);
+Laya.ClassUtils.regClass('ui.scene_game.result.ResultRightDownUI', ResultRightDown);
+Laya.ClassUtils.regClass('ui.scene_game.result.RankComponentUI', RankComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.RankLineComponentUI', RankLineComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.ChallengeBoxComponentUI', ChallengeBoxComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.DailyTaskComponentUI', DailyTaskComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongResultRatesUI', MahjongResultRates);
+Laya.ClassUtils.regClass('ui.scene_game.result.BaoItemUI', BaoItem);
+
+
+class ImageScaleScript extends Laya.Script {
+    init(scaleRate, time, done) {
+        this._scaleRate = scaleRate;
+        this._scaleTime = time;
+        this._done = done;
+
+        this.fdTime = this._scaleTime * 0.7;
+        this.stayTime = 80;
+        this.edTime = this._scaleTime - this.fdTime;
+    }
+
+    start() {
+        this.owner.scale(0, 0);
+        Laya.Tween.to(this.owner, { scaleX: this._scaleRate, scaleY: this._scaleRate }, this.fdTime, null, Laya.Handler.create(this, this._toEnd));
+    }
+
+    _toEnd() {
+        // Laya.Tween.to(this.owner, { scaleX: 1, scaleY: 1 }, this.edTime, null, Laya.Handler.create(this, this._complete), this.stayTime);
+        Laya.Tween.to(this.owner, { scaleX: 1, scaleY: 1 }, this.edTime, Laya.Ease.expoIn, Laya.Handler.create(this, this._complete), this.stayTime);
+    }
+
+    _complete() {
+        this._done && this._done();
+    }
+}
+
+
+
+
+class BreathScript extends Laya.Script {
+    onEnable() {
+        this.init();
+        this.start();
+    }
+
+    onDisable() {
+        this.stop();
+    }
+
+    onMouseOut() {
+        this.start();
+    }
+
+    onStageMouseUp() {
+        this.start();
+    }
+
+    init() {
+        this.minScaleX = this.owner.scaleX;
+        this.minScaleY = this.owner.scaleY;
+        this.maxScaleX = this.owner.scaleX * 1.1;
+        this.maxScaleY = this.owner.scaleY * 1.1;
+    }
+
+    start() {
+        if (!this.owner) { return }
+        this.breatheIn();
+    }
+
+    stop() {
+        Laya.Tween.clearAll(this.owner);
+    }
+
+    breatheIn() {
+        this.owner.scale(this.minScaleX, this.minScaleY);
+        Laya.Tween.to(this.owner, { scaleX: this.maxScaleX, scaleY: this.maxScaleY }, 1000, Laya.Ease.sineOut, Laya.Handler.create(this, this.breatheOut));
+    }
+
+    breatheOut() {
+        Laya.Tween.to(this.owner, { scaleX: this.minScaleX, scaleY: this.minScaleY }, 1000, Laya.Ease.sineOut, Laya.Handler.create(this, this.breatheIn));
+    }
+}

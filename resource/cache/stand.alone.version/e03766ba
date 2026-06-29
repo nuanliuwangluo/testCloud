@@ -1,0 +1,83 @@
+class LoadBgAni extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadBgAni',
+            scaleType: 'max',
+        })
+
+        this.bg = new game.Dragon('ani/dongtaibg.sk')
+        this.addChild(this.bg)
+        this.bg.x = this.width / 2
+        this.bg.y = this.height / 2
+    }
+    onEnable() {
+        this.bg.play(0, true)
+    }
+}
+
+class LoadBg extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadBg',
+            scaleType: 'max',
+        })
+    }
+
+    onEnable() {
+        game.scene.add(LoadLeftDown);
+        game.scene.add(LoadLeftUp);
+        game.scene.add(LoadRightUp);
+        game.scene.add(LoadLogo);
+    }
+}
+class LoadLogo extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadLogo',
+            up: true,
+            offy: game.height * 0.05,
+        })
+    }
+}
+class LoadLeftUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadLeftUp',
+            up: true,
+            left: true,
+            offx: 20,
+            offy: 20
+        })
+    }
+    onEnable() {
+        this.update_version();
+    }
+    update_version(server_version) {
+        let a1 = config.reqIpUrl.charAt(0).toUpperCase()
+        this.txt_version.text = `V:${config.clientVersion + config.versionK} ${config.useVersionIP ? 'Y' : 'N'}${a1} ${config.version_suffix}`
+        if (server_version) {
+            let a = this.txt_version.text
+            this.txt_version.text = a + '\nV:' + server_version
+        }
+    }
+}
+class LoadLeftDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadLeftDown',
+            down: true,
+            left: true
+        })
+    }
+}
+class LoadRightUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_load/loadRightUp',
+            up: true,
+            right: true,
+            offx: -20,
+            offy: 20
+        })
+    }
+}

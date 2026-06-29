@@ -1,0 +1,688 @@
+/*
+ * @Author: 轻飘时刻
+ * @Date:   2018-06-11 13:45:50
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-03-12 11:19:28
+ */
+
+var __voice = __voice || { myUid:null }
+
+__voice.protocol = 'wss://'
+
+
+__voice.readyPlayUserId = null
+__voice.readyPlayTime = null
+    //录音允许的最大时间
+__voice.allowMaxRecordTime = 30000
+__voice.readyPlayVoice = function(userId) {
+    __voice.readyPlayUserId = userId;
+    document.body.addEventListener('touchend', __voice.touchendEvent)
+}
+__voice.touchendEvent = function(e) {
+
+    if (__voice.readyPlayUserId) {
+        __voice.playVoice(__voice.readyPlayUserId)
+    }
+    __voice.readyPlayUserId = null
+    __voice.readyPlayTime = null
+    document.body.removeEventListener('touchend', __voice.touchendEvent)
+}
+
+__voice.startRecordTime = null
+__voice.maxRecordTimer = null
+__voice.startRecord = function() {
+    __voice.startRecordTime = Date.now()
+
+    __voice.stopVoice()
+    __sound.pause()
+
+    __voice.playing = false;
+    Laya.SoundManager.stopAllSound();
+    if (__voice.playingInfo && __voice.playingInfo.userId) game.cb.dispatchEvent('play_voice_complete', [__voice.playingInfo.userId])
+
+    if (game.runScene == 'wx') { trace('微信开始录音');
+        wx.startRecord(); } else if (game.runScene == 'mw') { trace('默往开始录音');
+        MostOneJSApis.startRecord() }
+
+    __voice.maxRecordTimer = setTimeout(function() {
+        __voice.stopRecord()
+    }, __voice.allowMaxRecordTime)
+}
+__voice.stopRecord = function() {
+    clearTimeout(__voice.maxRecordTimer)
+    if (Date.now() - __voice.startRecordTime < 1000) {
+        trace('少于1秒，1.5秒后自动停止录音', game.runScene)
+            // 如果录音过短 startRecord后1.5s再stopRecord 保证stopRecord不崩掉
+        setTimeout(function() {
+            if (game.runScene == 'wx') {
+                wx.stopRecord({ success: function(res) {} })
+            } else if (game.runScene == 'mw') { MostOneJSApis.stopRecord() }
+
+            __sound.working();
+        }, 1500)
+    } else {
+        trace('主动停止录音', game.runScene)
+        if (game.runScene == 'wx') {
+            wx.stopRecord({
+                success: function(res) {
+                    var localId = res.localId;
+                    trace('微信停止录音，开始上传...localId', localId)
+                    wx.uploadVoice({
+                        localId: localId, // 需要上传的音频的本地ID，由stopRecord接口获得
+                        isShowProgressTips: 0, // 默认为1，显示进度提示
+                        success: function(res) {
+                            var serverId = res.serverId; // 返回音频的服务器端ID
+                            trace('录音服务器serverId', serverId);
+
+                            VoiceemitAmr(serverId);
+                        }
+                    });
+                }
+            });
+        } else if (game.runScene == 'mw') { trace('默往停止录音');
+            MostOneJSApis.stopRecord() }
+
+        __sound.working();
+    }
+}
+
+__voice.voiceInfoArray = []
+__voice.playing = false
+__voice.addQueue = function(info) {
+    __voice.voiceInfoArray.push(info);
+    // __voice.voiceInfoArray[info.userId] = info;
+    // info.userId != __data.ivo.id && game.cb.dispatchEvent(__eh+'have_new_voice', [info.userId])
+}
+// 播放中的音频信息
+__voice.playingInfo = null
+// 播放结束计时器
+__voice.endVoiceTimer = null
+__voice.playVoice = function(userId) {
+    /*
+    音频格式: base64 格式的 AMR
+    完整示例音频: https://cdn.ronghub.com/voice-amr-base64.json
+    */
+    // 只能播放一个声音 如果有在播放 就种植掉
+    if (!__voice.voiceInfoArray.length) { __sound.working(); }
+    if (__voice.playing || !__voice.voiceInfoArray.length) { return }
+
+    __voice.stopVoice();
+
+    __voice.playingInfo = __voice.voiceInfoArray.shift();
+    // __voice.playingInfo = __voice.voiceInfoArray[userId];
+    // __voice.voiceInfoArray[userId] = null;
+    if (!__voice.playingInfo) return;
+    __sound.pause()
+    __voice.playing = true;
+
+    game.cb.dispatchEvent('play_voice_start', [__voice.playingInfo.userId]);
+
+    if(window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP){
+        AppBridge.playVoice("https://" + game.voiceConfig.ip + "/MessageServer/upload/" + __voice.playingInfo.mp3Url, ()=>{
+            __voice.playing = false
+            game.cb.dispatchEvent('play_voice_complete', [__voice.playingInfo.userId])
+            __voice.playVoice();
+        });
+    }else{
+        Laya.SoundManager.setSoundVolume(1);
+        Laya.SoundManager.playSound("https://" + game.voiceConfig.ip + "/MessageServer/upload/" + __voice.playingInfo.mp3Url, 1);
+        setTimeout(function() {
+            __voice.playing = false
+            game.cb.dispatchEvent('play_voice_complete', [__voice.playingInfo.userId])
+            __voice.playVoice();
+        }, __voice.playingInfo.duration * 1000)
+    }
+}
+
+// 停止当前播放的语音
+__voice.stopVoice = function() {
+    if (__voice.playing && __voice.playingInfo) {
+        if (__voice.playingInfo.userId == __voice.myUid) {
+            Laya.SoundManager.stopSound(__voice.playingInfo.mp3Url)
+            __voice.playing = false
+            game.cb.dispatchEvent('play_voice_complete', [__voice.playingInfo.userId])
+            __sound.working()
+        } else {
+
+        }
+    }
+}
+
+// 语音播放正常结束
+__voice.endVoice = function() {
+    __voice.playing = false
+    clearTimeout(__voice.endVoiceTimer)
+    game.cb.dispatchEvent('play_voice_complete', [__voice.playingInfo.userId])
+    // 播放完毕 再 检查是否有新消息 进行新消息 提示
+    if (__voice.voiceInfoArray[__voice.playingInfo.userId]) game.cb.dispatchEvent(__eh + 'have_new_voice', [__voice.playingInfo.userId])
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ * @Author: 轻飘时刻
+ * @Date:   2018-12-12 13:59:39
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2018-12-20 09:16:09
+ */
+var ___frame = ___frame || {};
+___frame.voiceConfig = {
+    token: '',
+    appKey: '',
+    ip: '',
+    port: 0
+}
+var ___frame = ___frame || {};
+___frame.VoiceNet = function() {
+    var that = this;
+    this.reConnectCount = 3
+    this.noPrintIDArr = [99, 998]; //99, 998
+    this.sendList = [];
+    this.readList = [];
+    this.socket = null;
+    this.sendMsgKey = 1;
+    this.readMsgKey = 1;
+    this.ip = ''; //该socket玩家ip
+    this.head = 10242048;
+    this.reSendList = [];
+    this.hasDealMsg = [];
+    this.ing = false
+    this.connect = function(protocol, ip, port) {
+        if (this.socket) this.socket.close()
+        this.socket = new ___frame.VoiceSocket(protocol, ip, port, this)
+    }
+    this.close = function() {
+        this.reSendList = []
+        this.hasDealMsg = []
+        this.ing = false;
+        this.sendMsgKey = 1;
+        this.readMsgKey = 1;
+        if (this.socket) this.socket.close()
+        this.socket = null;
+        this.reSendStop();
+        __voiceHeartbeat.stop()
+            // game.cb.dispatchEvent('no_socket')
+    }
+    this.clear = function() {
+        this.reConnectCount = 3
+        this.reSendList = []
+        this.hasDealMsg = []
+        this.ing = false;
+        this.sendList = [];
+        this.readList = [];
+        this.sendMsgKey = 1;
+        this.readMsgKey = 1;
+        if (this.socket) this.socket.close()
+        this.socket = null;
+        this.reSendStop();
+        __voiceHeartbeat.stop()
+            // game.cb.dispatchEvent('no_socket')
+    }
+    this.registeSendList = function(params____________) {
+        for (var i = 0; i < arguments.length; i++) {
+            new arguments[i](this)
+        }
+    }
+    this.registeReadList = function(params____________) {
+        for (var i = 0; i < arguments.length; i++) {
+            new arguments[i](this)
+        }
+    }
+    this.send = function(params____________) {
+        if (!this.ing) { console.warn('SOCKET 未实例化... or 未连接...'); return; }
+        if (!arguments.length) throw new Error("参数最少传入一个消息ID")
+        var id = arguments[0]
+        if (!this.sendList[id]) {
+            // throw new Error("send msg "+id+" 不存在")
+            console.warn("send msg " + id + " 不存在")
+            return
+        }
+        var params = [];
+        //index 从1 开始 默认删除id
+        for (var i = 1; i < arguments.length; i++) {
+            params.push(arguments[i])
+        }
+        this.sendList[id].apply(this.sendList[id].msg, params)
+        this.sendList[id].msg.send(arguments[0])
+        return true
+    }
+    this.reSendTime = null
+    this.reSendStart = function() {
+        clearInterval(this.reSendTime)
+        this.reSendTime = setInterval(this.reSendServer, 2000)
+    }
+    this.reSendServer = function() {
+        for (var id in that.reSendList) {
+            trace(id, that.reSendList[id])
+            that.socket.reSend(id, that.reSendList[id])
+        }
+    }
+    this.reSendStop = function() {
+        clearInterval(this.reSendTime)
+    }
+}
+___frame.VoiceSocket = function(protocol, ip, port, net) {
+    var that = this;
+    this.socket = new WebSocket(protocol + ip + ":" + port);
+    this.socket.socketid = this.socketid;
+    this.socket.binaryType = "arraybuffer";
+    this.aDataArray = [];
+    trace("开始连接语音服务器：", protocol + ip + ":" + port)
+    this.socket.onopen = function() {
+        net.ing = true
+        net.reConnectCount = 3;
+        clearTimeout(that.timeout);
+        __voiceHeartbeat.start()
+            // ___frame.cb.dispatchEvent("socketConnect")
+        net.reSendStart()
+        trace("语音服务器连接成功.")
+        net.send(2, ___frame.voiceConfig.appKey, __voice.myUid, ___frame.voiceConfig.token)
+    };
+    this.socket.onmessage = function(message) {
+        // __voiceHeartbeat.reset();
+        var barray = new Int8Array(message.data);
+        for (var i = 0; i < barray.length; i++) {
+            that.aDataArray.push(barray[i]);
+        }
+        that.read()
+    };
+    var serverid = 0;
+    var length = 0;
+    var key = 0;
+    var body = null;
+    this.read = function() {
+        //length id1 id2 uid 后面都是变动的需求了
+        //key服务判断 length长度 id1 服务标志 id2服务消息号解析用 uid当前socket玩家id
+        if (that.aDataArray.length >= 8) {
+            length = ___frame.byte.readInt(that.aDataArray);
+        }
+        if (length > 0) {
+            if (length <= this.aDataArray.length) {
+                body = this.aDataArray.splice(0, length)
+                serverid = ___frame.byte.readByte(body);
+                net.noPrintIDArr.indexOf(serverid) == -1 && trace("%c接受<<<-ID-" + serverid + "-length-" + length, "color:#039058")
+                this.manageMessage(serverid, body, net);
+                // if(serverid == 99 || serverid == 88){
+                //     this.manageMessage(serverid, body, net);
+                // }else if(!net.hasDealMsg[nmk] && net.readMsgKey == nmk){//这个服务是否已经处理
+                //     this.manageMessage(serverid, body, net);
+                //     net.hasDealMsg[nmk] = 1;
+                //     net.send(99, nmk)
+                //     net.readMsgKey++;
+                // }else if(net.hasDealMsg[nmk]){
+                //     net.send(99, nmk)
+                // }
+            }
+            key = length = 0;
+            this.read();
+        }
+    }
+    this.manageMessage = function(serverid, info, server) {
+            if (net.readList[serverid]) {
+                net.readList[serverid].msg.body = info
+                try {
+                    net.readList[serverid].apply(net.readList[serverid].msg)
+                } catch (e) {
+                    console.error(e)
+                }
+            } else { net.noPrintIDArr.indexOf(serverid) == -1 && trace("msg read " + serverid + " 不存在") }
+        }
+        // this.postToServer = function(sendMsgKey, serverid, value){
+    this.postToServer = function(serverid, value) {
+        var sendByte = new Int8Array(value.length);
+        for (var i = 0; i < value.length; i++) {
+            sendByte[i] = value[i];
+        }
+        this.send(sendByte.buffer)
+            // if(serverid != 99 && serverid != 998){
+            //     net.reSendList[sendMsgKey] = sendByte.buffer;
+            // net.reSendStart()
+            // }
+    }
+    this.reSend = function(id, buffer) {
+        trace('重发消息: ' + id)
+        this.send(buffer)
+    }
+    this.send = function(buffer) {
+        if (!this.socket) {
+            console.warn("服务器未连接。。。")
+        } else if (this.socket.readyState != 1) {
+
+        } else {
+            this.socket && this.socket.send(buffer);
+        }
+    }
+    this.socket.onerror = function(e) {
+        trace('<> ' + JSON.stringify(e))
+        that.close()
+        __voiceHeartbeat.stop()
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+            setTimeout(that.voiceSocketConnect, 5000)
+    };
+    this.socket.onclose = function() {
+        that.close()
+        __voiceHeartbeat.stop()
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+        setTimeout(that.voiceSocketConnect, 5000)
+    };
+    this.close = function() {
+        trace('语音服务器已断开.')
+        this.socket.close()
+        this.socket.onopen = null;
+        this.socket.onmessage = null;
+        this.socket.onerror = null;
+        this.socket.onclose = null;
+        clearTimeout(that.timeout)
+    }
+    this.timeout = setTimeout(function() {
+        trace('语音服务器连接超时')
+        //连接socket超时
+        that.close();
+        net.ing = false
+        net.reSendStop()
+        net.reConnectCount--
+        setTimeout(that.voiceSocketConnect, 5000)
+    }, 6666)
+
+    this.voiceSocketConnect = function() {
+        // game.server.send(993)
+        // game.voiceServer.connect(game.voiceConfig.ip, game.voiceConfig.port)
+    }
+}
+
+___frame.VoiceMsgSend = function VoiceMsgSend(net) {
+    var that = this
+    this.body = [];
+    this.content = "";
+    this.send = function(id_) {
+        // var body = []
+        // var sendMsgKey = id_!=99?net.sendMsgKey++:0;//99消息 不涨编号
+        // body = body.concat(___frame.byte.intToBytes(sendMsgKey))
+        // body = body.concat(___frame.byte.intToBytes(id_))
+        // body = body.concat(___frame.byte.stringToBytes(apilon))//精度
+        // body = body.concat(___frame.byte.stringToBytes(apilat))//维度
+        // body = body.concat(___frame.byte.stringToBytes(net.uid))
+        // body = body.concat(___frame.byte.stringToBytes(this.gameid))
+        // body = body.concat(this.body)
+        // var length = body.length;
+        var msg = [___frame.byte.byteToBytes(id_)];
+        // msg = msg.concat(___frame.byte.intToBytes(net.head))
+        // msg = msg.concat(___frame.byte.intToBytes(length))
+        msg = msg.concat(this.body)
+            // net.socket.postToServer(sendMsgKey, id_, msg)
+        net.socket.postToServer(id_, msg)
+        net.noPrintIDArr.indexOf(id_) == -1 && trace("%c发送>>>-ID-" + id_ + "-length-" + this.body.length, "color:#039058;font-weight:bold")
+        net.noPrintIDArr.indexOf(id_) == -1 && trace("发送内容：" + id_ + " " + this.content)
+        clear()
+    }
+
+    function clear(params) {
+        that.body.splice(0, that.body.length)
+        that.content = ""
+    }
+
+    this.writeInt = function(value) {
+        that.content += value + " "
+        that.body = that.body.concat(___frame.byte.intToBytes(value))
+    }
+
+    this.writeLong = function(value) {
+        that.content += value + " "
+        that.body = that.body.concat(___frame.byte.longToBytes(value))
+    }
+
+    this.writeByte = function(value) {
+        that.content += value + " "
+        that.body = that.body.concat(___frame.byte.byteToBytes(value))
+    }
+
+    this.writeString = function(value) {
+        value = value.toString()
+        that.content += value + " "
+        that.body = that.body.concat(___frame.byte.stringToBytes(value))
+    }
+
+    for (var name in this) {
+        if (name.indexOf("send_") != -1) {
+            var func = this[name];
+            var id = name.replace("send_", "")
+            if (net.sendList[id]) throw new Error("send msg " + id + " 已存在");
+            net.sendList[id] = func;
+            net.sendList[id].msg = this;
+        }
+    }
+}
+
+___frame.VoiceMsgRead = function VoiceMsgRead(net) {
+    var that = this
+
+    this.body;
+
+    this.readInt = function() {
+        return ___frame.byte.readInt(this.body)
+    }
+
+    this.readString = function() {
+        return ___frame.byte.readString(this.body)
+    }
+
+    this.readLong = function() {
+        return ___frame.byte.readLong(this.body)
+    }
+
+    this.readByte = function() {
+        return ___frame.byte.readByte(this.body)
+    }
+
+    for (var name in this) {
+        if (name.indexOf("read_") != -1) {
+            var func = this[name]
+            var id = name.replace("read_", "")
+            if (net.readList[id]) throw new Error("read msg " + id + " 已存在")
+            net.readList[id] = func
+            net.readList[id].msg = this
+        }
+    }
+}
+
+var __voiceHeartbeat = {
+    timeout: 10000,
+    timeoutObj: null,
+    tipsDelay: 30000,
+    tipsObj: null,
+    reset: function() {
+        this.stop();　　　　
+        this.start();
+    },
+    start: function() {
+        this.stop()
+        this.timeoutObj = setInterval(this.send, this.timeout);
+        this.tipsObj = setTimeout(this.tips, this.tipsDelay)
+    },
+    stop: function() {
+        // this.helperArray.splice(0)
+        clearInterval(this.timeoutObj);
+        clearTimeout(this.tipsObj);
+        // game.cache.recoverAll('VoiceHeartBeatHelper')
+        // clearTimeout(this.tipsObj);
+    },
+    send: function() {
+        // if(___frame.server.send(998)){
+        game.voiceServer.send(99)
+            // var helper = game.cache.get('VoiceHeartBeatHelper')
+            // helper.start()
+            // __voiceHeartbeat.helperArray.push(helper);
+            // };
+    },
+    tips: function() {
+        trace("语音服务器心跳停止 服务器关闭")
+            // alert('心跳停止 服务器关闭')
+        ___frame.voiceServer.close()
+            // game.server.close()
+            // game.scene.add(AreaWait).socketReConnect()
+        setTimeout(__voiceHeartbeat.voiceSocketConnect, 5000)
+    },
+    read: function() {
+        clearTimeout(this.tipsObj);
+        this.tipsObj = setTimeout(this.tips, this.tipsDelay);
+        // game.cache.recover(this.helperArray.shift())
+        // game.cache.recoverAll('HeartBeatHelper')
+        // clearTimeout(this.tipsObj);
+    },
+    voiceSocketConnect: function() {
+        // game.server.send(993)
+    }
+};
+// var VoiceHeartBeatHelper = (function(){
+//     function VoiceHeartBeatHelper(){
+//         this.time = null;
+//     }
+//     var _proto = VoiceHeartBeatHelper.prototype
+//     _proto.start = function(){
+//         this.stop()
+//         this.time = setTimeout(this.endHandler, 30000)
+//     }
+//     _proto.stop = function(){
+//         clearTimeout(this.time)
+//     }
+//     _proto.endHandler = function(){
+//         __voiceHeartbeat.tips()
+//     }
+//     return VoiceHeartBeatHelper
+// })();
+
+// game.cache.registe(VoiceHeartBeatHelper, 'VoiceHeartBeatHelper', function(helper){
+//     // trace('回收voiceHeartbeathelper')
+//     helper.stop()
+// })
+
+function VoiceMsgSend(net) {
+    var that = this
+
+    this.send_99 = function() {
+
+    }
+
+    this.send_2 = function(appKey, userID, token) {
+        this.writeString(appKey)
+        this.writeInt(userID)
+        this.writeString(token)
+    }
+
+    this.send_3 = function(id) {
+        this.writeString(id)
+    }
+
+    this.send_4 = function(id) {
+        this.writeString(id)
+    }
+
+    game.VoiceMsgSend.call(this, net)
+}
+
+___frame.voiceServerVerifyCount = 2
+
+function VoiceMsgRead(net) {
+    var that = this
+
+    this.read_99 = function() {
+        trace('语音服务器心跳正常')
+        __voiceHeartbeat.read();
+    }
+
+    // this.read_1 = function(){
+    //     var code = this.readInt()
+    //     if(code == 1){
+    //         __tips('语音服务器连接成功')
+    //     }else if(code == 0){
+    //         __tips('语音服务器连接失败')
+    //     }
+    // }
+
+    this.read_2 = function() {
+        var code = this.readByte()
+        if (code == 1) {
+            trace('语音服务器验证成功.')
+        } else if (code == 0) {
+            trace('语音服务器验证失败.')
+            if (___frame.voiceServerVerifyCount) game.server.send(993)
+            ___frame.voiceServerVerifyCount--
+        }
+    }
+
+    this.read_3 = function() {
+        var uid = this.readInt()
+        var duration = this.readInt(); //长度
+        var mp3Url = this.readString()
+        trace(duration, '语音长度', mp3Url, 'mp3Url')
+
+        __voice.addQueue({
+            userId: uid,
+            mp3Url: mp3Url,
+            duration: duration
+        })
+        __voice.playVoice(uid)
+    }
+
+    this.read_4 = function() {
+        var uid = this.readInt()
+        var duration = this.readInt(); //长度
+        var mp3Url = this.readString()
+        trace(duration, '语音长度', mp3Url, 'mp3Url')
+
+        __voice.addQueue({
+            userId: uid,
+            mp3Url: mp3Url,
+            duration: duration
+        })
+        __voice.playVoice(uid)
+    }
+
+    game.VoiceMsgRead.call(this, net)
+}
+
+var __voiceTime = 0
+
+function VoiceemitAmr(serverId) {
+    game.voiceServer.send(3, serverId)
+}

@@ -1,0 +1,295 @@
+__data.shareVideoRule = {
+    hashAdUnitIdName: {
+        'adunit-3f69a52bc2f1755f': '失败段位保护', // 视频分享都有
+        'adunit-d55dc62bb5256b1d': '胜利额外奖杯', // 视频分享都有
+        'adunit-b83df2d22e66e36b': '每日登录', // 视频分享都有
+        'adunit-cb884ce5e16b6f59': '失败激励', // 视频分享都有
+        'adunit-32db74247314cde6': '胜利激励', // 视频分享都有
+        'adunit-24f34675f1830a6c': '广告时间', // 没有分享
+        'adunit-1f51e678c42934e3': '救济金', // 视频分享都有
+        'adunit-f1c8c5f315e4054e': '七日签到', // 视频分享都有
+        'adunit-0d2990e2b4b2f487': '商城奖励', // 弃用
+        'adunit-24510f2ab8dd04a0': '封顶开始', // 没有分享
+        'adunit-1ebaf6a96e85f01e': '通用视频', // 没有分享
+
+        'adunit-2239c08f5259c2d1': '新人红包延时', // 只有视频
+        'adunit-21b4a4918cdbf39b': '新人红包复活', // 只有视频
+        'adunit-14d1ff0df5c09c4c': '全民复活复活', // 只有视频
+        'adunit-58202d8bfcdc9f99': '日常视频刷新', // 没有分享 视频失败 有提示开通vip
+        'adunit-friendRed_relife': '好友红包复活', // 没有分享 视频失败 有提示开通vip
+        'adunit-smallGame_addCount': '消消乐加次数', // 只有视频
+        'adunit-smallGame_relife': '消消乐复活', // 只有视频
+        'adunit-smallGame_magnet': '消消乐磁铁', // 只有视频
+        'adunit-smallGame_remove': '消消乐移出', // 只有视频
+        'adunit-smallGame_shuffle': '消消乐洗牌', // 只有视频
+        'adunit-smallGame_turn': '消消乐翻面', // 只有视频
+        'adunit-smallGame_unlock': '消消乐解锁', // 只有视频
+        'adunit-bless_first_free': '首次免费祝福', // 只有视频
+    },
+    hashAdUnit_test_lowValueWishUser: {
+        'adunit-3f69a52bc2f1755f': '失败段位保护', // 视频分享都有
+        'adunit-d55dc62bb5256b1d': '胜利额外奖杯', // 视频分享都有
+        'adunit-b83df2d22e66e36b': '每日登录', // 视频分享都有
+        'adunit-cb884ce5e16b6f59': '失败激励', // 视频分享都有
+        'adunit-32db74247314cde6': '胜利激励', // 视频分享都有
+        // 'adunit-24f34675f1830a6c': '广告时间', // 没有分享
+        'adunit-1f51e678c42934e3': '救济金', // 视频分享都有
+        'adunit-f1c8c5f315e4054e': '七日签到', // 视频分享都有
+        // 'adunit-0d2990e2b4b2f487': '商城奖励', // 弃用
+        // 'adunit-24510f2ab8dd04a0': '封顶开始', // 没有分享
+        // 'adunit-1ebaf6a96e85f01e': '通用视频', // 没有分享
+
+        'adunit-2239c08f5259c2d1': '新人红包延时', // 只有视频
+        'adunit-21b4a4918cdbf39b': '新人红包复活', // 只有视频
+        'adunit-14d1ff0df5c09c4c': '全民复活复活', // 只有视频
+        // 'adunit-58202d8bfcdc9f99': '日常视频刷新', // 没有分享 视频失败 有提示开通vip
+        'adunit-friendRed_relife': '好友红包复活',
+        'adunit-smallGame_addCount': '消消乐加次数', // 只有视频
+        'adunit-smallGame_relife': '消消乐复活', // 只有视频
+        'adunit-smallGame_magnet': '消消乐磁铁', // 只有视频
+        'adunit-smallGame_remove': '消消乐移出', // 只有视频
+        'adunit-smallGame_shuffle': '消消乐洗牌', // 只有视频
+        'adunit-smallGame_turn': '消消乐翻面', // 只有视频
+        'adunit-smallGame_unlock': '消消乐解锁', // 只有视频
+        'adunit-bless_first_free': '首次免费祝福', // 只有视频
+    },
+    get shareGroupItem() {
+        let a0 = miniApi.getItem(__data.uid + ":groupShareOB")
+        let b = a0 || JSON.stringify({
+            dealgid: {},
+            lowValueGnum: 0,
+            gday: {
+                // 下面如果注释回来 已经分享3个群 3天了 群id 是 1 2 3
+                // 1: { 1: 1, 2: 1, 3: 1 }, 2: { 1: 2, 2: 2, 3: 2 }, 3: { 1: 3, 2: 2, 3: 3 }
+            }
+        })
+        let c = JSON.parse(b);
+        return c;
+    },
+    shareGroupFailPrompt() {
+        // 分享失败，请分享到不同的群
+        if (window.wx && window.wx.showModal) {
+            wx.showModal({
+                content: '分享失败，请分享到不同的群',
+                showCancel: true,
+                cancelText: '取消',
+                cancelColor: '#ff0000',
+                confirmText: '分享',
+                confirmColor: '#000000',
+                success: function (res) {
+                    // trace('取消' + JSON.stringify(res))
+                    if (res.confirm == true) {
+                        miniApi.share(miniApi.shareParamsInfo)
+                    } else {
+                        miniApi.shareGroupClickCallback = null;
+                    }
+                    // else if (res.cancel == true && cancelCallback) cancelCallback()
+                },
+                fail: function (res) {
+                    // trace('确定')
+                },
+                complete: function (res) {
+                    // trace('complete')
+                },
+            })
+        } else {
+            __showScene.show_prompt_select('分享失败，请分享到不同的群', () => {
+                miniApi.share(miniApi.shareParamsInfo)
+            }, null, '分享', '取消')
+        }
+    },
+    async shareGroupCallback(opengid) {
+        if (!miniApi.shareGroupClickCallback) return;
+        await game.server.send(16027)
+        let c = __data.shareVideoRule.shareGroupItem;
+
+        if (c.dealgid[opengid]) {
+            this.shareGroupFailPrompt()
+        } else {
+            c.gday[opengid] = c.gday[opengid] || {};
+            c.gday[opengid][__tool.getDayCount(Date.now())] = __data.shareVideoRule.invite_playerCount
+            let a = Object.values(c.gday[opengid])
+            if (a.length <= 3) {
+                miniApi.shareGroupClickCallback && miniApi.shareGroupClickCallback()
+                __data.shareVideoRule.clr_show_shareBtnNumber()
+            }
+            else if (a[0] != a.at(-1)) {
+                // else if (a[0] != a[a.length - 1]) {
+                c.gday[opengid] = {};
+                miniApi.shareGroupClickCallback && miniApi.shareGroupClickCallback()
+                __data.shareVideoRule.clr_show_shareBtnNumber()
+            }
+            else if (a[0] == a.at(-1)) {
+                // else if (a[0] == a[a.length - 1]) {
+                c.dealgid[opengid] = 1;
+                c.lowValueGnum++;
+
+                if (c.lowValueGnum >= 3) {
+                    // 通知后台存低价值用户标志
+                    let a = {
+                        isLowShareValueUser: 1,
+                        isLowShareWishUser: this.isLowShareWishUser ? 1 : 0,
+                    }
+                    game.server.send(16028, JSON.stringify(a))
+                }
+                this.shareGroupFailPrompt()
+            }
+        }
+
+        miniApi.setItem(__data.uid + ":groupShareOB", JSON.stringify(c))
+        miniApi.shareGroupClickCallback = null
+    },
+    test_clear_lowValueUser() {
+        let c = this.shareGroupItem;
+        if (c.lowValueGnum >= 3) {
+            let pgn = c['playerGIN'] || 0
+            if (pgn != __data.shareVideoRule.invite_playerCount) {
+                c.lowValueGnum = 0;
+                // 通知后台低价值用户变更
+                let a = {
+                    isLowShareValueUser: 0,
+                    isLowShareWishUser: this.isLowShareWishUser ? 1 : 0,
+                }
+                game.server.send(16028, JSON.stringify(a))
+            }
+        }
+        c['playerGIN'] = __data.shareVideoRule.invite_playerCount
+        miniApi.setItem(__data.uid + ":groupShareOB", JSON.stringify(c))
+    },
+    // 判断低分享意愿人群
+    inc_show_shareBtnNumber() {
+        let a = miniApi.getItem(__data.uid + ':show_shareBtnNumber')
+        a = parseInt(a)
+        a = Number.isFinite(a) ? a : 0;
+        a++;
+        miniApi.setItem(__data.uid + ':show_shareBtnNumber', a)
+
+        if (a >= 10) {
+            let a1 = {
+                isLowShareValueUser: this.isLowShareValueUser ? 1 : 0,
+                isLowShareWishUser: 1,
+            }
+            game.server.send(16028, JSON.stringify(a1))
+        }
+    },
+    clr_show_shareBtnNumber() {
+        miniApi.setItem(__data.uid + ':show_shareBtnNumber', 0)
+
+        let a = {
+            isLowShareValueUser: this.isLowShareValueUser ? 1 : 0,
+            isLowShareWishUser: 0,
+        }
+        game.server.send(16028, JSON.stringify(a))
+    },
+    get isLowShareValueUser() {
+        let c = this.shareGroupItem;
+        return c.lowValueGnum >= 3;
+    },
+    get isLowShareWishUser() {
+        let a = miniApi.getItem(__data.uid + ':show_shareBtnNumber')
+        a = parseInt(a)
+        a = Number.isFinite(a) ? a : 0;
+        return a >= 10
+    },
+
+    total_todayInterstitialAdCloseCount() {
+        let key = __data.uid + ':today_interstitialAdCloseCount:' + new Date().toDateString()
+        let c = this.today_lookVideoFinishCount
+        miniApi.setItem(key, c + 1)
+    },
+    get today_interstitialAdCloseCount() {
+        let key = __data.uid + ':today_interstitialAdCloseCount:' + new Date().toDateString()
+        let c = Number(miniApi.getItem(key))
+        c = c >= 0 ? c : 0;
+        return c;
+    },
+    total_lookVideoFinishCount(adUnitId) {
+        // 通知后台增加 看视频完成 type=5
+        game.server.send(11002, 5)
+        let key = __data.uid + ':today_lookVideoFinishCount:' + new Date().toDateString()
+        let c = this.today_lookVideoFinishCount
+        miniApi.setItem(key, c + 1)
+        console.log("完播广告-" + this.hashAdUnitIdName[adUnitId]);
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': this.hashAdUnitIdName[adUnitId], 'Mj_Participation': '完播广告' })
+    },
+    get today_lookVideoFinishCount() {
+        let key = __data.uid + ':today_lookVideoFinishCount:' + new Date().toDateString()
+        let c = Number(miniApi.getItem(key))
+        c = c >= 0 ? c : 0;
+        return c;
+    },
+    total_groupReceiveRewardCount() {
+        let key = __data.uid + ':today_groupReceiveRewardCount:' + new Date().toDateString()
+        let c = this.today_groupReceiveRewardCount
+        miniApi.setItem(key, c + 1)
+        this.allTime_groupReceiveRewardCount++;
+        // 通知后台增加 群内领奖次数
+        game.server.send(11002, 4)
+    },
+    video_clearCallback() {
+        miniApi.video_successCallback = null;
+    },
+    get today_groupReceiveRewardCount() {
+        let key = __data.uid + ':today_groupReceiveRewardCount:' + new Date().toDateString()
+        let c = Number(miniApi.getItem(key))
+        c = c >= 0 ? c : 0;
+        return c;
+    },
+    get isVerifyShareOnShowTime() {
+        return this.today_groupReceiveRewardCount < 2
+    },
+    allTime_groupReceiveRewardCount: 0,
+    invite_playerCount: 0,
+    total_clickShareCount() {
+        // 下面的逻辑临时注释掉 后台不用点击分享次数了 
+        // this.clickShareCount++;
+        // // 通知后台增加 点击分享次数
+        // game.server.send(11002, 2)
+    },
+    clickShareCount: 0,
+    total_shareShowCount(shareBtnParent) {
+        // 增加低分享意愿人群的显示分享按钮次数
+        let a = __tool.canSee(shareBtnParent)
+        a && this.inc_show_shareBtnNumber();
+        // 下面的逻辑临时注释掉 后台不用点击分享次数了 
+        // this.shareShowCount++;
+        // // 通知后台增加 分享出现次数
+        // game.server.send(11002, 1)
+    },
+    shareShowCount: 0,
+    ifVideoSuccessUseRule(adUnitId) {
+        if (miniApi.clientType == 'app') return true
+
+        if (adUnitId == 'adunit-24f34675f1830a6c') {
+            // 广告时间id 如果视频成功 就是一只看视频
+            return true
+        }
+        // return false;
+        if (this.hashAdUnit_test_lowValueWishUser[adUnitId]) {
+            if (__data.shareVideoRule.isLowShareValueUser) {
+                return true;
+            }
+            if (__data.shareVideoRule.isLowShareWishUser) {
+                return true;
+            }
+        }
+        // return false;
+        if (this.today_lookVideoFinishCount < 5) {
+            return true
+        }
+        // if (this.shareShowCount < 10) {
+        //     if (Math.random() * 1 < 0.25) return false;
+        //     else return true
+        // }
+        // if (this.clickShareCount / this.shareShowCount < 0.1) {
+        //     if (Math.random() * 1 < 0.1) return false;
+        //     else return true
+        // }
+        // if (this.invite_playerCount / this.allTime_groupReceiveRewardCount < 0.02) {
+        //     if (Math.random() * 1 < 0.02) return false;
+        //     else return true
+        // }
+        if (Math.random() * 1 < 0.2) return false;
+        else return true
+    },
+}

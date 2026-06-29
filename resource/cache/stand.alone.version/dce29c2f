@@ -1,0 +1,1078 @@
+/**
+ * 分数解析器配置类
+ */
+ class ScoreConfig {
+
+    // 静态配置对象 
+    static get config() {
+        if (!this.__config) {
+            this.__config = {
+                // ScoreParser 配置
+                parser: {
+                    // 显示格式
+                    separator: '(', // 数字和描述之间的左分隔符
+                    separatorEnd: ')', // 数字和描述之间的右分隔符
+                    multiplySymbol: 'x', // 乘法符号
+
+                    // 功能配置
+                    cacheEnabled: false, // 是否启用缓存
+                    cacheMaxSize: 100, // 缓存最大数量
+                    validateData: false // 是否验证数据
+                },
+
+                // DisplayCombiner 配置
+                combiner: {
+                    // 连接符号
+                    multiplySymbol: 'x', // 乘法符号
+                    plusSymbol: '+', // 加法符号
+                    minusSymbol: '-', // 减法符号
+
+                    // 连接符
+                    multiplyConnector: 'x', // 多个fan显示之间的连接符
+                    plusConnector: '+', // received部分之间的连接符
+                    minusConnector: '-', // paid部分之间的连接符
+
+                    // 显示格式
+                    paidPrefix: '-', // paid部分的前缀
+                    spaceAroundOperators: true, // 运算符周围是否加空格
+                    emptyString: '' // 空字符串
+                }
+            };
+        }
+        return this.__config;
+    }
+
+    /**
+     * 获取完整配置
+     * @returns {Object} 完整配置
+     */
+    static get() {
+        return JSON.parse(JSON.stringify(this.config));
+    }
+
+    /**
+     * 获取解析器配置
+     * @returns {Object} 解析器配置
+     */
+    static getParser() {
+        return JSON.parse(JSON.stringify(this.config.parser));
+    }
+
+    /**
+     * 获取组合器配置
+     * @returns {Object} 组合器配置
+     */
+    static getCombiner() {
+        return JSON.parse(JSON.stringify(this.config.combiner));
+    }
+
+    /**
+     * 更新配置
+     * @param {Object} newConfig - 新配置
+     */
+    static update(newConfig) {
+        // 深度合并配置
+        this.config = this.deepMerge(this.config, newConfig);
+    }
+
+    /**
+     * 重置为默认配置
+     */
+    static reset() {
+        this.config = {
+            parser: {
+                separator: '（',
+                separatorEnd: '）',
+                multiplySymbol: 'x',
+                cacheEnabled: false,
+                cacheMaxSize: 100,
+                validateData: false
+            },
+            combiner: {
+                multiplySymbol: 'x',
+                plusSymbol: '+',
+                minusSymbol: '-',
+                multiplyConnector: 'x',
+                plusConnector: '+',
+                minusConnector: '-',
+                paidPrefix: '-',
+                spaceAroundOperators: true,
+                emptyString: ''
+            }
+        };
+    }
+
+    /**
+     * 深度合并对象
+     * @private
+     */
+    static deepMerge(target, source) {
+        const result = { ...target };
+
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(result[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+
+        return result;
+    }
+}
+window.ScoreConfig = ScoreConfig;
+
+/**
+ * 分数解析器 - 静态工具类
+ */
+class ScoreParser {
+
+    static get cache() {
+        if (!this.__cache) this.__cache = new Map();
+        return this.__cache;
+    }
+
+    static get cacheSize() {
+        if (!this.__cacheSize) this.__cacheSize = 0;
+        return this.__cacheSize;
+    }
+    static set cacheSize(value) { this.__cacheSize = value; }
+    /**
+     * 获取当前配置
+     * @returns {Object} 当前配置
+     */
+    static config() {
+        return ScoreConfig.getParser();
+    }
+
+    /**
+     * 解析分数数据
+     * @param {Object} data - 原始数据 {fan: [], jia: []}
+     * @param {number} position - 查询位置
+     * @param {Object} playId - 玩法id
+     * @returns {Object} 解析结果
+     */
+    static parse(data, position, playId) {
+        // 数据不存在
+        if(!data){ return {}; }
+        // 获取对应的解析规则
+        const rules = ParseRules.getRules(playId);
+        // 对于这种简单数据，JSON方法是最好的选择
+        data = JSON.parse(JSON.stringify(data));
+        try{ data.jia = data.jia.reverse(); }catch(e){  };
+
+        const config = ScoreConfig.getParser();
+        // 合并选项
+        const opts = {
+            useCache: config.cacheEnabled,
+            validate: config.validateData,
+        };
+
+        // 验证数据
+        if (opts.validate && !ScoreParser.validateData(data)) {
+            // throw new Error('数据格式无效');
+        }
+
+        // 生成缓存键
+        const cacheKey = ScoreParser.generateCacheKey(data, position, opts);
+
+        // 检查缓存
+        if (opts.useCache && ScoreParser.cache.has(cacheKey)) {
+            return ScoreParser.cache.get(cacheKey);
+        }
+
+        // 创建结果对象
+        const result = {
+            position: position,
+            all: [],
+            paid: {},
+            received: {},
+            summary: {
+                byPosition: {},
+                totals: {
+                    paidTotal: 0,
+                    receivedTotal: 0,
+                    netTotal: 0
+                }
+            }
+        };
+
+        data.fan = ScoreParser.mergeSameItem(data.fan, rules.mergeFan);
+        data.jia = ScoreParser.mergeSameItem(data.jia, rules.mergeJia);
+
+        // 处理数据
+        ScoreParser.processData('fan', data.fan, position, result);
+        ScoreParser.processData('jia', data.jia, position, result);
+
+        // 计算统计
+        ScoreParser.calculateSummary(result);
+
+        // 缓存结果
+        if (opts.useCache) {
+            ScoreParser.setCache(cacheKey, result);
+        }
+
+        return result;
+    }
+
+    // 合并同类项
+    static mergeSameItem(items, rules) {
+        if (!rules) { return items; }
+        const mergedMap = new Map();
+        const result = [];
+        items.forEach((item, index) => {
+            const description = item[item.length - 1];
+            const shouldMerge = rules.some(rule =>
+                description && description.includes(rule)
+            );
+
+            if (shouldMerge) {
+                const key = JSON.stringify(item);
+
+                if (mergedMap.has(key)) {
+                    // 合并到已存在的项
+                    const existingIndex = mergedMap.get(key);
+                    const existingItem = result[existingIndex];
+
+                    // 合并分数
+                    const score = item[2];
+                    if (typeof score === 'string' && score.includes('|')) {
+                        const [num, cnt] = score.split('|').map(Number);
+                        const existingScore = existingItem[2];
+                        const [existingNum, existingCnt] = existingScore.split('|').map(Number);
+                        existingItem[2] = `${num}|${existingCnt + cnt}`;
+                    } else {
+                        existingItem[2] = (parseFloat(existingItem[2]) + parseFloat(score)).toString();
+                    }
+                } else {
+                    // 首次出现，添加到结果中
+                    result.push([...item]);
+                    mergedMap.set(key, result.length - 1);
+                }
+            } else {
+                // 不需要合并，直接添加
+                result.push([...item]);
+            }
+        });
+        return result;
+    }
+
+    /**
+     * 处理数据数组
+     * @private
+     */
+    static processData(type, dataArray, position, result) {
+        if (!Array.isArray(dataArray)) return;
+
+        dataArray.forEach(item => {
+            ScoreParser.processItem(type, item, position, result);
+        });
+    }
+
+    /**
+     * 处理单个数据项
+     * @private
+     */
+    static processItem(type, item, position, result) {
+        const [payer, receiver, multiplier, description] = item;
+
+        // 计算分数和生成显示信息
+        const { score, display, displayCalc } = ScoreParser.calculateScoreInfo(multiplier, description);
+
+        // 创建记录对象
+        const record = {
+            type: type,
+            description: description,
+            score: score,
+            display: display,
+            displayCalc: displayCalc,
+            rawData: [...item]
+        };
+
+        // 添加到所有记录
+        result.all.push(item);
+
+        // 判断是付分还是得分
+        if (payer === position) {
+            ScoreParser.addToPaid(receiver, type, record, result);
+        } else if (receiver === position) {
+            ScoreParser.addToReceived(payer, type, record, result);
+        }
+    }
+
+    /**
+     * 计算分数和显示信息
+     * @private
+     */
+    static calculateScoreInfo(multiplier, description) {
+        const score = ScoreParser.calculateScore(multiplier);
+        const display = ScoreParser.generateDisplay(multiplier, description);
+        const displayCalc = ScoreParser.generateDisplayCalc(multiplier);
+
+        return { score, display, displayCalc };
+    }
+
+    /**
+     * 计算分数
+     * @private
+     */
+    static calculateScore(multiplier) {
+        if (typeof multiplier === 'string' && multiplier.includes('|')) {
+            const [num1, num2] = multiplier.split('|').map(Number);
+            return num1 * num2;
+        }
+        return Number(multiplier);
+    }
+
+    /**
+     * 生成显示字符串
+     * @private
+     */
+    static generateDisplay(multiplier, description) {
+        const config = ScoreConfig.getParser();
+        if (typeof multiplier === 'string' && multiplier.includes('|')) {
+            const [num1, num2] = multiplier.split('|');
+            return `${num1}${config.multiplySymbol}${num2}${config.separator}${description}${config.separatorEnd}`;
+        }
+        return `${multiplier}${config.separator}${description}${config.separatorEnd}`;
+    }
+
+    /**
+     * 生成计算过程字符串
+     * @private
+     */
+    static generateDisplayCalc(multiplier) {
+        const config = ScoreConfig.getParser();
+        if (typeof multiplier === 'string' && multiplier.includes('|')) {
+            const [num1, num2] = multiplier.split('|');
+            return `${num1}${config.multiplySymbol}${num2}`;
+        }
+        return String(multiplier);
+    }
+
+    /**
+     * 添加到付分记录
+     * @private
+     */
+    static addToPaid(targetPos, type, record, result) {
+        ScoreParser.ensurePositionExists(result.paid, targetPos);
+
+        if (type === 'fan') {
+            result.paid[targetPos].fan.push(record);
+            result.paid[targetPos].fanDisplays.push(record.display);
+        } else {
+            result.paid[targetPos].jia.push(record);
+            result.paid[targetPos].jiaDisplays.push(record.display);
+        }
+    }
+
+    /**
+     * 添加到得分记录
+     * @private
+     */
+    static addToReceived(sourcePos, type, record, result) {
+        ScoreParser.ensurePositionExists(result.received, sourcePos);
+
+        if (type === 'fan') {
+            result.received[sourcePos].fan.push(record);
+            result.received[sourcePos].fanDisplays.push(record.display);
+        } else {
+            result.received[sourcePos].jia.push(record);
+            result.received[sourcePos].jiaDisplays.push(record.display);
+        }
+    }
+
+    /**
+     * 确保位置对象存在
+     * @private
+     */
+    static ensurePositionExists(targetObj, position) {
+        if (!targetObj[position]) {
+            targetObj[position] = {
+                fan: [],
+                jia: [],
+                fanDisplays: [],
+                jiaDisplays: [],
+                summary: {
+                    fanProduct: 0,
+                    jiaSum: 0,
+                    total: 0
+                }
+            };
+        }
+    }
+
+    /**
+     * 计算统计信息
+     * @private
+     */
+    static calculateSummary(result) {
+        // 计算每个位置的统计
+        ScoreParser.calculatePositionSummary(result.paid);
+        ScoreParser.calculatePositionSummary(result.received);
+
+        // 计算全局统计
+        ScoreParser.calculateGlobalSummary(result);
+    }
+
+    /**
+     * 计算位置统计
+     * @private
+     */
+    static calculatePositionSummary(positionData) {
+        Object.values(positionData).forEach(data => {
+            // 计算fan乘积
+            if (data.fan.length > 0) {
+                data.summary.fanProduct = data.fan.reduce(
+                    (product, record) => product * record.score, 1
+                );
+            } else {
+                data.summary.fanProduct = 0;
+            }
+
+            // 计算jia总和
+            data.summary.jiaSum = data.jia.reduce(
+                (sum, record) => sum + record.score, 0
+            );
+
+            // 计算总分
+            data.summary.total = data.summary.fanProduct + data.summary.jiaSum;
+        });
+    }
+
+    /**
+     * 计算全局统计
+     * @private
+     */
+    static calculateGlobalSummary(result) {
+        // 收集所有相关位置
+        const allPositions = new Set([
+            ...Object.keys(result.paid).map(Number),
+            ...Object.keys(result.received).map(Number)
+        ]);
+
+        // 重置总计
+        result.summary.totals.paidTotal = 0;
+        result.summary.totals.receivedTotal = 0;
+        result.summary.byPosition = {};
+
+        // 计算每个位置的净得分
+        allPositions.forEach(pos => {
+            const paidToPos = result.paid[pos] ? result.paid[pos].summary.total : 0;
+            const receivedFromPos = result.received[pos] ? result.received[pos].summary.total : 0;
+
+            result.summary.byPosition[pos] = {
+                paid: paidToPos,
+                received: receivedFromPos,
+                net: receivedFromPos - paidToPos
+            };
+
+            result.summary.totals.paidTotal += paidToPos;
+            result.summary.totals.receivedTotal += receivedFromPos;
+        });
+
+        // 计算总净得分
+        result.summary.totals.netTotal =
+            result.summary.totals.receivedTotal - result.summary.totals.paidTotal;
+    }
+
+    /**
+     * 验证数据格式
+     * @param {Object} data - 待验证的数据
+     * @returns {boolean} 是否有效
+     */
+    static validateData(data) {
+        if (!data || typeof data !== 'object') return false;
+
+        const validateArray = (arr, name) => {
+            if (!Array.isArray(arr)) {
+                if (ScoreParser.config.strictMode) {
+                    console.error(`${name} 必须是数组`);
+                }
+                return false;
+            }
+
+            for (let i = 0; i < arr.length; i++) {
+                const item = arr[i];
+                if (!Array.isArray(item) || item.length !== 4) {
+                    if (ScoreParser.config.strictMode) {
+                        console.error(`${name}[${i}] 必须是长度为4的数组`);
+                    }
+                    return false;
+                }
+
+                const [p1, p2, multiplier, desc] = item;
+                if (typeof p1 !== 'number' || typeof p2 !== 'number' ||
+                    (typeof multiplier !== 'number' && typeof multiplier !== 'string') ||
+                    typeof desc !== 'string') {
+                    if (ScoreParser.config.strictMode) {
+                        console.error(`${name}[${i}] 格式错误:`, item);
+                    }
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        return validateArray(data.fan, 'fan') && validateArray(data.jia, 'jia');
+    }
+
+    /**
+     * 清空缓存
+     */
+    static clearCache() {
+        ScoreParser.cache.clear();
+        ScoreParser.cacheSize = 0;
+    }
+
+    /**
+     * 获取缓存统计信息
+     */
+    static getCacheStats() {
+        return {
+            size: ScoreParser.cache.size,
+            maxSize: ScoreParser.config.cacheMaxSize,
+            hitRate: ScoreParser.cacheSize > 0 ?
+                (ScoreParser.cache.size / ScoreParser.cacheSize).toFixed(2) : 0
+        };
+    }
+
+    /**
+     * 设置缓存（带大小限制）
+     * @private
+     */
+    static setCache(key, value) {
+        // 检查缓存大小
+        if (ScoreParser.cache.size >= ScoreParser.config.cacheMaxSize) {
+            // 删除第一个条目（最简单的LRU策略）
+            const firstKey = ScoreParser.cache.keys().next().value;
+            ScoreParser.cache.delete(firstKey);
+        }
+
+        ScoreParser.cache.set(key, value);
+        ScoreParser.cacheSize++;
+    }
+
+    /**
+     * 生成缓存键
+     * @private
+     */
+    static generateCacheKey(data, position, options) {
+        const dataKey = JSON.stringify({
+            fan: data.fan && data.fan.length || 0,
+            jia: data.jia && data.jia.length || 0
+        });
+        const optionsKey = JSON.stringify(options);
+        return `${dataKey}_${position}_${optionsKey}`;
+    }
+
+    /**
+     * 从解析结果中获取与指定位置相关的所有记录
+     * @param {Object} parsedData - 解析后的数据
+     * @param {number} targetPosition - 目标位置
+     * @returns {Array} 相关记录
+     */
+    static getRecordsForPosition(parsedData, targetPosition) {
+        const records = [];
+
+        // 检查paid中的记录
+        if (parsedData.paid[targetPosition]) {
+            records.push(...parsedData.paid[targetPosition].fan);
+            records.push(...parsedData.paid[targetPosition].jia);
+        }
+
+        // 检查received中的记录
+        if (parsedData.received[targetPosition]) {
+            records.push(...parsedData.received[targetPosition].fan);
+            records.push(...parsedData.received[targetPosition].jia);
+        }
+
+        return records;
+    }
+}
+window.ScoreParser = ScoreParser;
+
+/**
+ * 显示信息组合器（支持tokens输出）
+ */
+class DisplayCombiner {
+    /**
+     * 组合指定位置的显示信息
+     * @param {Object} parsedData - parseScoreData返回的数据
+     * @param {number} targetPosition - 要组合的目标位置
+     * @param {Object} isWinner - 胜利者 （true 正序排 ...received, ...paid,   false 反序排 ...paid, ...received）
+     * @param {Object} playId - 玩法id，会根据它获取对应规则
+     * @returns {Object} 组合结果
+     */
+    static displays(parsedData, targetPosition, isWinner, playId) {
+        if (!parsedData || typeof targetPosition !== 'number') {
+            console.error('参数错误：需要有效的parsedData和目标位置');
+            return { final: "", tokens: [] };
+        }
+        // 获取对应的解析规则
+        const rules = ParseRules.getRules(playId);
+
+        const CONFIG = {
+            ...ScoreConfig.getCombiner()
+        };
+
+        const result = {
+            targetPosition: targetPosition,
+            sourcePosition: parsedData.position,
+            config: CONFIG,
+
+            // 最终组合字符串
+            final: '',
+
+            // tokens数组
+            tokens: [],
+
+            // 计算过程
+            calculation: {
+                steps: [],
+                receivedParts: [],
+                paidParts: []
+            },
+
+            // 原始数据
+            rawData: {
+                received: {
+                    fanDisplays: [],
+                    jiaDisplays: []
+                },
+                paid: {
+                    fanDisplays: [],
+                    jiaDisplays: []
+                }
+            }
+        };
+
+        // 提取目标位置的显示数据
+        const receivedData = parsedData.received[targetPosition];
+        const paidData = parsedData.paid[targetPosition];
+
+        // 按排序规则排序
+        if (receivedData) receivedData.fanDisplays = this.sortDisplays(receivedData.fanDisplays, rules.sort);
+        if (paidData) paidData.fanDisplays = this.sortDisplays(paidData.fanDisplays, rules.sort);
+
+        // 按替换规则替换
+        if (paidData) paidData.fanDisplays = this.paidDisplays(paidData.fanDisplays, rules.paidFan);
+        if (paidData) paidData.jiaDisplays = this.paidDisplays(paidData.jiaDisplays, rules.paidJia);
+
+        // 收集原始数据
+        if (receivedData) {
+            result.rawData.received.fanDisplays = [...receivedData.fanDisplays];
+            result.rawData.received.jiaDisplays = [...receivedData.jiaDisplays];
+        }
+
+        if (paidData) {
+            result.rawData.paid.fanDisplays = [...paidData.fanDisplays];
+            result.rawData.paid.jiaDisplays = [...paidData.jiaDisplays];
+        }
+
+
+
+        // 处理received数据
+        const receivedParts = this.processReceivedDisplays(receivedData, CONFIG);
+        result.calculation.receivedParts = receivedParts;
+        if (receivedParts.length > 0) {
+            const connector = CONFIG.plusConnector;
+            result.calculation.steps.push(`received部分: ${receivedParts.join(connector)}`);
+        }
+
+        // 处理paid数据
+        const paidParts = this.processPaidDisplays(paidData, CONFIG);
+        result.calculation.paidParts = paidParts;
+        if (paidParts.length > 0) {
+            const connector = CONFIG.minusConnector;
+            result.calculation.steps.push(`paid部分: ${paidParts.join(connector)}`);
+        }
+        
+        result.tokens = this.generateTokens(receivedParts, paidParts, CONFIG, isWinner);
+            
+        // 从tokens生成final字符串
+        result.final = result.tokens.map(token => token.value).join('');
+
+        result.calculation.steps.push(`最终结果: ${result.final}`);
+
+        // 计算净得分（兼容性写法）
+        const netScore = this.getSafe(parsedData, `summary.byPosition.${targetPosition}.net`, 0);
+        result.summary = netScore;
+
+        return result;
+    }
+
+    // 按规则进行排序
+    static sortDisplays(items, rules) {
+        if (!rules) return items;
+        const matched = items.filter(item => rules.some(ref => item.includes(ref)));
+        const unmatched = items.filter(item => !rules.some(ref => item.includes(ref)));
+
+        return [
+            ...matched.sort((a, b) =>
+                rules.findIndex(ref => a.includes(ref)) - rules.findIndex(ref => b.includes(ref))
+            ),
+            ...unmatched
+        ];
+    }
+
+    // 
+    static paidDisplays(items, rules) {
+        if (!rules) return items;
+        // 更安全的版本（避免重复替换）
+        return items.map(item => {
+            for (const [key, value] of Object.entries(rules)) {
+                if (item.includes(`(${key})`)) {
+                    return item.replace(`(${key})`, `(${value})`);
+                }
+            }
+            return item;
+        });
+    }
+
+    static getSafe(obj, path, defaultValue = 0) {
+        if (!obj || typeof obj !== 'object') return defaultValue;
+
+        const keys = path.split('.');
+        let result = obj;
+
+        for (const key of keys) {
+            if (result === null || result === undefined) {
+                return defaultValue;
+            }
+            result = result[key];
+        }
+
+        return result !== undefined ? result : defaultValue;
+    }
+
+    /**
+     * 生成tokens数组
+     * @private
+     */
+    static generateTokens(receivedParts, paidParts, config, isReverse) {
+        const receivedTokens = [];
+        const paidTokens = [];
+        let isFirstReceived = true;
+        let isFirstPaid = true;
+
+        // 处理received部分
+        if (receivedParts.length > 0) {
+            receivedParts.forEach((part, partIndex) => {
+                // 添加操作符（不是第一项）
+                if (!isFirstReceived) {
+                    receivedTokens.push({
+                        type: 'operator',
+                        value: config.plusConnector,
+                        highlight: true
+                    });
+                }
+                isFirstReceived = false;
+
+                // 解析part为tokens
+                const partTokens = this.parsePartToTokens(part, config);
+                receivedTokens.push(...partTokens);
+            });
+        }
+
+        // 处理paid部分
+        if (paidParts.length > 0) {
+            paidParts.forEach((part, partIndex) => {
+                // 添加操作符和前缀
+                if (receivedParts.length === 0 && isFirstPaid) {
+                    // 只有paid部分，不加空格
+                    paidTokens.push({
+                        type: 'operator',
+                        value: config.minusSymbol,
+                        highlight: true
+                    });
+                } else {
+                    paidTokens.push({
+                        type: 'operator',
+                        value: config.minusConnector,
+                        highlight: true
+                    });
+                }
+                isFirstPaid = false;
+
+                // 解析part为tokens
+                const partTokens = this.parsePartToTokens(part, config);
+                paidTokens.push(...partTokens);
+            });
+        }
+
+        // 反向排序，优先排序付分数据 对于后面的收分数据中间加入一个连接符
+        if(isReverse){
+            if(paidTokens.length && receivedTokens.length)
+                return [...paidTokens, {type: 'operator', value: config.plusConnector, highlight: true }, ...receivedTokens];
+            else if(paidTokens.length)
+                return [...paidTokens];
+            else if(receivedTokens.length)
+                return [...receivedTokens];
+            else
+                return [];
+        }else{
+            return [...receivedTokens, ...paidTokens];
+        }
+    }
+
+    /**
+     * 解析单个part为tokens（如 "2(自摸)" 或 "2(自摸) × 2(夹)"）
+     * @private
+     */
+    static parsePartToTokens(part, config) {
+        const tokens = [];
+
+        // 检查是否包含乘法连接符
+        if (part.includes(config.multiplyConnector.trim())) {
+            const subParts = part.split(config.multiplyConnector.trim());
+
+            subParts.forEach((subPart, subIndex) => {
+                // 添加乘法操作符（不是第一项）
+                if (subIndex > 0) {
+                    tokens.push({
+                        type: 'operator',
+                        value: config.multiplyConnector,
+                        highlight: true
+                    });
+                }
+
+                // 解析单个项目
+                const itemTokens = this.parseItemToTokens(subPart, config);
+                tokens.push(...itemTokens);
+            });
+        } else {
+            // 单个项目
+            const itemTokens = this.parseItemToTokens(part, config);
+            tokens.push(...itemTokens);
+        }
+
+        return tokens;
+    }
+
+    /**
+     * 解析单个项目为tokens（如 "2(自摸)" 或 "5×1(明杠)"）
+     * @private
+     */
+    static parseItemToTokens(item, config) {
+        const tokens = [];
+        const parserConfig = ScoreConfig.getParser();
+
+        // 分离数字部分和描述部分
+        const separator = parserConfig.separator || '（';
+        const separatorEnd = parserConfig.separatorEnd || '）';
+
+        const sepIndex = item.indexOf(separator);
+
+        if (sepIndex === -1) {
+            // 没有描述部分
+            tokens.push({
+                type: 'number',
+                value: item,
+                highlight: true
+            });
+        } else {
+            // 数字部分
+            const numberPart = item.substring(0, sepIndex);
+            tokens.push({
+                type: 'number',
+                value: numberPart,
+                highlight: true
+            });
+
+            // 描述部分（包含分隔符）
+            const descriptionPart = item.substring(sepIndex);
+            tokens.push({
+                type: 'txt',
+                value: descriptionPart,
+                highlight: false
+            });
+        }
+
+        return tokens;
+    }
+
+    /**
+     * 处理received显示数据
+     * @private
+     */
+    static processReceivedDisplays(receivedData, config) {
+        const parts = [];
+
+        if (!receivedData) return parts;
+
+        // 处理fanDisplays
+        if (receivedData.fanDisplays && receivedData.fanDisplays.length > 0) {
+            if (receivedData.fanDisplays.length === 1) {
+                parts.push(receivedData.fanDisplays[0]);
+            } else {
+                // 多个fan显示，用配置的连接符连接
+                parts.push(receivedData.fanDisplays.join(config.multiplyConnector));
+            }
+        }
+
+        // 处理jiaDisplays
+        if (receivedData.jiaDisplays && receivedData.jiaDisplays.length > 0) {
+            receivedData.jiaDisplays.forEach(display => {
+                parts.push(display);
+            });
+        }
+
+        return parts;
+    }
+
+    /**
+     * 处理paid显示数据
+     * @private
+     */
+    static processPaidDisplays(paidData, config) {
+        const parts = [];
+
+        if (!paidData) return parts;
+
+        // 处理fanDisplays
+        if (paidData.fanDisplays && paidData.fanDisplays.length > 0) {
+            if (paidData.fanDisplays.length === 1) {
+                parts.push(paidData.fanDisplays[0]);
+            } else {
+                // 多个fan显示，用配置的连接符连接
+                parts.push(paidData.fanDisplays.join(config.multiplyConnector));
+            }
+        }
+
+        // 处理jiaDisplays
+        if (paidData.jiaDisplays && paidData.jiaDisplays.length > 0) {
+            paidData.jiaDisplays.forEach(display => {
+                parts.push(display);
+            });
+        }
+
+        return parts;
+    }
+
+    /**
+     * 批量组合多个位置的显示信息
+     * @param {Object} parsedData - parseScoreData返回的数据
+     * @param {number[]} targetPositions - 目标位置数组
+     * @param {Object} config - 符号配置（可选）
+     * @returns {Object} 所有位置的组合结果
+     */
+    static batch(parsedData, targetPositions, config = {}) {
+        const results = {};
+        targetPositions.forEach(position => {
+            results[position] = this.displays(parsedData, position, config);
+        });
+        return results;
+    }
+}
+window.DisplayCombiner = DisplayCombiner;
+
+
+class ScoreSeparator {
+    static separator(data) {
+        const array = [...data.fan, ...data.jia];
+        return array.map(([scoreValue, description]) => ({
+            description,
+            score: typeof scoreValue === 'string' && scoreValue.includes('|') ?
+                scoreValue.split('|').reduce((a, b) => parseFloat(a) * parseFloat(b)) :
+                parseFloat(scoreValue)
+        }));
+    }
+}
+window.ScoreSeparator = ScoreSeparator;
+
+/**
+ * 麻将位置关系工具（简化版）
+ */
+class PositionRelation {
+    /**
+     * 根据自己和他人位置获取关系描述
+     * @param {number} myPosition - 自己的位置 (1-4)
+     * @param {number} otherPosition - 他人的位置 (1-4)
+     * @returns {string} 位置关系描述
+     */
+    static getRelation(myPosition, otherPosition) {
+        // 确保位置在1-4范围内
+        const myPos = ((myPosition - 1) % 4 + 4) % 4 + 1;
+        const otherPos = ((otherPosition - 1) % 4 + 4) % 4 + 1;
+        
+        // 如果是自己
+        if (myPos === otherPos) {
+            return '本家';
+        }
+        
+        // 计算相对位置（逆时针方向）
+        const diff = (otherPos - myPos + 4) % 4;
+        
+        // 根据差值返回描述
+        if (diff === 1) return '下家';
+        if (diff === 2) return '对家';
+        if (diff === 3) return '上家';
+        
+        return '未知';
+    }
+}
+window.PositionRelation = PositionRelation;
+
+/**
+ * 解析规则
+ * sort 按从左至右的顺序优先排列，不在数组内的没有排序
+ * paidFan 付分番数组替换规则(就是输了，带负号) key内容会被替换为对应的value
+ * paidJia 付分加数组替换规则(就是输了，带负号) key内容会被替换为对应的value
+ *
+ * mergeJia 加数组合并规则 数据完全相同才合并对应数据，如果是单一数据直接加，如果为4|1，|后会相加
+ */
+class ParseRules {
+    /**
+     * 根据玩法获取 解析规则
+     * @param {*} rule 
+     * @returns 
+     */
+    static getRules(rule){
+        try{
+            if(rule == FriendRoomPlays.AREA.HONGZHONGLAIZI)
+                return this.hongzhonglaizi;
+            else if(rule == FriendRoomPlays.AREA.GUANGDONG)
+                return this.guangdong;
+            else if(rule == FriendRoomPlays.AREA.FUJIN)
+                return this.guangdong;
+            else
+                return {};
+        }catch(e){
+            return {};// 可返回测试规则
+        }
+    }
+    // 红中赖子
+    static get hongzhonglaizi() {
+        if (!this.$hongzhonglaizi) {
+            this.$hongzhonglaizi = {
+                sort: ['自摸', '接炮', '抢杠胡', '杠上开花', '天胡', '地胡', '庄', '不求人', '边张', '坎张', '单钓将', '七小对', '碰碰胡', '清一色', '三明刻'],
+                paidFan: { '自摸':'被自摸','接炮':'点炮','抢杠胡':'被抢杠胡','杠上开花':'被杠上开花' }
+            }
+        }
+        return this.$hongzhonglaizi;
+    }
+    // 广东
+    static get guangdong() {
+        if (!this.$guangdong) {
+            this.$guangdong = {
+                sort: ['自摸', '天胡', '抢杠胡', '杠上开花', '七小对', '无鬼牌', '碰碰胡', '清一色', '龙七对', '幺九', '十三幺', '字一色', '承包'],
+                paidFan: { '自摸': '被自摸', '天胡': "被天胡", '抢杠胡': '被抢杠胡', '杠上开花': '被杠上开花' },
+                paidJia: { '明杠': '被明杠', '补杠': '被补杠', '暗杠': '被暗杠' },
+
+                mergeJia: ['明杠', '补杠', '暗杠']
+            }
+        }
+        return this.$guangdong;
+    }
+    // 富锦
+    static get fujin() {
+        if (!this.$fujin) {
+            this.$fujin = {
+                sort: ['自摸', '接炮', '天胡', '庄', '夹', '门清', '三家清', '混'],
+                paidFan: { '自摸': '被自摸', '天胡': "被天胡", '接炮':'点炮' }
+            }
+        }
+        return this.$fujin;
+    }
+}

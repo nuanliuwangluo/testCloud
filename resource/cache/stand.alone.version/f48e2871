@@ -1,0 +1,333 @@
+class GameRecoder {
+    // 初始化
+    static init(){
+        // 没有实例化
+        if(!this.recoderManager)return;
+        // 监听录音事件
+        this.recoderManager.onStart(() => {
+            trace('录音开始');
+            game.cb.event('start_recoder');
+        });
+
+        this.recoderManager.onStop((res) => {
+            trace('录音停止', res);
+
+            game.cb.event('stop_recoder');
+            // 这里可以处理录音文件，如上传或播放
+            const { tempFilePath, duration } = res;
+            trace('录音文件路径:', tempFilePath, '录音时长:', duration);
+            if(duration < GameRecoder.limitTime){ __tips(GameRecoder.shortTimeTips);return; }
+            GameRecoder.upload(tempFilePath);
+            // 示例：播放录音
+            // const innerAudioContext = wx.createInnerAudioContext();
+            // innerAudioContext.src = tempFilePath;
+            // innerAudioContext.play();
+        });
+
+        this.recoderManager.onError((res) => {
+            trace('录音错误:', JSON.stringify(res));
+        });
+    }
+
+    // 上传录音文件
+    static upload(tempFilePath){
+        // 没有实例化
+        if(!this.recoderManager)return;
+        // 没有正确的语音服务器ip
+        if(!game.voiceConfig.ip)return;
+        // 上传录音文件
+        // 显示上传进度
+        trace(`上传中...[${"https://" + game.voiceConfig.ip + "/MessageServer/uploadVideo"}]`);
+        wx.uploadFile({
+            url: "https://" + game.voiceConfig.ip + "/MessageServer/uploadVideo",
+            filePath: tempFilePath,
+            name: 'file',
+            formData: {
+                'appKey': game.voiceConfig.appKey,
+                'uid': __voice.myUid,
+                'token': game.voiceConfig.token
+            },
+            success(res) {
+                trace('上传结果：', res);
+                try {
+                    const response = JSON.parse(res.data);
+                    if (response.code === 200) {
+                        trace('上传成功');
+                        // console.log('文件URL:', response.data.url);
+                        // 处理服务器返回的数据
+                    } else {
+                        trace('上传失败');
+                    }
+                } catch (e) {
+                    trace('解析响应失败', JSON.stringify(e));
+                }
+            },
+            fail(err) {
+                trace('上传失败', JSON.stringify(err));
+            }
+        });
+    }
+    
+    // 开始录音
+    static start() {
+        // 没有实例化
+        if(!this.recoderManager)return;
+        GameRecoder.status = true;
+        wx.authorize({
+            scope: 'scope.record',
+            success() {
+                trace('已获得录音权限');
+                if(GameRecoder.status){
+                    GameRecoder.recoderManager.start(GameRecoder.config);
+                }else{
+                    __tips(GameRecoder.shortTimeTips);
+                    game.cb.event('stop_recoder');
+                }
+            },
+            fail(err) {
+                trace('获取录音权限失败', err);
+                if(err.errno == 103 || err.errMsg == 'authorize:fail:auth deny'){
+                    // 可以提示用户去设置中开启权限
+                    __showScene.show_prompt_select('需要您授权录音权限，请点击确定前往设置', ()=>{
+                        wx.openSetting({
+                            success(settingRes) {
+                                if (settingRes.authSetting['scope.record']) {
+                                    trace('用户已授权录音权限');
+                                } else {
+                                    trace('用户仍未授权录音权限');
+                                }
+                            }
+                        });
+                    }, ()=>{
+
+                    })
+                }
+                // __tips('需要麦克风权限才能录音');
+            }
+        });
+    }
+
+    // 停止录音
+    static stop() {
+        // 没有实例化
+        if(!this.recoderManager)return;
+        GameRecoder.status = false;
+        GameRecoder.recoderManager.stop();
+    }
+
+    /**
+     * 录音配置
+     */
+    static get config(){
+        if(!this._config){
+            // 录音配置
+            this._config = {
+                duration: 30000,
+                sampleRate: 16000,
+                numberOfChannels: 1,
+                encodeBitRate: 96000,
+                format: 'mp3',
+                frameSize: 50
+            };
+        }
+        return this._config;
+    }
+
+    // 通话时长限制
+    static get limitTime(){ return 1000; }
+
+    static get shortTimeTips(){ return "录音过短" }
+
+    /**
+     * 获取录音管理器
+     */
+    static get recoderManager(){
+        if (window.wx && typeof window.wx === 'object'){
+            if(!this._recoderManager){
+                this._recoderManager = wx.getRecorderManager();
+            }
+            return this._recoderManager;
+        }
+        return null;
+    }
+
+    static set status(value){ this._status = value; }
+    static get status(){ return this._status; }
+}
+GameRecoder.init();
+
+
+
+
+class AppGameRecoder{
+    static start(){
+        AppGameRecoder.status = true;
+        if(window.__sound)__sound.pause();
+        if(window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP){ 
+            AppBridge.requestAuth('microphone', (ret)=>{
+                if(ret.status){
+                    AppBridge.startRecoder((ret)=>{
+                        if(ret.status){
+                            game.cb.event('start_recoder');
+                        }else{
+                            __tips(ret.msg);
+                        }
+                    });
+                }
+            })
+        }else{
+            Permission.check('microphone', ()=>{
+                if(AppGameRecoder.status){
+                    game.cb.event('start_recoder');
+                    api.startRecord({ path: AppGameRecoder.amrPath });
+                    console.log('录音开始.');
+                }
+            })
+        }
+    }
+
+    static stop(){
+        console.log('录音停止');
+        AppGameRecoder.status = false;
+        game.cb.event('stop_recoder');
+        if(window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP){
+            AppBridge.stopRecoder((ret)=>{
+                if(ret.status){
+                    let duration = ret.duration;
+                    if (duration < GameRecoder.limitTime / 1000) { 
+                        __tips(GameRecoder.shortTimeTips); 
+                        return;
+                    } else if (duration >= 29) { 
+                        __tips("录音超过30秒") ;
+                        return;
+                    }else{
+                        AppGameRecoder.upload()
+                    }
+                }
+            });
+        }else{
+            api.stopRecord(function(ret, err) {
+                if (ret) {
+                    let path, duration
+                    path = ret.path;
+                    duration = ret.duration;
+                    console.log('录音文件路径:', path, '录音时长:', duration);
+                    if (duration < GameRecoder.limitTime / 1000) { 
+                        __tips(GameRecoder.shortTimeTips); 
+                        return;
+                    } else if (duration >= 29) { 
+                        __tips("录音超过30秒") ;
+                        return;
+                    }
+                    AppGameRecoder.upload()
+                }else{
+                    ret && console.log('ret->' + JSON.stringify(ret));
+                    err && console.log('err->' + JSON.stringify(err));
+                }
+            });
+        }
+        if(window.__sound)__sound.working();
+    }
+
+    static upload(){
+        // 没有正确的语音服务器ip
+        if(!game.voiceConfig.ip)return;
+        // 上传录音文件
+        // 显示上传进度
+        trace(`上传中...[${"https://" + game.voiceConfig.ip + "/MessageServer/uploadVideo"}]`);
+
+        if(window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP){
+             this.uploadData = { 
+                url: "https://" + game.voiceConfig.ip + "/MessageServer/uploadVideo", 
+                values: { 
+                    appKey: game.voiceConfig.appKey, 
+                    uid: __voice.myUid, 
+                    token: game.voiceConfig.token 
+                } 
+            };
+            AppBridge.uploadRecoder((ret)=>{
+                trace('上传语音结果----------', ret.status);
+            }, this.uploadData);
+        }else{
+            api.ajax({
+                url: "https://" + game.voiceConfig.ip + "/MessageServer/uploadVideo",
+                method: 'post',
+                data: {
+                    values: { appKey: game.voiceConfig.appKey, uid: __voice.myUid, token: game.voiceConfig.token },
+                    files: { file: AppGameRecoder.amrPath }
+                }
+            }, function(ret, err) {
+                if (ret) {
+                    trace('上传语音结果----------', ret.status, ret.progress)
+                    if (ret.status == '1' || parseInt(ret.progress == 100)) {}
+                } else {}
+            });
+        }
+        
+    }
+
+
+    static get amrPath(){
+        return 'fs://amrly_appletmj.amr';
+    }
+
+    static set status(value){ this._status = value; }
+    static get status(){ return this._status; }
+}
+
+
+class Permission{
+    static check(name, next){
+        if(!name){ next && next(); }
+        else{
+            Permission.next = next;
+            Permission.permission(name);
+        } 
+    }
+
+
+    static permission(name){
+        var rets = api.hasPermission({ list:[name] });
+        if (rets && rets.length && rets[0].granted) {
+            // 已授权，可以继续下一步操作
+            console.log(name + '已授权.');
+            Permission.next && Permission.next();
+            Permission.next = null;
+        } else {
+            api.confirm({
+                title: '授权申请',
+                msg: '应用需要获得 ' + Permission.permsToName[name] + " 权限\n是否前往设置？",
+                buttons: ['取消','去设置']
+            }, function(ret) {
+                if (ret.buttonIndex == 2) {
+                    api.requestPermission({
+                        list: [name],
+                    }, function(res) {
+                        if (res.list[0].granted) {
+                            // 已授权，可以继续下一步操作
+                            console.log(name + '已同意授权.');
+                            Permission.next && Permission.next();
+                            Permission.next = null;
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    static get permsToName(){
+        if(!Permission._names){
+            Permission._names = {
+                location:'位置信息',
+                storage:'本地存储',
+                photos:'本地存储',
+                microphone:'录音',
+                camera:'相机',
+            };
+        }
+        return Permission._names;
+    }
+
+    static set next(func){ Permission._next = func; }
+    static get next(){ return Permission._next; }
+};

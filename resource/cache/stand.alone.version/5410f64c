@@ -1,0 +1,291 @@
+class DeskRadio {
+    static start() {
+        let list = this.getList(__data.deskData.roomVo.roomID);
+        for (let i = 0; i < list.length; i++) {
+            let rd = RankUtils.getPlayerAreaRank(list[i].id);// 获取用户的排位信息
+            let isEmpty = this.isEmpty(rd);// 是否为空数据
+            if (isEmpty) continue;// 空数据不处理
+            let isDone = this.isDone(list[i]);// 是否完播
+            if (isDone) continue;// 完播不处理
+            let cups = __data.othersVO[list[i].id].scores[__data.othersVO[list[i].id].area];// 该用户的段位
+            let isSpecial = RankUtils.isSpecialRank(cups, list[i].id, HallPlay.lastCityId);// 是否为特殊段位
+            if (!isSpecial) continue;// 不是特殊段位不处理
+            // 播报
+            this.complete(list[i]);
+            DeskRadioUIManager.play(list[i]);
+        }
+    }
+
+    /**
+     * 是否属于播放完的用户
+     * @param {*} vo 
+     */
+    static isDone(vo) {
+        let list = this.getDoneList();
+        let index = this.getIndex(list, vo);
+        // 不为-1 代表在完播列表里找到了  这个对象 
+        return index != -1;
+    }
+
+    /**
+     * 添加进播放完成列表
+     * @param {*} vo 
+     */
+    static complete(vo) {
+        let list = this.getDoneList();
+        let index = this.getIndex(list, vo);
+        if (index == -1) { list.push(vo); }
+    }
+
+    /**
+     * 是否为空的object
+     * @param {Object} obj 
+     * @returns 
+     */
+    static isEmpty(obj) {
+        return Object.keys(obj).length === 0 && obj.constructor === Object;
+    }
+
+
+
+    /**
+     * 添加一个需要广播的对象
+     * @param {PlayerVo} vo 
+     */
+    static push(vo) {
+        let list = this.getList(__data.deskData.roomVo.roomID);
+        let index = this.getIndex(list, vo);
+        if (index == -1) { list.push(vo); }
+    }
+    /**
+     * 删除一个需要广播的对象
+     * @param {PlayerVo} vo 
+     */
+    static remove(vo) {
+        let list = this.getList(__data.deskData.roomVo.roomID);
+        let index = this.getIndex(list, vo);
+        (index != -1) && list.splice(index, 1);
+        // 完播列表也需要删除一下
+        list = this.getDoneList();
+        index = this.getIndex(list, vo);
+        (index != -1) && list.splice(index, 1);
+    }
+
+    /**
+     * 获取对象下标
+     * @param {Array} list 
+     * @param {PlayerVo} vo 
+     * @returns 
+     */
+    static getIndex(list, vo) {
+        for (let i = 0; list && vo && i < list.length; i++) {
+            if (list[i].id == vo.id) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 获取根据roomid绑定的集合  没有生成一个空的集合
+     * @param {int} roomId 
+     * @returns 
+     */
+    static getList(roomId) {
+        if (!this._list || !this._list[roomId]) {
+            this._list = {};
+            this._list[roomId] = [];
+            this._doneList = [];// 新房间重置一下
+        }
+        return this._list[roomId]
+    }
+
+    /**
+     * 获取已经完成播放的列表
+     * @returns 
+     */
+    static getDoneList() {
+        if (!this._doneList) {
+            this._doneList = [];
+        }
+        return this._doneList;
+    }
+
+    static clear() {
+        this._list = {};
+        this._doneList = [];
+    }
+}
+
+class DeskRadioUIManager {
+    /**
+     * 播放广播
+     * @param {*} vo 
+     */
+    static play(vo, data) {
+        let ui = this.getUI(data);
+        if (!ui) { return; }
+        ui.play(vo, data);
+        this.list.push(ui);
+        this.layer.c.addChild(ui).pos(Laya.stage.width - ui.width >> 1, 100);
+        Laya.timer.callLater(this, this.relocation);
+    }
+
+    /**
+     * 重新定位所有广播UI 位置
+     */
+    static relocation() {
+        let firsty = this.list[this.list.length - 1].y;
+        let index = 1;
+        for (let i = this.list.length - 2; i >= 0; i--) {
+            Laya.Tween.to(this.list[i], { y: firsty + index * this.list[i].height }, 150);
+            index++;
+        }
+    }
+
+    /**
+     * 所有ui集合
+     */
+    static get list() {
+        if (!this._list) {
+            this._list = [];
+        }
+        return this._list;
+    }
+
+    /**
+     * 获取一个广播ui
+     * @returns 
+     */
+    static getUI(data) {
+        if (data) {
+            switch (data.type) {
+                case DeskRadioUIManager.PRAY:
+                    return new DeskPrayRadioUI();
+                case DeskRadioUIManager.RANK:
+                    return new DeskRankRadioUI();
+            }
+        }
+        return new DeskRankRadioUI();
+    }
+
+    /**
+     * 回收广播ui
+     * @param {*} ui 
+     */
+    static recover(ui) {
+        this.deleByList(ui);
+    }
+
+    /**
+     * 删除集合中的ui
+     * @param {*} ui 
+     */
+    static deleByList(ui) {
+        let index = this.list.indexOf(ui);
+        index != -1 && this.list.splice(index, 1);
+    }
+
+    /**
+     * 广播播报的层
+     * @return Laya.Sprite
+     */
+    static get layer() {
+        return game.scene.layer['icon'];
+    }
+
+
+    static get PRAY() { return "pray"; }
+    static get RANK() { return "rank"; }
+}
+
+
+
+class DeskRankRadioUI extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/DeskRankRadio',
+            module: false
+        })
+        this.tween = new Laya.Tween();
+    }
+
+    /**
+     * 是否为传奇雀神
+     * @param {*} vo 
+     * @returns 
+     */
+    isLegend(vo) {
+        let rd = RankUtils.getPlayerAreaRank(vo.id);
+        if (rd.name == __data.rank.chuanqiQueshen.name) { return true; }
+        return false;
+    }
+
+    updateUI(vo) {
+        LabelHiddenUtils.getAdapterContent(this.txt_name, vo.name);
+        // this.txt_name.text = vo.name;
+        this.txt_trail.x = this.txt_name.x + this.txt_name.textField.textWidth + 30;
+        SkinUtils.setSkin(this.bg, this.isLegend(vo) ? 'local/game_common/1/img_rc_cqqs.png' : 'local/game_common/1/img_rc_xyqs.png');
+    }
+
+    play(vo) {
+        this.bg.alpha = 1;
+        this.bg.scale(0, 0);
+        this.updateUI(vo);
+        this.tween.to(this.bg, { scaleX: 1, scaleY: 1 }, 200, Laya.Ease.expoOut, Laya.Handler.create(this, this._appearComplete));
+    }
+
+    _appearComplete() {
+        this.tween.clear();
+        this.tween.to(this.bg, { alpha: 0 }, 200, Laya.Ease.expoIn, Laya.Handler.create(this, this._hideComplete), 1000)
+    }
+
+    _hideComplete() {
+        game.utils.remove(this);
+        DeskRadioUIManager.recover(this);
+        this.destroy();
+    }
+}
+
+
+
+class DeskPrayRadioUI extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/DeskPrayRadio',
+            module: false
+        })
+        this.bg.size(this.width, this.height);
+        this.bg.pivot(this.width / 2, this.height / 2);
+        this.bg.pos(this.width / 2, this.height / 2);
+        this.tween = new Laya.Tween();
+    }
+
+    updateUI(vo, data) {
+        LabelHiddenUtils.getAdapterContent(this.txt_name, vo.name);
+        this.txt_trail.x = this.txt_name.x + this.txt_name.textField.textWidth + 30;
+        SkinUtils.setSkin(this.icon, this.getSkin(data.index));
+    }
+
+    getSkin(index) {
+        return `cdn/bless_mj/img_zf${index}.png`;
+    }
+
+    play(vo, data) {
+        this.bg.alpha = 1;
+        this.bg.scale(0, 0);
+        this.updateUI(vo, data);
+        this.tween.to(this.bg, { scaleX: 1, scaleY: 1 }, 200, Laya.Ease.expoOut, Laya.Handler.create(this, this._appearComplete));
+    }
+
+    _appearComplete() {
+        this.tween.clear();
+        this.tween.to(this.bg, { alpha: 0 }, 200, Laya.Ease.expoIn, Laya.Handler.create(this, this._hideComplete), 1000)
+    }
+
+    _hideComplete() {
+        game.utils.remove(this);
+        DeskRadioUIManager.recover(this);
+        this.destroy();
+    }
+}

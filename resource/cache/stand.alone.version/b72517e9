@@ -1,0 +1,1086 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-13 12:00:33
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-29 19:27:14
+ */
+class FriendRoomTrackEvent {
+    static trackEvent() {
+        try {
+            if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) { return; }
+            let umEventName = excelUtils.getUmEventName(HallPlay.lastCityId)
+            let countyName = umEventName;// 地区
+            let round = String(__data.deskData.roomVo.allGame);// 总局数
+            let result = __data.deskData.roomVo.smallResultData.myResult ? '胜利' : '失败'; // 胜利 失败
+            let uid = __data.uid.toString();// 用户id
+            let gameMethod = excelUtils.getPlayIdName(__data.deskData.roomVo.modelId);// 玩法名称
+            let coins = parseInt(__data.deskData.roomVo.smallResultData.myScore);// 结算分数
+            let victoryMethod = '未知';// 胡牌方式
+            let vip = __data.vip.isVip ? '是' : '否'; // vip
+            let surplus = __data.deskData.roomVo.smallResultData.surplus; // 剩余牌数
+            let specialCard = 0;// 特殊牌型
+            let lastGame = __data.deskData.roomVo.smallResultData.isOver ? '是' : '否';// 是否为最后一局
+
+            let vms = ['接炮', '自摸', '摸宝', '漏宝', '射宝', '对宝', '大风', '红中', '天胡'];
+            for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+                let player = __data.deskData.roomVo.smallResultData.playerArray[i];
+                let winner = player.winPosition.indexOf(player.position) != -1;
+                if (winner) {
+                    let explains = player.scoreInfo.split(' ');
+                    for (let j = 0; explains && j < explains.length; j++) {
+                        if (victoryMethod != '未知') continue;
+                        let explain = explains[j];
+                        for (let z = 0; z < vms.length; z++) {
+                            if (victoryMethod != '未知') continue;
+                            // 找到这个描述文字了
+                            if (explain.indexOf(vms[z]) != -1) {
+                                victoryMethod = vms[z];
+                                break;
+                            }
+                        }
+                    }
+                }
+                // 方正
+                if (player.id == __data.uid && (HallPlay.lastCityId == 8 || HallPlay.lastCityId == 10)) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isXi = group.startsWith('82');
+                        isXi && specialCard++;
+                    }
+                }
+                // 富锦
+                if (player.id == __data.uid && HallPlay.lastCityId == 13) {
+                    let hands = [].concat(player.handTileArray);
+                    let picks = __compUtils.pickup(hands, __data.deskData.roomVo.mixedArr);
+                    specialCard = picks.pickups ? picks.pickups.length : 0;
+                }
+                // 泰来
+                if (player.id == __data.uid && HallPlay.lastCityId == 111) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isXi = group.startsWith('82');
+                        isXi && specialCard++;
+                    }
+                }
+                // 汤原 经典黑龙江
+                if (player.id == __data.uid && (HallPlay.lastCityId == 21 || HallPlay.curRuleId == -1)) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isGang = group.startsWith('5');
+                        isGang && specialCard++;
+                    }
+                }
+            }
+
+            // 我赢了 需要Mj_VictoryMethod字段
+            if (__data.deskData.roomVo.smallResultData.myResult) {
+
+                // 赢家找到的 是未知
+                if (victoryMethod == '未知') {
+                    for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+                        let player = __data.deskData.roomVo.smallResultData.playerArray[i];
+                        let loser = player.winPosition.indexOf(player.position) == -1;
+                        if (loser) {
+                            let explains = player.scoreInfo.indexOf('炮');
+                            if (explains != -1) { // 输家的描述中找到了 炮字
+                                victoryMethod = '接炮';
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                miniApi.trackEvent('Mj_FriendGame', {
+                    'Mj_County': countyName,
+                    'Mj_GameNumber': round,
+                    'Mj_Results': result,
+                    'Mj_UserID': uid,
+                    'Mj_GameMethod': gameMethod,
+                    'Mj_Score': coins,
+                    'Mj_VictoryMethod': victoryMethod,
+                    'Mj_VIP': vip,
+                    'Mj_Remainder': surplus,
+                    'Mj_SpecialCard': specialCard,
+                    'Mj_LastGame': lastGame
+                });
+            }
+            // 我输了   不要Mj_VictoryMethod 这个字段
+            else {
+                miniApi.trackEvent('Mj_FriendGame', {
+                    'Mj_County': countyName,
+                    'Mj_GameNumber': round,
+                    'Mj_Results': result,
+                    'Mj_UserID': uid,
+                    'Mj_GameMethod': gameMethod,
+                    'Mj_Score': coins,
+                    'Mj_VIP': vip,
+                    'Mj_Remainder': surplus,
+                    'Mj_SpecialCard': specialCard,
+                    'Mj_LastGame': lastGame
+                });
+            }
+        } catch (e) {
+
+        }
+    }
+}
+class FriendComponent extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap[`scene_game/result/FriendComponent`]);
+    }
+}
+
+class MahjongSmallResultInfoScript extends Laya.Script {
+
+    bind(container) {
+        this.container = container;
+    }
+
+    onEnable() {
+        this.showInfo();
+        this.owner.getChildByName('btn_play').on(Laya.Event.CLICK, this, this._showPlayContiner);
+    }
+
+    onDisable() {
+        this.owner.getChildByName('btn_play').off(Laya.Event.CLICK, this, this._showPlayContiner);
+    }
+
+    showInfo() {
+        this.owner.getChildByName('txt_id').text = `房间号:${__data.deskData.roomVo.roomID}`;
+        this.owner.getChildByName('txt_round').text = this.getRound();
+        if (__data.deskData.roomVo.isRecordPlaying) this.container.visible = true;
+        else this.container.visible = false;
+    }
+
+    getRound() {
+        if (HallPlay.curRuleId == FriendRoomPlays.AREA.WUHU) {
+            return `第${__data.deskData.roomVo.curGame - 1}局`;
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.TONGJIANG) {
+            return `第${__data.deskData.roomVo.curGame - 1}局`;
+        } else {
+            return `第${Math.min(__data.deskData.roomVo.curGame - 1, __data.deskData.roomVo.allGame)}/${__data.deskData.roomVo.allGame}局`;
+        }
+    }
+
+    _showPlayContiner(e) {
+        e && e.stopPropagation();
+        Laya.timer.callLater(this, this.hideOrShow);
+    }
+
+    hideOrShow() {
+        if (this.container && this.container.visible)
+            this.container.visible = false;
+        else
+            this.container.visible = true;
+    }
+}
+
+class FriendMahjongSmallResultItem extends game.ModuleBase {
+    constructor(name, side) {
+        super()
+        this.createView(game.uiMap[`scene_game/result/${name}`]);
+        this.bgSkin = this.bg.texture || this.bg.skin;
+        this.side = side;
+        this.greenArr = [];
+        for (var i = 0; i < 10; i++) this.greenArr.push("local/game_common/1/img_green_" + i + ".png")
+        this.greenArr['+'] = 'local/game_common/1/img_green_increase.png'
+        this.redArr = [];
+        for (var i = 0; i < 10; i++) this.redArr.push("local/game_common/1/img_red_" + i + ".png")
+        this.redArr['-'] = 'local/game_common/1/img_red_reduce.png'
+    }
+
+    onAwake() {
+        this.btn_look.on(Laya.Event.CLICK, this, this._lookPlayer);
+    }
+
+    updateDataHandler() {
+        if (__data.othersVO[this.__data.id]) {
+            // 本家
+            let targetId = __data.deskData.roomVo.isRecordPlaying ? __data.deskData.roomVo.recordViewerID : __data.uid;
+            let targetVo = __data.deskData.roomVo.getResultPlayer(targetId);
+            SkinUtils.setSkin(this.sign, WuhuCompassInfo.getRes(targetVo ? targetVo.position : 0, this.__data.position));
+
+            LabelHiddenUtils.getAdapterContent(this.txt_name, __data.othersVO[this.__data.id].name);
+            let area = __data.othersVO[this.__data.id].area;
+            let areaRank = __data.othersVO[this.__data.id].areaRank;
+            if (__data.deskData.roomVo.isRecordPlaying) this.txt_ar.text = '';
+            else this.txt_ar.text = `[${excelUtils.getCityName_mj(area)}，${RankUtils.getAreaRankInfo(areaRank)}]`;
+        }
+    }
+
+    get dataSource() { return this.value }
+    set dataSource(value) {
+        if (!value) { return }
+        __data.deskData.roomVo.playArea = (__data.deskData.roomVo.roomPlay.indexOf('99') != -1) ? 99 : 98
+
+        this.__data = value;
+        //用户信息
+        this.updateDataHandler();
+
+        this.showPropertys();
+
+        if (__data.deskData.roomVo.playArea == 99) {
+            // //得分
+            // this.txtScore = this.txtScore || new game.NumText(this.greenArr)
+            // if (this.__data.score >= 0) {
+            //     this.txtScore.urls__ = this.greenArr;
+            //     this.txtScore.text = '+' + this.__data.score
+            // } else {
+            //     this.txtScore.urls__ = this.redArr;
+            //     this.txtScore.text = this.__data.score
+            // }
+            // this.txtScore.x = this.img_hu.x + this.img_hu.width + 60;
+            // this.txtScore.y = this.height - this.txtScore.height - 10;
+
+            // this.addChild(this.txtScore)
+
+            let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+            if (this.__data.score == 0) {
+                this.txt_score.text = '-0';
+            } else if (this.__data.score > 0) {
+                this.txt_score.text = '+' + formatScore;
+            } else if (this.__data.score < 0) {
+                this.txt_score.text = formatScore;
+            }
+            this.txt_score.color = this._scoreColor(this.__data.score);
+        } else {
+            if (__data.deskData.roomVo.roomPlay.split(",").indexOf("13") > -1) { this.__data.winnerMixedNumber = 0; }
+
+            let __hunScore = 0;
+            let __fanScore = 0;
+            let __baseScore = 0;
+
+            __baseScore = (__data.deskData.roomVo.roomPlay.split(",").indexOf("9") > -1) ? -1 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("10") > -1) ? -2 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("11") > -1) ? -3 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("14") > -1) ? -5 : (__data.deskData.roomVo.roomPlay.split(",").indexOf("15") > -1) ? -10 : 0
+
+            if (this.__data.huPosition.length > 0) {
+                if (this.__data.winPosition.indexOf(this.__data.position) > -1) {
+                    __hunScore = this.__data.winnerMixedNumber * (__data.deskData.roomVo.roomPlayer - 1) * Math.abs(__baseScore)
+                    __fanScore = this.__data.score - __hunScore
+                } else {
+                    __hunScore = this.__data.winnerMixedNumber * __baseScore
+                    __fanScore = this.__data.score - __hunScore
+                }
+            }
+
+            // this.txtScore = this.txtScore || new game.NumText(this.greenArr)
+            // if (this.__data.score >= 0) {
+            //     this.txtScore.urls__ = this.greenArr;
+            //     this.txtScore.text = '+' + this.__data.score.toString()
+            // } else {
+            //     this.txtScore.urls__ = this.redArr;
+            //     this.txtScore.text = this.__data.score.toString()
+            // }
+            // this.txtScore.x = this.img_hu.x + this.img_hu.width + 55;
+            // this.txtScore.y = 40
+
+            // this.addChild(this.txtScore)
+
+            if (__data.deskData.roomVo.smallResultData.isJiao) {
+                SkinUtils.setSkin(this.gold, 'cdn/mahjong_result/mahjong_result/img_jiaof.png');
+                let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+                if (this.__data.score == 0) {
+                    this.txt_score.text = '-0';
+                } else if (this.__data.score > 0) {
+                    this.txt_score.text = '+' + formatScore;
+                } else if (this.__data.score < 0) {
+                    this.txt_score.text = formatScore;
+                }
+                this.txt_score.color = this._scoreColor(this.__data.score);
+            }
+            else {
+                SkinUtils.setSkin(this.gold, 'cdn/mahjong_result/mahjong_result/img_jf.png');
+                let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+                if (this.__data.score == 0) {
+                    this.txt_score.text = '-0';
+                } else if (this.__data.score > 0) {
+                    this.txt_score.text = '+' + formatScore;
+                } else if (this.__data.score < 0) {
+                    this.txt_score.text = formatScore;
+                }
+                this.txt_score.color = this._scoreColor(this.__data.score);
+            }
+        }
+
+
+
+        let __hunInfo = '';
+        __data.deskData.roomVo.playArea = (__data.deskData.roomVo.roomPlay.indexOf('99') != -1) ? 99 : 98
+        if (__data.gameId.curId == 13 && HallPlay.curRuleId > 0) {
+            if (__data.deskData.roomVo.playArea == 98) {
+                __hunInfo = (this.__data.winnerMixedNumber > 0) ? '混×' + this.__data.winnerMixedNumber : '';
+            }
+        }
+
+
+        var infoStr = '';
+        //胡的说明  具体为后端 提供
+        if (this.__data.scoreInfo) {
+            if (this.__data.winPosition.indexOf(this.__data.position) != -1) {
+                infoStr = this.__data.scoreInfo.endsWith(' ') ? this.__data.scoreInfo + __hunInfo : this.__data.scoreInfo + ' ' + __hunInfo;
+            } else {
+                infoStr = this.__data.scoreInfo;
+            }
+        } else {
+            infoStr = '';
+        }
+        // this.txt_info.overflow = 'visible';
+        this.txt_info.fontSize = 32;
+        this.txt_info.text = this.autoInfoText(infoStr);
+
+        // this.container.width = this.txt_score.x + this.txt_score.width;
+        // this.container.x = this.width - this.container.width >> 1;
+
+        let url = this.bgSkin;
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        if (this.__data.id == __data.uid) {
+            url = url.replace('player1', 'playerme');
+        } else if (!result) {
+            url = url.replace('player1', 'player2');
+        }
+        SkinUtils.setSkin(this.bg, url);
+
+        //获取当前用户vo
+        let __vo = __data.deskData.roomVo.getPlayer(this.__data.id);
+        //当前用户和庄的位置一致 与不一致 的显示与移除
+        if (__vo && __vo.position == __data.deskData.roomVo.bankerPosition) this.addChild(this.branker)
+        else game.utils.remove(this.branker)
+
+        //胡的位置 显示胡的标志
+        if (this.__data.winPosition.indexOf(this.__data.position) != -1) {
+            this.__data.winner = true;
+            this.addChild(this.img_hu)
+        } else {
+            this.__data.winner = false;
+            game.utils.remove(this.img_hu);
+        }
+
+        if (this.__data.winner) {
+            SkinUtils.setSkin(this.btn_look, 'cdn/mahjong_result/mahjong_result/bt_ck2.png');
+        } else {
+            SkinUtils.setSkin(this.btn_look, 'cdn/mahjong_result/mahjong_result/bt_ck.png');
+        }
+
+        // 头像地址
+        if (__vo) {
+            SkinUtils.setSkin(this.head.getChildByName('frame'), __vo.frameUrl);
+            if (__vo.url) {
+                SkinUtils.setSkin(this.head.getChildByName('head'), __vo.url);
+            } else {
+                SkinUtils.setSkin(this.head.getChildByName('head'), '');
+            }
+        }
+
+        this.relocationUI();
+    }
+
+
+    autoInfoText(str) {
+        var list = str.split(' ');
+        let returnStr = '';
+        let temp_list = [];
+        for (let i = 0; i < list.length; i++) {
+            temp_list.push(list[i]);
+            if (temp_list.join(' ').length > 13) {
+                temp_list.pop();
+                returnStr += temp_list.join(' ') + '\n';
+                temp_list = [];
+                i--;
+            }
+        }
+        returnStr += temp_list.join(' ');
+        return returnStr;
+    }
+
+
+    relocationUI() {
+        if (this.side == 'left') {
+            this.c_img.x = this.txt_score.x + this.txt_score.textField.textWidth + 30;
+            this.c_img.y = this.txt_score.y + (this.txt_score.height - this.c_img.height) / 2;
+        } else if (this.side == 'right') {
+            this.container.x = this.txt_score.x + this.txt_score.width - this.txt_score.textField.textWidth - this.gold.width - 30;
+            this.c_img.x = this.container.x - 30;
+            this.c_img.y = this.txt_score.y + (this.txt_score.height - this.c_img.height) / 2;
+        }
+    }
+
+    showPropertys() {
+        let imgs = [];
+        //  -1  破产   
+        if (this.__data.propertyState == -1 && __data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) {
+            let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            SkinUtils.setSkin(img, 'local/game_common/1/ic_pc.png');
+            imgs.push(img);
+        }
+        //  1 上限
+        if (this.__data.propertyState == 1) {
+            let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            SkinUtils.setSkin(img, 'local/game_common/1/ic_sx.png');
+            imgs.push(img);
+        }
+        //  2 封顶
+        if (this.__data.propertyState == -2) {
+            let img = Laya.Pool.getItemByClass('RESULT_PROPERTYS', Laya.Image);
+            SkinUtils.setSkin(img, 'local/game_common/1/img_fd.png');
+            imgs.push(img);
+        }
+
+        while (this.c_img.numChildren) {
+            let node = this.c_img.removeChildAt(0);
+            node.off(Laya.Event.CLICK, this, this._lookBzexplain);
+            Laya.Pool.recover('RESULT_PROPERTYS', node);
+        }
+
+        this.c_img.height = 0;
+        for (let i = 0; i < imgs.length; i++) {
+            this.c_img.addChild(imgs[i]);
+            imgs[i].x = this.side == 'left' ? 0 : -imgs[i].width; // this.c_img.width == 0 ? this.c_img.width : this.c_img.width + 10;
+            imgs[i].y = this.c_img.height == 0 ? 0 : this.c_img.height + 5; // this.c_img.height - imgs[i].height >> 1;
+            this.c_img.height = imgs[i].y + imgs[i].height;
+        }
+    }
+
+    showSign(position) {
+        if (this.__data.position == position) {
+            game.cb.event('result_player_card', [this.__data]);
+        }
+    }
+
+    _lookPlayer(e) {
+        e && e.stopPropagation();
+        game.cb.event('result_item_look_player', [this.__data, this.side, this.localToGlobal(new Laya.Point(this.btn_look.x, this.btn_look.y + this.btn_look.height / 2))]);
+    }
+
+    _lookBzexplain(e) {
+        // 封顶开始游戏 且 输了的玩家  
+        if (parseInt(this.__data.isMaxMatch) && this.__data.winPosition.indexOf(this.__data.position) == -1) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '封顶开始说明' });
+            let point = this.localToGlobal(new Laya.Point(this.c_img.x + e.currentTarget.x + e.currentTarget.width / 2, this.c_img.y + e.currentTarget.y + e.currentTarget.height));
+            BagInfoUtils.init('prefab/ResultExplainTips.json', true);
+            BagInfoUtils.show('此玩家已激活封顶开始，损失金币以赢家拥有金币为封顶上限', point, game.scene.layer['panel'].c);
+        }
+
+        // 胡的位置  且是 vip 用户 
+        if (this.__data.winPosition.indexOf(this.__data.position) != -1 && this.__data.isVip) {
+            // 触发了 全额保障
+            if (ResultPanelManager.compensateGold()) {
+                miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '全额保障说明' });
+                game.scene.add(MahjongResultCompensateExplain, [this.triggerCompensateGroups()])
+            }
+        }
+    }
+
+    /**
+     * 输赢分数的颜色
+     * @param {int} score 
+     * @returns 
+     */
+    _scoreColor(score) {
+        if (score > 0)
+            return '#6caa01';
+        else
+            return '#ea7779';
+    }
+}
+
+
+class FriendResultLeftUp extends FriendMahjongSmallResultItem {
+    constructor() {
+        super('FriendResultLeftUp', 'left');
+    }
+}
+class FriendResultLeftDown extends FriendMahjongSmallResultItem {
+    constructor() {
+        super('FriendResultLeftDown', 'left');
+    }
+}
+class FriendResultRightUp extends FriendMahjongSmallResultItem {
+    constructor() {
+        super('FriendResultRightUp', 'right');
+    }
+}
+class FriendResultRightDown extends FriendMahjongSmallResultItem {
+    constructor() {
+        super('FriendResultRightDown', 'right');
+    }
+}
+
+class FriendMahjongSmallResult extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/FriendMahjongSmallResult',
+            "layer": 'middle',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.addComponent(MahjongSmallResultHideTestScript);
+        this.roomInfo.addComponent(MahjongSmallResultInfoScript).bind(this.play_c);
+        this.play_c.addComponent(Click_Stage_Remove_UI).setLimit(this._onRecording.bind(this));
+
+        this.leftup_originx = this.leftup.x;
+        this.leftdown_originx = this.leftdown.x;
+        this.rightup_originx = this.rightup.x;
+        this.rightdown_originx = this.rightdown.x;
+
+        this.score_yellowArr = [];
+        for (var i = 0; i < 10; i++) this.score_yellowArr.push("cdn/mahjong_result/mahjong_result/a" + i + ".png")
+        this.txt_bottom_score = new game.NumText();
+        this.txt_bottom_score.skins = this.score_yellowArr;
+        this.txt_bottom_score.text = '0';
+        this.bg.addChild(this.txt_bottom_score).pos(this.sb.x + this.sb.width + 10, this.sb.y + (this.sb.height - this.txt_bottom_score.height) / 2);
+
+        this.txt_fish_score = new game.NumText();
+        this.txt_fish_score.skins = this.score_yellowArr;
+        this.txt_fish_score.text = '0';
+
+        this.list_m.renderHandler = new Laya.Handler(this, (item) => { item.isHorse = true; })
+    }
+
+    clickMask() { }
+
+    _onRecording() { return __data.deskData.roomVo.isRecordPlaying; }
+
+    onAwake() {
+        this.btn_goon.addComponent(FriendGameGoonScript);
+        this.btn_quit.addComponent(MahjongDesk_AllResult_Close_Script);
+        this.btn_all.addComponent(FriendGameAllScript).errorView(this.btn_quit);
+    }
+
+    getDistance() {
+        return (this.bottom.width - game.width / game.scale) / 2;
+    }
+
+    adapterPlayer() {
+        let safe_area = miniApi.statusBarRatio() * game.width;
+        this.mouseThrough = true;
+
+        this.roomInfo.x = -this.x + 30 + safe_area;//3.1.19.2版本修改至左上角
+        this.bg.x = this.roomInfo.x + this.roomInfo.width + 30;// -this.x + 30 + safe_area; 
+        this.btn_quit.x = this.bg.x + this.btn_quit.width / 2;
+
+        this.c_bao.x = this.maxRight;
+        this.nb_box.x = this.baoFont.x + this.baoFont.width + 10;
+        this.c_bao.width = this.nb_box.x + this.list_bao.width;
+
+        this.c_mp.x = this.c_bao.x + this.c_bao.width + 20;
+        this.c_mp.width = this.c_mp.getChildByName('list').x + this.c_mp.getChildByName('list').width;
+        if (HallPlay.curRuleId == FriendRoomPlays.AREA.SHUANGYASHAN) {
+            this.c_bao.visible = true;
+            this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+        }
+        else if (HallPlay.curRuleId == -2 || HallPlay.curRuleId == -3 || !this.areaInfo.haveNb.show) {
+            this.c_bao.visible = false;
+            this.bg.width = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.JIXI) {
+            if (this.__data.mondayPieceCode != 255) {
+                this.bg.width = this.c_mp.x + this.c_mp.getChildByName('list').x + this.c_mp.getChildByName('list').width + 30;
+            } else {
+                this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+            }
+        } else {
+            this.c_bao.visible = true;
+            this.bg.width = this.c_bao.x + this.c_bao.width + this.sb.x;
+        }
+
+        this.gdm.x = this.width + this.x - safe_area - this.gdm.width - 30;
+        this.quickPray.x = this.width + this.x - safe_area - this.quickPray.width - 30;// 3.1.19.2版本新增快速祈福
+        // this.roomInfo.x = this.width + this.x - safe_area - this.roomInfo.width - 30; 3.1.19.2版本弃用
+
+        this.setPlays();
+        // this.challengeUI.x = this.width + this.x - safe_area - this.challengeUI.width - 30;
+        // this.taskUI.x = this.width + this.x - safe_area - this.taskUI.width - 30;
+    }
+
+    get maxRight() {
+        let bottomx = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+        let fishx = this.txt_fish_score.parent ? this.txt_fish_score.x + this.txt_fish_score.width + 30 - this.nb_box.x : 0;
+        return Math.max(bottomx, fishx);
+    }
+
+    setPlays() {
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            this.play_c.getChildByName('txt_play').width = this.width * 0.8;
+            this.play_c.getChildByName('txt_play').text = FriendRoomPlays.getPlaysInfo(__data.deskData.roomVo.modelId, __data.deskData.roomVo.roomPlay);
+            this.play_c.width = this.play_c.getChildByName('txt_play').x * 2 + this.play_c.getChildByName('txt_play').textField.textWidth;
+            this.play_c.height = this.play_c.getChildByName('txt_play').y * 2 + this.play_c.getChildByName('txt_play').height;
+            this.play_c.y = this.result.y + this.result.height + 20;
+            this.play_c.x = this.roomInfo.x;
+        } else {
+            this.play_c.width = this.roomInfo.width * 2.5;
+            this.play_c.getChildByName('txt_play').width = this.play_c.width - this.play_c.getChildByName('txt_play').x * 2;
+            this.play_c.getChildByName('txt_play').text = FriendRoomPlays.getPlaysInfo(__data.deskData.roomVo.modelId, __data.deskData.roomVo.roomPlay);
+            if (this.play_c.getChildByName('txt_play').textField.textWidth < 520) {
+                this.play_c.width = this.play_c.getChildByName('txt_play').x * 2 + this.play_c.getChildByName('txt_play').textField.textWidth;
+            } else {
+                this.play_c.width = 520;
+            }
+            this.play_c.height = this.play_c.getChildByName('txt_play').y * 2 + this.play_c.getChildByName('txt_play').height;
+            this.play_c.y = this.roomInfo.y + this.roomInfo.height + 20;
+            this.play_c.x = this.roomInfo.x;
+        }
+
+    }
+
+    onEnable() {
+        FriendMahjongSmallResult.isShow = true;
+        Laya.timer.once(1000, this, () => { __sound.stopMusic(); })// 3.1.18.1版本修改
+        this.hideButton();
+        game.cb.on('result_item_look_player', this, this.lookPlayer);
+        game.cb.on(__eh + 'update_user_info', this, this.updateDataHandler);
+
+        this.__data = __data.deskData.roomVo.smallResultData;
+        //当前大区信息，留存以备不时之需
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+
+        // 胜利失败音效
+        let down_vo = __data.deskData.roomVo.getPlayer('down');
+        this.__data.myPosition = down_vo ? down_vo.position : this.__data.myPosition;
+        if (this.__data.huPositionArr.indexOf(this.__data.myPosition) != -1) {
+            this.__data.myResult = true;
+            // GameMainWinLoseGuide.showType = 'win';
+            __sound.gameSound("win");
+        } else {
+            this.__data.myResult = false;
+            // GameMainWinLoseGuide.showType = 'lose';
+            __sound.gameSound("lose");
+        }
+
+        //宝牌 混牌是否需要显示  
+        // this.nb_box.visible = __data.deskData.roomVo.roomPlay.indexOf('98') > -1 ? false : this.areaInfo.haveNb.show
+
+        this.baoCode = 255
+        // 底分
+        this.txt_bottom_score.text = __data.deskData.roomVo.bottomScore;
+        this.yf.visible = false;
+        this.gdm.visible = false;
+        this.c_mp.visible = false;
+        game.utils.remove(this.txt_fish_score);
+        if (__data.gameId.curId == FriendRoomPlays.CITY.FUJIN && HallPlay.curRuleId > 0) {
+            this.baoCode = this.__data.mixed;
+            if (__data.deskData.roomVo.playArea == 98) {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+            }
+        } else if (__data.gameId.curId == FriendRoomPlays.CITY.TANGYUAN && HallPlay.curRuleId > 0) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, '');
+            this.yf.visible = true;
+            this.yf.x = this.txt_bottom_score.x + this.txt_bottom_score.width + 30;
+            if (this.baoCode == 255 || !__data.deskData.roomVo.getIncludeRule(Play_tangyuan.FISH)) {
+                this.txt_fish_score.text = 0;
+            } else this.txt_fish_score.text = this.baoCode >= 40 ? 10 : (this.baoCode + 1) % 10;
+            this.bg.addChild(this.txt_fish_score).pos(this.yf.x + this.yf.width + 10, this.yf.y + (this.yf.height - this.txt_fish_score.height) / 2);
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.FUYUAN) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_zy.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.TONGJIANG) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.JIXI) {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+            if (this.__data.mondayPieceCode != 255) {
+                this.c_mp.visible = true;
+                this.c_mp.getChildByName('list').array = [this.__data.mondayPieceCode];
+            }
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.GUANGDONG) {
+            // this.baoCode = this.__data.baoCode;
+            this.baoCode = GdGhost.getGhost(this.__data.baoCode)
+            this.gdm.visible = true;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_gp.png');
+        } else if (HallPlay.curRuleId == FriendRoomPlays.AREA.SHUANGYASHAN) {
+            this.baoCode = this.__data.baoCode;
+            let isFish = this.__data.wfArray.find((value) => { return value == Play_shuangyashan.SEA });// 是否为对海洋
+            if (isFish) {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/hy.png');
+            } else {
+                SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/zyz.png');
+            }
+        } else {
+            this.baoCode = this.__data.baoCode;
+            SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+        }
+
+        // if (__data.domain == 13) {
+        //     baoCode = this.__data.mixed;
+        //     SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_hp.png');
+        // } else {
+        //     baoCode = this.__data.baoCode;
+        //     SkinUtils.setSkin(this.baoFont, 'cdn/mahjong_result/mahjong_result/img_bp.png');
+        // }
+
+        SkinUtils.setSkin(this.result, this.__data.myResult ? 'cdn/mahjong_br/mahjong_br/bg_js1ah.png' : 'cdn/mahjong_br/mahjong_br/bg_js2ah.png');
+
+        this.baoHandle();
+        // 加数   #fb3b44   减数  #4b9854  
+        __data.deskData.roomVo.roomPlayer = this.__data.playerArray.length;
+
+        // this.winnerUI.visible = false;
+        this.playerlist = [this.leftup, this.rightup, this.leftdown, this.rightdown];
+        this.setPlayer();
+        this.startAni();
+        // 延迟显示激励事件
+        Laya.timer.callLater(this, this.adapterPlayer);
+        Laya.timer.callLater(this, this.showIcons);
+    }
+
+    showIcons() {
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            this.btn_pray.visible = false;
+            game.utils.remove(this.quickPray);
+            return
+        }
+
+        this.btn_pray.visible = true;
+
+        let safe_area = miniApi.statusBarRatio() * game.width;
+        let icon_space = 20;
+        this.btn_pray.x = -this.x + 30 + safe_area;
+
+        this.friendRed.x = this.btn_pray.x + this.btn_pray.width * this.btn_pray.scaleX + icon_space;
+        if (this.__data.isOver) {
+            let ids = __data.deskData.roomVo.getPlayerIds();
+            for (let i = 0; i < ids.length; i++) {
+                let status = __data.friendRoom.red.getRedStatus_room(ids[i]);
+                if (status == 1 || status == 2) {
+                    if (ids[i] == __data.uid) {
+                        game.server.send(18020)
+                    } else {
+                        __showScene.show_friendRoom_redSuccess(ids[i]);
+                    }
+                    break;
+                }
+            }
+        }
+        let info = PrayStatistics.instance.checkResultTrigger();
+        if (info) { this.quickPray.source(info, '结算'); this.addChild(this.quickPray); }
+        else { game.utils.remove(this.quickPray); }
+    }
+
+    baoHandle() {
+        let list = typeof this.baoCode == 'number' ? [this.baoCode] : typeof this.baoCode == 'string' ? this.baoCode.split(',') : [255];
+        this.list_bao.array = list;
+        this.list_bao.repeatX = this.list_bao.array.length;
+
+        this.list_m.array = GdHorseInfo.horses.all;
+        this.list_m.repeatX = this.list_m.array.length;
+        this.mFont.x = this.list_m.x + this.list_m.width + 10;
+        this.gdm.width = this.mFont.x + this.mFont.width;
+        this.adapterPlayer();
+    }
+
+    onDisable() {
+        FriendMahjongSmallResult.isShow = false;
+        GdHorseInfo.clear();
+        game.cb.off('result_item_look_player', this, this.lookPlayer);
+        game.cb.off(__eh + 'update_user_info', this, this.updateDataHandler)
+    }
+
+    setPlayer() {
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            this.playerlist[i].dataSource = this.__data.playerArray[i];
+        }
+    }
+
+    startAni() {
+        this.leftup.x = this.leftup_originx - 1000;
+        this.leftdown.x = this.leftdown_originx - 1000;
+        this.rightup.x = this.rightup_originx + 1000;
+        this.rightdown.x = this.rightdown_originx + 1000;
+        // let scaleTime = 300;
+        // this.topcIss.init(1, scaleTime);
+        // this.topcIss.start();
+        let moveTime = 300;
+        let delayTime = 0;
+        Laya.Tween.to(this.leftup, { x: this.leftup_originx }, moveTime, Laya.Ease.expoOut, null, 0 * delayTime);
+        Laya.Tween.to(this.rightup, { x: this.rightup_originx }, moveTime, Laya.Ease.expoOut, null, 1 * delayTime);
+        Laya.Tween.to(this.leftdown, { x: this.leftdown_originx }, moveTime, Laya.Ease.expoOut, null, 2 * delayTime);
+        Laya.Tween.to(this.rightdown, { x: this.rightdown_originx }, moveTime, Laya.Ease.expoOut, null, 3 * delayTime);
+        Laya.timer.once(3 * delayTime + moveTime, this, this._allAniComplete);
+
+        __sound.gameSound("end");
+    }
+
+    _playerAni() {
+
+    }
+
+    _rankAniComplete() {
+        game.cb.event('RESULT_ANI_RANK_FLY');
+    }
+
+    _allAniComplete() {
+        this.showButton();
+    }
+
+    hideButton() {
+        this.btn_quit.visible = false;
+        this.btn_goon.visible = false;
+        this.btn_all.visible = false;
+    }
+
+    showButton() {
+        if (__data.deskData.roomVo.isRecordPlaying) { return; }
+        this.btnTween && this.btnTween.clear();
+        if (this.__data.isOver) this.btn_all.visible = true;
+        else this.btn_goon.visible = true;
+        this.c_btn.scale(0, 0);
+        this.btnTween = this.btnTween || new Laya.Tween();
+        this.btnTween.to(this.c_btn, { scaleX: 1, scaleY: 1 }, 250);
+    }
+
+    lookPlayer(object, side, point) {
+        let position = object ? object.position : null;
+        position = position || this.__data.huPositionArr[0] || this.__data.playerArray[0].position;
+        Laya.timer.callLater(this, this.showSign, [position, side, point])
+    }
+    showSign(position, side, point) {
+        // this.winnerUI.visible = true;
+        point = this.globalToLocal(point);
+        for (let i = 0; i < this.__data.playerArray.length; i++) {
+            if (this.__data.playerArray[i].position == position) {
+                // this.winnerUI.dataSource = this.__data.playerArray[i];
+                // this.winnerUI.side = side;
+                game.scene.add(MahjongResultDetails, [{
+                    position: this.__data.myPosition,
+                    player: this.__data.playerArray[i],
+                    playerArray: this.__data.playerArray,
+                    winners: this.__data.huPositionArr,
+                    details: MahjongResultDetailsData.getDetails()
+                }]);
+            }
+        }
+        // this.winnerUI.pos(point.x - this.winnerUI.offx, point.y);
+    }
+
+    lookAllResultHandler() {
+        game.utils.remove(this);
+        // game.scene.add(DeskResultBG);
+        // game.scene.add(MahjongAllResult);
+    }
+
+    updateDataHandler() { this.setPlayer(); }
+
+    static set isShow(value) { this._isShow = value; }
+    static get isShow() { return this._isShow; }
+}
+window.FriendMahjongSmallResult = FriendMahjongSmallResult;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class FriendMahjongAllResultItem extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/FriendMahjongAllResultItem']);
+
+        this.greenArr = [];
+        for (var i = 0; i < 10; i++) this.greenArr.push("local/desk_common_num/1/img_green_" + i + ".png")
+        this.greenArr['+'] = 'local/desk_common_num/1/img_green_increase.png'
+        this.redArr = [];
+        for (var i = 0; i < 10; i++) this.redArr.push("local/desk_common_num/1/img_red_" + i + ".png")
+        this.redArr['-'] = 'local/desk_common_num/1/img_red_reduce.png'
+    }
+
+    onAwake() { }
+
+    onEnable() {
+        game.utils.remove(this.ownerImg)
+        game.cb.on(__eh + 'update_user_info', this, this.updateDataHandler)
+    }
+
+    onDisable() {
+        game.cb.off(__eh + 'update_user_info', this, this.updateDataHandler)
+    }
+
+    updateDataHandler() {
+        if (this.__data) {
+            this.txt_name.text = this.__data.name
+            this.txt_id.text = 'ID：' + this.__data.id;
+            trace('结算用户信息：', this.__data);
+            if (__data.othersVO[this.__data.id]) SkinUtils.setSkin(this.head.getChildByName('head'), __data.othersVO[this.__data.id].headUrl);
+            else if (this.__data.url) SkinUtils.setSkin(this.head.getChildByName('head'), this.__data.url);
+            else SkinUtils.setSkin(this.head.getChildByName('head'), '');
+
+            if (__data.othersVO[this.__data.id]) SkinUtils.setSkin(this.head.getChildByName('frame'), PropIcon.icon[__data.othersVO[this.__data.id].headFrameId || 301].skin);
+            if (this.__data.headFrameId) SkinUtils.setSkin(this.head.getChildByName('frame'), PropIcon.icon[this.__data.headFrameId || 301].skin);
+            else SkinUtils.setSkin(this.head.getChildByName('frame'), PropIcon.icon[301].skin);
+        }
+    }
+
+    set dataSource(value) {
+        if (!value) { return }
+        this.__data = value;
+        this.updateDataHandler();
+        // if (__data.othersVO[value.id]) {
+        //     this.updateDataHandler();
+        // } else { game.server.send(2005, value.id) }
+
+        this.relocationTxt();
+
+        if (__data.deskData.roomVo.roomOwner == this.__data.id) { this.addChild(this.ownerImg) }
+
+        if (this.__data.id == __data.uid) SkinUtils.setSkin(this.bg, 'cdn/mahjong_br/mahjong_br/img_playerb.png');
+        else SkinUtils.setSkin(this.bg, 'cdn/mahjong_br/mahjong_br/img_playera.png');
+
+        // if('a' == '交分'){ SkinUtils.setSkin(this.gold, 'cdn/mahjong_result/mahjong_result/img_jiaof.png'); }
+        // else { SkinUtils.setSkin(this.gold, 'cdn/mahjong_result/mahjong_result/img_jf.png'); }
+    }
+
+    relocationTxt() {
+        let formatScore = GoldFormatUtils.format(this.__data.score, 2);
+        if (this.__data.score == 0) {
+            this.txt_score.text = '-0';
+        } else if (this.__data.score > 0) {
+            this.txt_score.text = '+' + formatScore;
+        } else if (this.__data.score < 0) {
+            this.txt_score.text = formatScore;
+        }
+        let space = 10;
+        let width = this.txt_score.width + this.gold.width + space;
+        let startx = (this.width - width) / 2;
+        this.gold.x = startx;
+        this.txt_score.x = this.gold.x + this.gold.width + space;
+        this.txt_score.color = this._scoreColor(this.__data.score);
+    }
+
+    /**
+     * 输赢分数的颜色
+     * @param {int} score 
+     * @returns 
+     */
+    _scoreColor(score) {
+        if (score > 0)
+            return '#6caa01';
+        else
+            return '#ea7779';
+    }
+
+    get dataSource() {
+        return this.value
+    }
+}
+
+class FriendMahjongAllResult extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/FriendMahjongAllResult',
+            "layer": 'panel',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.btn_close.addComponent(MahjongDesk_AllResult_Close_Script)
+        this.btn_share.addComponent(Mahjong_Image_Share_Script)
+        this.btn_copy.addComponent(Mahjong_Data_Copy_Script)
+        this.play_c.addComponent(Click_Stage_Remove);
+    }
+
+    clickMask() { }
+
+    adapterPlayer() {
+        this.play_c.height = this.txtPlay.height + this.txtPlay.y * 2;
+        this.sign.y = this.play_c.height - 8;
+        this.play_c.pivot(this.sign.x + this.sign.width / 2, this.sign.y + this.sign.height);
+        this.play_c.pos(this.btn_rp.x, this.btn_rp.y - this.btn_rp.height / 2);
+    }
+
+    onEnable() {
+        game.utils.remove(this.play_c);
+
+        this.__data = __data.deskData.roomVo.allRoundResult;
+
+        this.list.array = this.__data.playerArray;
+        //日期
+        this.txtDate.text = game.utils.timeToString(this.__data.time || new Date(), ' ');
+        //房间号
+        this.txtRoomInfo.text = "房间号：" + this.__data.roomPwd;
+        //房间信息
+        this.txtPlay.text = this.getExplain();
+
+        Laya.timer.callLater(this, this.adapterPlayer);
+        // Laya.timer.once(1000, this, this.showFriendRed);
+        // this.showFriendRed();
+    }
+
+    showFriendRed() {
+        let ids = __data.deskData.roomVo.getPlayerIds();
+        for (let i = 0; i < ids.length; i++) {
+            let status = __data.friendRoom.red.getRedStatus_room(ids[i]);
+            if (status == 1 || status == 2) {
+                if (ids[i] == __data.uid) {
+                    game.server.send(18020)
+                } else {
+                    __showScene.show_friendRoom_redSuccess(ids[i]);
+                }
+            }
+        }
+    }
+
+    added(isLook) {
+        this.btn_play.visible = isLook;
+        this.btn_c.visible = !isLook;
+        this.btn_play.on(Laya.Event.CLICK, this, this._toHall);
+        this.btn_rp.on(Laya.Event.CLICK, this, this._onShowPlays);
+    }
+
+    _toHall() {
+        __showScene.show_hall();
+    }
+
+    _onShowPlays(e) {
+        e && e.stopPropagation();
+        this.addChild(this.play_c);
+    }
+
+    getExplain() {
+        // ${MahjongNameUtils.getPrefix(__data.deskData.roomVo.allRoundResult.curRuleId)} 删除无用的前缀代码
+        let name = `【${MahjongConfig.getName(__data.deskData.roomVo.allRoundResult.lastCityId, __data.deskData.roomVo.allRoundResult.curRuleId)}】`;
+        let player = `${__data.deskData.roomVo.allRoundResult.playerArray.length}人`;
+        let round = `${__data.deskData.roomVo.allRoundResult.roundCount}局`;
+        let plays = FriendRoomPlays.getPlaysInfo(__data.deskData.roomVo.allRoundResult.curRuleId, __data.deskData.roomVo.allRoundResult.roomPlay);
+        return name + [player, round, plays].join(',');
+    }
+
+    onDisable() { __data.deskData.roomVo.allRoundResult = null }
+}
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendResultLeftUpUI', FriendResultLeftUp);
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendResultLeftDownUI', FriendResultLeftDown);
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendResultRightUpUI', FriendResultRightUp);
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendResultRightDownUI', FriendResultRightDown);
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendComponentUI', FriendComponent);
+Laya.ClassUtils.regClass('ui.scene_game.result.FriendMahjongAllResultItemUI', FriendMahjongAllResultItem);
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongPrayIconUI', MahjongPrayIcon);
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongQuickPrayResultMenuUI', MahjongQuickPrayResultMenu);

@@ -1,0 +1,1042 @@
+class GameMainShop extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_shop',
+            layer: 'panel'
+        })
+        this.txt_gold.addComponent(S_update_gold)
+        this.txt_stone.addComponent(S_update_stone)
+        this.txt_star.addComponent(S_hall_tween_star)
+        this.__list.vScrollBarSkin = '';
+        this.__tab.selectHandler = new Laya.Handler(this, this.onSelect);
+        this.__tab_wxios.selectHandler = new Laya.Handler(this, this.onSelect_wxios);
+        this.btn_close.addComponent(S_click_shop_close)
+        this.btn_firstpay_or_vip.addComponent(S_shop_show_firstPay_or_vip)
+
+        this.cacheAs = 'bitmap'
+    }
+    added(defaultIndex = 0) {
+        // IOS能支付修改
+        // if (miniApi.clientType == 'wx' && miniApi.isIOS) {
+        //     this.img_gold_bg.visible = false
+        //     this.img_stone_bg.visible = false
+        //     this.__tab.visible = false
+        //     this.__tab_wxios.visible = true
+        //     this.__tab_wxios.selectedIndex = 0
+        //     this.onSelect_wxios(this.__tab_wxios.selectedIndex);
+        //     this.bg.skin = 'cdn/a_shop/bg_mall1.png'
+        // } else {
+        this.img_gold_bg.visible = true
+        this.img_stone_bg.visible = true
+        this.__tab_wxios.visible = false
+        this.__tab.visible = true
+        this.__tab.selectedIndex = defaultIndex
+        this.onSelect(this.__tab.selectedIndex);
+        this.bg.skin = 'cdn/a_shop/bg_mall.png'
+        // }
+        game.cb.on('update_shop_data', this, this.update_shop_data)
+        game.cb.on('update_fuguiManor_data', this, this.update_shop_data)
+
+        this.curGold = __data.gold
+    }
+    onDisable() {
+        game.cb.off('update_shop_data', this, this.update_shop_data)
+        game.cb.off('update_fuguiManor_data', this, this.update_shop_data)
+        // 弹出立即充值弹框 关闭商城检测 金币增加 关闭弹框
+        if (__bigNumberCal.gt(__data.gold, this.curGold)) {
+            game.scene.remove(PromptSingle)
+        }
+        ResUtils.clearTextureRes(['cdn.a_shop'])
+        ResUtils.clearAtlas('res/atlas/cdn/a_shop.atlas')
+        ResUtils.clearTextureRes(['bag_icon'], [
+            'bag_icon/img_hyzx.png',
+            'bag_icon/img_icon_1.png',
+            'bag_icon/img_icon_2.png',
+        ])
+    }
+    onSelect(index) {
+        if (index == 0) {
+            this.__list.visible = false
+            this.__list_discount.visible = true
+            this.btn_firstpay_or_vip.visible = true;
+            this.__list_discount.array = Object.values(shopConfig.discount)
+
+            let red = this.btn_firstpay_or_vip.getChildByName('img_red')
+            red.visible = false;
+            if (__data.garden.fuguiManor.buyNum < 1) {
+                this.btn_firstpay_or_vip.skin = 'cdn/a_shop/bt_fgzy.png'
+                this.btn_firstpay_or_vip.type1$1 = 'fuguiManor'
+                red.visible = true
+            }
+            else if (__data.firstPay.isHaveData && __data.firstPay.isHasBuy) {
+                this.btn_firstpay_or_vip.skin = 'cdn/a_shop/bt_vip.png'
+                this.btn_firstpay_or_vip.type1$1 = 'vip'
+            }
+        } else if (index == 1) {
+            this.__list.visible = true
+            this.__list_discount.visible = false
+            this.btn_firstpay_or_vip.visible = false
+            this.__list.array = Object.values(shopConfig.gold)
+        } else if (index == 2) {
+            this.__list.visible = true
+            this.__list_discount.visible = false
+            this.btn_firstpay_or_vip.visible = false
+            let a = Object.values(shopConfig.prop);
+            let b = a.filter((e) => {
+                return e.num != 30 && e.smallGameProp != 1
+            })
+            this.__list.array = b
+        } else if (index == 3) {
+            this.__list.visible = true
+            this.__list_discount.visible = false
+            this.btn_firstpay_or_vip.visible = false
+            this.__list.array = Object.values(shopConfig.stone)
+        }
+    }
+    onSelect_wxios() {
+        this.__list.visible = true
+        this.__list_discount.visible = false
+        this.btn_firstpay_or_vip.visible = false
+        let a = Object.values(shopConfig.prop);
+        let b = a.filter((e) => {
+            return e.num != 30 && e.buyMoneyId == 5
+        })
+        this.__list.array = b
+    }
+    update_shop_data() {
+        // IOS能支付修改
+        // if (miniApi.clientType == 'wx' && miniApi.isIOS) {
+        //     this.onSelect_wxios(this.__tab_wxios.selectedIndex);
+        // } else {
+        this.onSelect(this.__tab.selectedIndex);
+        // }
+    }
+}
+// 重置后回调
+GameMainShop.callbackAfterPay = null;
+class S_shop_show_firstPay_or_vip extends Laya.Script {
+    onClick(e) {
+        if (this.owner.type1$1 == 'vip') {
+            __showScene.show_vip()
+        } else if (this.owner.type1$1 == 'fuguiManor') {
+            __showScene.show_garden_fugui_manor_bombbox();
+        }
+    }
+}
+class S_click_shop_close extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainShop)
+    }
+}
+class GameMainShopItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_shopItem',
+            module: false
+        })
+        this.__vo = null;
+        this.btn_buy.addComponent(S_shop_buy)
+        game.utils.updateLabelY(this.txt_price)
+
+        this.aw = fileWHConfig[this.img_prop.skin].width;
+        this.ah = fileWHConfig[this.img_prop.skin].height;
+    }
+    onEnable() {
+
+    }
+    set dataSource(vo) {
+        if (!vo) return
+        this.__vo = vo;
+        this.txt_name.text = vo.name || PropIcon.icon[vo.propId].name;
+        this.txt_discount.visible = false;
+        this.img_discount_bg.visible = false;
+        this.img_double.visible = false;
+        // this.btn_video_buy.visible = false;
+        // this.btn_share_buy.visible = false;
+        if (vo.discount) {
+            this.txt_discount.visible = true;
+            this.img_discount_bg.visible = true;
+            this.txt_discount.text = vo.discount;
+        }
+        if (vo.double) {
+            this.img_double.visible = true;
+            if (vo.buyNum >= 1) {
+                this.img_double.visible = false;
+            }
+        }
+
+        let useSkin = vo.skin || PropIcon.icon[vo.propId].skin
+        this.img_prop.skin = useSkin;
+        let a = this.aw / fileWHConfig[useSkin].width
+        let b = this.ah / fileWHConfig[useSkin].height
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+
+        if (['gold', 'prop'].includes(vo.type)) {
+            this.txt_price.text = vo.price;
+            this.img_price.visible = true;
+            this.img_price.x = 0;
+            this.txt_price.x = this.img_price.x + this.img_price.width;
+
+            let buyMoneyId = vo.buyMoneyId || 2;
+            this.img_price.skin = PropIcon.icon[buyMoneyId].skin
+        } else {
+            let price11 = ''
+            if (window.IOSPay) {
+                price11 = IOSPay.getPriceById(vo.goodsId);
+            } else if (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) {
+                price11 = OriginAppIap.getPriceById(vo.goodsId);
+            } else {
+                price11 = '¥' + vo.price;
+            }
+            this.txt_price.text = price11;
+            this.img_price.visible = false;
+            this.txt_price.x = 0
+        }
+        this.sp_price.width = this.txt_price.x + this.txt_price.textField.textWidth;
+        this.sp_price.x = this.width / 2 - this.sp_price.width / 2;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_shopItemUI', GameMainShopItem);
+
+class GameMainShopItemDiscount extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_shopItemDiscount',
+            module: false
+        })
+        this.__vo = null;
+        this.btn_buy.addComponent(S_shop_buy)
+        game.utils.updateLabelY(this.txt_price)
+
+        this.aw = 343;
+        this.ah = 471;
+
+        // let a = game.scene.get(GameMainShop)
+        // this.btn_question.addComponent(S_clickBtnShow_clickOtherRemove).init(a.img_tips)
+    }
+    onEnable() {
+    }
+    onDisable() {
+    }
+    set dataSource(vo) {
+        if (!vo) return
+        this.__vo = vo;
+        // this.txt_name.text = vo.name;
+        this.txt_discount.visible = false;
+        this.img_discount_bg.visible = false;
+        // this.img_double.visible = false;
+        if (vo.discount) {
+            this.txt_discount.visible = true;
+            this.img_discount_bg.visible = true;
+            this.txt_discount.text = vo.discount;
+        }
+
+        // this.img_video.visible = false;
+        // this.img_share.visible = false;
+        // this.btn_question.visible = false
+        if (vo.video == 1) {
+            // this.btn_question.visible = true
+            let isVideoSuccess = __data.shareVideoRule.ifVideoSuccessUseRule('adunit-0d2990e2b4b2f487')
+            this.update_video_ready({ adUnitId: 'adunit-0d2990e2b4b2f487', isSuccess: isVideoSuccess })
+        } else {
+
+        }
+        this.txt_limit.text = vo.limit_des + vo.buyNum + '/' + vo.limit_count
+        this.img_prop.skin = vo.skin;
+
+        let red = this.btn_buy.getChildByName('img_red')
+        red.visible = vo.buyNum < vo.limit_count;
+
+        this.txt_price.text = vo.price;
+        this.img_price.visible = true;
+        this.img_price.x = 0;
+        this.txt_price.x = this.img_price.x + this.img_price.width;
+
+        this.sp_price.width = this.txt_price.x + this.txt_price.textField.textWidth;
+        this.sp_price.x = this.width / 2 - this.sp_price.width / 2;
+    }
+    // update_video_ready(r) {
+    //     if (!r.isSuccess) {
+    //         this.img_share.visible = true;
+    //         this.img_video.visible = false;
+    //         if (this.__vo.buyNum >= 1) {
+    //             this.img_share.disabled = true;
+    //         } else {
+    //             __data.shareVideoRule.total_shareShowCount()
+    //         }
+    //     } else {
+    //         this.img_share.visible = false;
+    //         this.img_video.visible = true;
+    //         if (this.__vo.buyNum >= 1) {
+    //             this.img_video.disabled = true;
+    //         }
+    //     }
+    // }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_shopItemDiscountUI', GameMainShopItemDiscount);
+
+class S_click_shop_discount_btn_question extends Laya.Script {
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onClick(e) {
+        e.stopPropagation()
+    }
+}
+
+class S_shop_buy extends Laya.Script {
+    async onClick(e) {
+        let goodsId = this.owner.parent.__vo.goodsId
+        if (this.owner.parent.__vo.limit_count >= 1 && this.owner.parent.__vo.buyNum >= this.owner.parent.__vo.limit_count) {
+            __tips('今日已购买')
+            return;
+        }
+        if (shopConfig.stone[goodsId]) {
+            // 购买钻石
+            if (__data.pay_curValue + shopConfig.stone[goodsId].price > __data.pay_maxValue) {
+                __tips(__lang.pay_over_max)
+                return;
+            }
+        }
+
+        if (this.owner.parent.__vo.video) {
+            // if (__data.vip.isVip) {
+            //     // 购买金币
+            //     game.server.send(2404, goodsId)
+            // } else {
+            if (this.owner.parent.img_video.visible) {
+                let adunitId = 'adunit-0d2990e2b4b2f487'
+                await miniApi.video_ready(adunitId)
+                miniApi.video_show(adunitId, () => {
+                    game.server.send(2404, goodsId, 1, 1)
+                }, () => {
+                    __tips('暂无广告，请稍后再试或开通VIP')
+                }, 0);
+                let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+                miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '商城奖励', 'Mj_Participation': n })
+            } else {
+                // __data.shareVideoRule.total_clickShareCount()
+                miniApi.share({
+                    titleId: __tool.randomRange(1, 9),
+                    shareVerifyOnShowFnTime: __data.shareVideoRule.isVerifyShareOnShowTime,
+                    shareGroupClickCallback: () => {
+                        game.server.send(2404, goodsId, 1, 2)
+                        game.scene.remove(GameMainRedPacket_2)
+                    },
+                    shareOnShowCallback: () => {
+                        game.scene.add(GameMainRedPacket_2)
+                    },
+                    params: `uid=${__data.uid}&shareRewardType=shopShare&myCityId=${__data.myCityId}`,
+                })
+                miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '商城奖励', 'Mj_Participation': '参与分享' })
+            }
+            // }
+        } else {
+            console.log(`发送RMB-购买命令`, this.owner.parent.__vo.goodsId);
+            if (shopConfig.prop[goodsId]) {
+                // 购买道具
+                game.scene.add(GameMainShopNum, [goodsId])
+            } else if (shopConfig.discount[goodsId]) {
+                // 购买特惠金币
+                game.server.send(2404, goodsId)
+            } else if (shopConfig.gold[goodsId]) {
+                // 购买金币
+                game.server.send(2404, goodsId)
+            } else if (shopConfig.stone[goodsId]) {
+                pay_stone_logic(goodsId)
+            }
+        }
+    }
+}
+
+let pay_stone_logic = async (goodsId) => {
+    await game.server.send(16020);
+    if (__data.onoff_pay != 1) return __tips(__lang.nocan_pay)
+    // 购买钻石
+    if (__data.isSupportUser == 1) {
+        game.server.send(17002, goodsId)
+    }
+    else if (window['wx'] || window.IOSPay || (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP)) {
+        // 获取订单信息
+        // IOS能支付修改
+        // if (miniApi.isIOS) return 1;
+        game.scene.add(LoadingSmall)
+        miniApi.pay({
+            goodsId,
+            successCallback: () => {
+                game.scene.remove(LoadingSmall)
+            },
+            failCallback: () => {
+                game.scene.remove(LoadingSmall)
+            }
+        })
+        if (__data.isSupportUser != 1) {
+            miniApi.trackEvent('Mj_Pay', {
+                Mj_ADPreference: miniApi.adUserValueLevel,
+                'Mj_PayName': shopConfig.stone[goodsId].md_mj_pay_name,
+                'Mj_PayPrice': shopConfig.stone[goodsId].price,
+                'Mj_Paytype': '点击',
+                'Mj_UserID': String(__data.uid),
+            })
+        }
+    } else {
+        game.scene.add(LoadingSmall)
+        game.server.send(2406, goodsId)
+    }
+}
+
+class GameMainShopNum extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_shopNum',
+            layer: 'panel'
+        })
+        this.btn_buy.addComponent(S_shopNum_buy)
+        this.btn_add.addComponent(S_shopNum_add)
+        this.btn_reduce.addComponent(S_shopNum_reduce)
+        this.sp_des.visible = false;
+    }
+    added(goodsId) {
+        let vo = shopConfig.prop[goodsId];
+        let buyMoneyId = vo.buyMoneyId || 2
+        this.img_buy.skin = PropIcon.icon[buyMoneyId].skin;
+        this.goodsId = goodsId;
+        this.txt_name.text = shopConfig.prop[goodsId].name || PropIcon.icon[vo.propId].name;
+        this.txt_waterValue.text = '+' + PropIcon.icon[vo.propId].waterValue
+        S_shopNum_buy.buyNum = 1;
+
+        let useMoney;
+        if (buyMoneyId == 1) {
+            useMoney = __data.gold;
+        } else if (buyMoneyId == 2) {
+            useMoney = __data.stone;
+        } else if (buyMoneyId == 5) {
+            useMoney = __data.garden.star;
+        }
+
+        S_shopNum_buy.maxNum = Math.floor(useMoney / vo.price);
+        if (S_shopNum_buy.buyNum > S_shopNum_buy.maxNum) {
+            S_shopNum_buy.buyNum = S_shopNum_buy.maxNum
+        }
+        if (S_shopNum_buy.buyNum < 1) {
+            S_shopNum_buy.buyNum = 1
+        }
+        this.modifyNum();
+        this.scene_prop.vo = {
+            propId: vo.propId
+        }
+        this.txt_des.text = PropIcon.icon[vo.propId].describe
+    }
+    onDisable() { }
+    modifyNum() {
+        let needStoneNum = shopConfig.prop[this.goodsId].price * S_shopNum_buy.buyNum;
+        this.txt_need.text = needStoneNum;
+        if (S_shopNum_buy.buyNum == 1) {
+            this.btn_reduce.disabled = true;
+            this.btn_add.disabled = false;
+        } else if (S_shopNum_buy.buyNum == S_shopNum_buy.maxNum) {
+            this.btn_reduce.disabled = false;
+            this.btn_add.disabled = true;
+            if (S_shopNum_buy.maxNum == 0) {
+                this.btn_reduce.disabled = true;
+            }
+        } else {
+            this.btn_reduce.disabled = false;
+            this.btn_add.disabled = false;
+        }
+
+        let vo = shopConfig.prop[this.goodsId];
+        let buyMoneyId = vo.buyMoneyId || 2
+        let useMoney;
+        if (buyMoneyId == 1) {
+            useMoney = __data.gold;
+        } else if (buyMoneyId == 2) {
+            useMoney = __data.stone;
+        } else if (buyMoneyId == 5) {
+            useMoney = __data.garden.star;
+        }
+
+        if ((S_shopNum_buy.buyNum + 1) * shopConfig.prop[this.goodsId].price > useMoney) {
+            this.btn_add.disabled = true;
+        }
+        this.txt_num.text = S_shopNum_buy.buyNum
+    }
+}
+class S_shopNum_add extends Laya.Script {
+    onEnable() {
+        this.down = false;
+    }
+    onMouseDown() {
+        this.down = true
+        this.tt = Date.now()
+        this.onUpdate(1)
+    }
+    onUpdate(forceExec) {
+        if (forceExec || (this.down && Date.now() - this.tt >= 500)) {
+            S_shopNum_buy.buyNum++;
+            if (S_shopNum_buy.buyNum > S_shopNum_buy.maxNum) {
+                S_shopNum_buy.buyNum = S_shopNum_buy.maxNum
+            }
+            if (S_shopNum_buy.buyNum < 1) {
+                S_shopNum_buy.buyNum = 1
+            }
+            this.owner.parent.parent.modifyNum()
+        }
+    }
+    onStageMouseUp() {
+        this.down = false;
+    }
+}
+class S_shopNum_reduce extends Laya.Script {
+    onEnable() {
+        this.down = false;
+    }
+    onMouseDown() {
+        this.down = true
+        this.tt = Date.now()
+        this.onUpdate(1)
+    }
+    onUpdate(forceExec) {
+        if (forceExec || (this.down && Date.now() - this.tt >= 500)) {
+            S_shopNum_buy.buyNum--;
+            S_shopNum_buy.buyNum < 1 && (S_shopNum_buy.buyNum = 1)
+            this.owner.parent.parent.modifyNum()
+        }
+    }
+    onStageMouseUp() {
+        this.down = false;
+    }
+}
+class S_shopNum_buy extends Laya.Script {
+    onClick() {
+        let sn = game.scene.get(GameMainShopNum)
+        let goodsId = sn.goodsId;
+        if (S_shopNum_buy.buyNum > S_shopNum_buy.maxNum) {
+            game.scene.remove(GameMainShopNum)
+            if (shopConfig.prop[goodsId].buyMoneyId == 2) {
+                return __tips(__lang.stone_no_enough)
+            }
+            if (shopConfig.prop[goodsId].buyMoneyId == 5) {
+                return __tips(__lang.star_no_enough)
+            }
+            return;
+        }
+        game.server.send(2404, goodsId, S_shopNum_buy.buyNum)
+
+        game.scene.remove(GameMainShopNum)
+    }
+}
+S_shopNum_buy.buyNum = 1;
+
+let shopConfig = {
+    'vip': {
+        '10001': {
+            name: 'VIP月卡',
+            price: 30,
+            goodsId: '10001',
+            vipAddDayCount: 30,
+            dailyOnlyNeed: 1,
+            vipType: '3.1.17_vip',
+        },
+        '10014': {
+            name: 'VIP年卡',
+            price: 198,
+            goodsId: '10014',
+            vipAddDayCount: 365,
+            dailyOnlyNeed: 0.54,
+            vipType: '3.1.17_vip',
+        },
+        '10201': {
+            name: 'VIP季卡',
+            price: 68,
+            goodsId: '10201',
+            vipAddDayCount: 90,
+            dailyOnlyNeed: 0.76,
+            vipType: '3.1.17_vip',
+        },
+    },
+    'firstPay': {
+        10010: {
+            price: 3,
+            goodsId: '10010',
+            rewardPropId: 1,
+            rewardPropNum: 50000,
+            vipAddDayCount: 1,
+        }
+    },
+    // 3.1.20 暂时关闭 惊喜暴击
+    // 'surpriseCrit': {
+    //     price: 6,
+    //     goodsId: '10031',
+    //     rewardPropId: 2,
+    //     rewardPropNum: 120,
+    //     vipAddDayCount: 0,
+    // },
+    'todayDiscount': {
+        10032: {
+            price: 3,
+            goodsId: '10032',
+            rewardPropId: 2,
+            rewardPropNum: 120,
+            vipAddDayCount: 0,
+        },
+        10033: {
+            price: 6,
+            goodsId: '10033',
+            rewardPropId: 2,
+            rewardPropNum: 120,
+            vipAddDayCount: 0,
+        },
+        10034: {
+            price: 12,
+            goodsId: '10034',
+            rewardPropId: 2,
+            rewardPropNum: 120,
+            vipAddDayCount: 0,
+        },
+    },
+    'prop': {
+        10015: {
+            goodsId: '10015',
+            propId: '8005',
+            name: '富贵竹(1个)',
+            type: 'prop',
+            num: 1,
+            price: 3,
+            buyMoneyId: 5,
+            buyNum: 0,
+        },
+        10016: {
+            goodsId: '10016',
+            propId: '601',
+            name: '互动符(1个)',
+            type: 'prop',
+            num: 1,
+            price: 3,
+            buyMoneyId: 5,
+            buyNum: 0,
+        },
+        10017: {
+            goodsId: '10017',
+            propId: '8005',
+            name: '富贵竹(10个)',
+            type: 'prop',
+            num: 10,
+            price: 24,
+            buyMoneyId: 5,
+            buyNum: 0,
+        },
+        10018: {
+            goodsId: '10018',
+            propId: '601',
+            name: '互动符(10个)',
+            type: 'prop',
+            num: 10,
+            price: 24,
+            buyMoneyId: 5,
+            buyNum: 0,
+        },
+        10019: {
+            goodsId: '10019',
+            propId: '601',
+            name: '互动符(30个)',
+            type: 'prop',
+            num: 30,
+            price: 60,
+            buyMoneyId: 5,
+            buyNum: 0,
+        },
+
+        10120: {
+            goodsId: '10120',
+            propId: '8005',
+            name: '富贵竹(1个)',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10121: {
+            goodsId: '10121',
+            propId: '601',
+            name: '互动符(1个)',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10122: {
+            goodsId: '10122',
+            propId: '8005',
+            name: '富贵竹(10个)',
+            type: 'prop',
+            num: 10,
+            price: 8,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10123: {
+            goodsId: '10123',
+            propId: '601',
+            name: '互动符(10个)',
+            type: 'prop',
+            num: 10,
+            price: 8,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10124: {
+            goodsId: '10124',
+            propId: '601',
+            name: '互动符(30个)',
+            type: 'prop',
+            num: 30,
+            price: 20,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+
+        10130: {
+            smallGameProp: 1,
+            goodsId: '10130',
+            name: '开始游戏',
+            type: 'prop',
+            num: 1,
+            price: 5,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10131: {
+            smallGameProp: 1,
+            goodsId: '10131',
+            name: '磁铁',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10132: {
+            smallGameProp: 1,
+            goodsId: '10132',
+            name: '移出',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10133: {
+            smallGameProp: 1,
+            goodsId: '10133',
+            name: '洗牌',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10134: {
+            smallGameProp: 1,
+            goodsId: '10134',
+            name: '翻面',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10135: {
+            smallGameProp: 1,
+            goodsId: '10135',
+            name: '解锁',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+        10136: {
+            smallGameProp: 1,
+            goodsId: '10136',
+            name: '复活',
+            type: 'prop',
+            num: 1,
+            price: 1,
+            buyMoneyId: 2,
+            buyNum: 0,
+        },
+    },
+    'discount': {
+        // 9008: {
+        //     goodsId: '9008',
+        //     type: 'gold',
+        //     // name: `4000金币`,
+        //     skin: 'cdn/a_shop/img_th1.png',
+        //     price: 0,
+        //     video: 1,
+        //     num: 4000,
+        //     buyNum: 0,
+        //     discount: '',
+        //     limit_des: '今日限领',
+        //     limit_count: 1,
+        //     md_mj_pay_name: '每日福利',
+        //     realReward: [
+        //         { id: 1, num: 2888 },
+        //         { id: 8005, num: 3 },
+        //         { id: 601, num: 3 },
+        //     ]
+        // },
+        9009: {
+            goodsId: '9009',
+            type: 'gold',
+            // name: `4000金币`,
+            skin: 'cdn/a_shop/img_th2.png',
+            price: 20,
+            num: 30000,
+            buyNum: 0,
+            discount: '6.7折',
+            limit_des: '每日限购',
+            limit_count: 1,
+            md_mj_pay_name: '3万金币特惠',
+        },
+        9010: {
+            goodsId: '9010',
+            type: 'gold',
+            // name: `4000金币`,
+            skin: 'cdn/a_shop/img_th3.png',
+            price: 50,
+            num: 100000,
+            buyNum: 0,
+            discount: '5折',
+            limit_des: '每日限购',
+            limit_count: 1,
+            md_mj_pay_name: '10万金币特惠',
+        },
+    },
+    'gold': {
+        9001: {
+            goodsId: '9001',
+            type: 'gold',
+            name: `3万金币`,
+            skin: 'bag_icon/img_gold2.png',
+            // extra: '+1.2万金币',
+            // discount: '1折',
+            price: 30,
+            num: 30000,
+            buyNum: 0,
+            md_mj_pay_name: '30钻石金币',
+        },
+        9002: {
+            goodsId: '9002',
+            type: 'gold',
+            name: `6万+6000金币`,
+            skin: 'bag_icon/img_gold3.png',
+            // extra: '+3万金币',
+            discount: '10%',
+            price: 60,
+            num: 66000,
+            buyNum: 0,
+            md_mj_pay_name: '60钻石金币',
+        },
+        9003: {
+            goodsId: '9003',
+            type: 'gold',
+            name: `16万+2.4万金币`,
+            skin: 'bag_icon/img_gold4.png',
+            // extra: '+9万金币',
+            discount: '15%',
+            price: 160,
+            num: 184000,
+            buyNum: 0,
+            md_mj_pay_name: '160钻石金币',
+        },
+        9004: {
+            goodsId: '9004',
+            type: 'gold',
+            name: `26万+5.2万金币`,
+            skin: 'bag_icon/img_gold5.png',
+            // extra: '+21万金币',
+            discount: '20%',
+            price: 260,
+            num: 312000,
+            buyNum: 0,
+            md_mj_pay_name: '260钻石金币',
+        },
+        9005: {
+            goodsId: '9005',
+            type: 'gold',
+            name: `60万+15万金币`,
+            skin: 'bag_icon/img_gold6.png',
+            // extra: '+39.2万金币',
+            discount: '25%',
+            price: 600,
+            num: 750000,
+            buyNum: 0,
+            md_mj_pay_name: '600钻石金币',
+        },
+        9006: {
+            goodsId: '9006',
+            type: 'gold',
+            name: `120万+36万金币`,
+            skin: 'bag_icon/img_gold7.png',
+            // extra: '+148万金币',
+            discount: '30%',
+            price: 1200,
+            num: 1560000,
+            buyNum: 0,
+            md_mj_pay_name: '1200钻石金币',
+        },
+        9007: {
+            goodsId: '9007',
+            type: 'gold',
+            name: `300万+105万金币`,
+            skin: 'bag_icon/img_gold8.png',
+            // extra: '+324万金币',
+            discount: '35%',
+            price: 3000,
+            num: 4050000,
+            buyNum: 0,
+            md_mj_pay_name: '3000钻石金币',
+        }
+    },
+    'dailyTask': {
+        10125: {
+            goodsId: '10125',
+            type: 'gold',
+            name: `追加任务`,
+            md_mj_pay_name: '追加任务',
+            num: 1,
+            price: 5,
+            buyNum: 0,
+        },
+    },
+    'freeVip': {
+        9011: {
+            goodsId: '9011',
+            propId: '701',
+            type: 'gold',
+            name: `VIP体验卡`,
+            skin: 'bag_icon/img_vipjk.png',
+            price: 0,
+            num: 1,
+            buyNum: 0,
+            md_mj_pay_name: 'VIP体验卡',
+        },
+    },
+    'stone': {
+        10002: {
+            goodsId: '10002',
+            type: "stone",
+            name: '30钻石',
+            skin: 'bag_icon/img_dia1.png',
+            // double: 1,
+            price: 3,
+            num: 30,
+            buyNum: 0,
+            md_mj_pay_name: '3元钻石',
+        },
+        10003: {
+            goodsId: '10003',
+            type: "stone",
+            name: '60钻石',
+            skin: 'bag_icon/img_dia2.png',
+            // double: 1,
+            price: 6,
+            num: 60,
+            buyNum: 0,
+            md_mj_pay_name: '6元钻石',
+        },
+        10004: {
+            goodsId: '10004',
+            type: "stone",
+            name: '180钻石',
+            skin: 'bag_icon/img_dia3.png',
+            // double: 1,
+            price: 18,
+            num: 180,
+            buyNum: 0,
+            md_mj_pay_name: '18元钻石',
+        },
+        10005: {
+            goodsId: '10005',
+            type: "stone",
+            name: '300钻石',
+            skin: 'bag_icon/img_dia4.png',
+            // double: 1,
+            price: 30,
+            num: 300,
+            buyNum: 0,
+            md_mj_pay_name: '30元钻石',
+        },
+        10006: {
+            goodsId: '10006',
+            type: "stone",
+            name: '680钻石',
+            skin: 'bag_icon/img_dia5.png',
+            // extra: '+21免输卡',
+            // double: 1,
+            price: 68,
+            num: 680,
+            buyNum: 0,
+            md_mj_pay_name: '68元钻石',
+        },
+        10007: {
+            goodsId: '10007',
+            type: "stone",
+            name: '1280钻石',
+            skin: 'bag_icon/img_dia6.png',
+            // extra: '+40免输卡',
+            // double: 1,
+            price: 128,
+            num: 1280,
+            buyNum: 0,
+            md_mj_pay_name: '128元钻石',
+        },
+        10008: {
+            goodsId: '10008',
+            type: "stone",
+            name: '3280钻石',
+            skin: 'bag_icon/img_dia7.png',
+            // extra: '+148免输卡',
+            // double: 1,
+            price: 328,
+            num: 3280,
+            buyNum: 0,
+            md_mj_pay_name: '328元钻石',
+        },
+        10009: {
+            goodsId: '10009',
+            type: "stone",
+            name: '6480钻石',
+            skin: 'bag_icon/img_dia8.png',
+            // extra: '+324免输卡',
+            // double: 1,
+            price: 648,
+            num: 6480,
+            buyNum: 0,
+            md_mj_pay_name: '648元钻石',
+        }
+    },
+    'garden': {
+        10126: {
+            goodsId: '10126',
+            type: 'theme',
+            name: `富贵庄园`,
+            // skin: 'bag_icon/img_gold8.png',
+            // extra: '+324万金币',
+            // discount: '35%',
+            price: 59,
+            num: 1,
+            buyNum: 0,
+            md_mj_pay_name: '富贵庄园',
+        }
+    }
+}
+window.allPayPropId = [...Object.keys(shopConfig.vip),
+...Object.keys(shopConfig.firstPay),
+...Object.keys(shopConfig.stone)];
+window.shopConfig = shopConfig;

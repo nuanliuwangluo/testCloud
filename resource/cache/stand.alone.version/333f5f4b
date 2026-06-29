@@ -1,0 +1,20 @@
+class S_clickBtnShow_clickOtherRemove extends Laya.Script {
+    init(img_show) {
+        this.img_show = img_show
+        return this
+    }
+    onEnable() {
+        this.img_show.visible = false;
+    }
+    onClick(e) {
+        this.img_show.visible = true;
+        e.stopPropagation()
+    }
+    onMouseDown(e) {
+        e.stopPropagation()
+    }
+    onStageMouseDown(e) {
+        this.img_show.visible = false;
+        e.stopPropagation()
+    }
+}

@@ -1,0 +1,173 @@
+/*
+ * @Author: 轻飘时刻
+ * @Date:   2017-01-21 16:42:45
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2020-06-05 14:45:57
+ */
+window.__sound = window.__sound || {};
+__sound.bgm = {};
+/**
+ * 背景音乐播放的位置
+ */
+__sound.bgm.position = 0;
+/**
+ * 是否正在播放音乐
+ * @type {Boolean}
+ */
+__sound.isPlaying = false;
+/**
+ * App是否在前台运行  1 为在前台运行   0   为在后台运行
+ */
+__sound.isFrontStage = 1;
+/**
+ * 音乐是否开启    1 为开启  0 为关闭
+ */
+__sound.yyVolume = 1;
+/**
+ * 音效是否开启    1 为开启  0 为关闭
+ */
+__sound.yxVolume = 1;
+/**
+ * 音乐文件的有效路径前缀
+ */
+__sound.urlPrefix = "sound/";
+/**
+ * 上一次播放的背景音乐
+ * @type {String}
+ */
+__sound.last_url = ""
+
+__sound.musicUrl = ""
+__sound.k = 0;
+
+/**
+ * 播放背景音乐
+ */
+__sound.playGameMusic = function (value) {
+    if (!config.isMusic) return
+    let startTime = 0
+    if (__sound.musicUrl == value && __sound.bgmChannel) {
+    }
+    __sound.musicUrl = value;
+    // wx每次读取最新的音乐 每次更改音乐拼接后缀 读取最新的 如果播放缓存音乐会出现 重叠播放
+    // if (config.gameType == 'wx') {
+    //     Laya.SoundManager.playMusic(config.soundHead + __sound.urlPrefix + value + __sound.nameTail + __version.res + (__sound.k++), 0);
+    // } else {
+    try {
+        Laya.SoundManager.stopMusic();
+        __sound.bgmChannel = Laya.SoundManager.playMusic(config.soundHead + __sound.urlPrefix + value + __sound.nameTail + __version.res, 0, null, startTime);
+    } catch (error) {
+    }
+    // }
+}
+__sound.playAllMusic = function () {
+    if (!config.isMusic) return
+    __sound.stopAllMusic();
+    try {
+        let hall = game.scene.get(Hall)
+        let b = game.scene.get(HallPlay)
+        let a = game.scene.get(GameMainSelectPlayBG)
+        if (
+            __showScene.sceneType == 'hall'
+            || __showScene.sceneType == 'hallPlay'
+            || __showScene.sceneType == 'selectCity'
+            || __showScene.sceneType == 'garden'
+        ) {
+            __sound.playGameMusic('bgm_hall')
+        }
+        else if (__showScene.sceneType == 'mjSmallGame') {
+            __sound.playGameMusic('bgm_xxl')
+        }
+        else if (__showScene.sceneType == 'mj') {
+            __sound.playGameMusic('bgm_room')
+        }
+    } catch (error) { }
+
+}
+__sound.stopAllMusic = function () {
+    Laya.SoundManager.stopMusic();
+    Laya.SoundManager.stopAll();
+}
+__sound.stopMusic = function () {
+    Laya.SoundManager.stopMusic()
+}
+
+/**
+ * 播放音效
+ * @value    音效文件的名称   播放路径会根据 urlPrefix 属性设置的文件路径前缀查找该文件
+ */
+__sound.playGameYx = function (value, num_, playCompleteFunction) {
+    if (!config.isSound) return
+
+    value = value ? value : 'button';
+    // trace("%c播放音效<<<--" + value, "color:#008841")
+    if (num_) { value += Math.ceil(Math.random() * num_).toString() }
+    // console.log(config.soundHead + __sound.urlPrefix + value + __sound.nameTail)
+    Laya.SoundManager.playSound(config.soundHead + __sound.urlPrefix + value + __sound.nameTail, 1, Laya.Handler.create(null, playCompleteFunction));
+}
+__sound.gameSound = __sound.playGameYx;
+/**
+ * 停止音效
+ * @value    音效文件的名称   播放路径会根据 urlPrefix 属性设置的文件路径前缀查找该文件
+ */
+__sound.stopGameYx = function (value) {
+    if (!config.isSound) return
+    Laya.SoundManager.stopSound(config.soundHead + __sound.urlPrefix + value + __sound.nameTail + __version.res, 1);
+}
+
+/**
+ * 播放按钮音效
+ */
+__sound.button = function () {
+    __sound.playGameYx("button");
+}
+
+
+/**
+ * app在后台运行
+ * 尝试重新播放背景音乐
+ */
+__sound.pause = function (callBack) {
+    Laya.SoundManager.setSoundVolume(0);
+    Laya.SoundManager.setMusicVolume(0);
+    // Laya.SoundManager.stopMusic();
+    __sound.stopMusic();
+    __sound.isPlaying = false;
+    trace('暂停工作')
+}
+
+/**
+ * App是否在前台运行
+ * 尝试重新播放背景音乐
+ */
+__sound.working = function () {
+    //设置音效音量
+    Laya.SoundManager.setSoundVolume(__sound.yxVolume);
+    //设置背景音乐音量
+    Laya.SoundManager.setMusicVolume(__sound.yyVolume);
+    //播放音乐
+    __sound.playAllMusic();
+    trace('开始工作')
+}
+
+Object.defineProperty(__sound, 'urlPrefix', {
+    get: function () {
+        if (miniApi.clientType == 'app') {
+            return 'soundapp/';
+        } else {
+            return 'sound/';
+        }
+    },
+    configurable: true
+});
+
+Object.defineProperty(__sound, 'nameTail', {
+    get: function () {
+        if (miniApi.clientType == 'app') {
+            return '.wav';
+        } else {
+            return '.mp3';
+        }
+    },
+    configurable: true
+});

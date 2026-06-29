@@ -1,0 +1,135 @@
+let __socket_match_send = {
+
+    3000(roomId) {
+        this.int = roomId;
+    },
+    // 加入房间
+    3002(gameId, address) {
+        this.int = gameId;
+        this.string = address || "";
+    },
+    // 比赛报名
+    // matchType 1杯赛 2锦标赛
+    3301(matchType, matchId) {
+        this.int = matchType;
+        this.int = matchId
+    },
+    // 比赛退赛
+    // matchType 1杯赛 2锦标赛
+    3302(matchType, matchId) {
+        this.int = matchType;
+        this.int = matchId
+    },
+    // 比赛匹配
+    3303(ruleId, lv, cityId) {
+        MahjongStatus.READY = true;
+        __data.prev_match_modelId = ruleId;
+        HallPlay.curRuleId = ruleId;
+        __data.prev_match_lv = lv;
+        // 游戏的ID(int)
+        // 等级(int -1为快速开始 1-普通 2-精英 3-土豪 4-至尊 5-大师 )
+        this.int = ruleId
+        this.int = lv
+        this.int = cityId;
+    },
+    // 进行封顶限制匹配 参数与3303一致，返回14002消息 消息结构与3303一致
+    14002(ruleId, lv, cityId) {
+        MahjongStatus.READY = true;
+        __data.prev_match_modelId = ruleId;
+        HallPlay.curRuleId = ruleId;
+        __data.prev_match_lv = lv;
+        // 游戏的ID(int)
+        // 等级(int -1为快速开始 1-普通 2-精英 3-土豪 4-至尊 5-大师 )
+        this.int = ruleId
+        this.int = lv
+        this.int = cityId;
+    },
+    // 查询当前积分情况
+    3306(gameId, modelId) {
+        this.int = gameId
+        this.int = modelId
+    },
+    // 查询锦标赛
+    3308() {},
+    // 查询杯赛信息
+    3309(gameId) {
+        this.int = gameId
+    },
+    3311(type, page) {
+        // int-类型 1 个人榜；2 城市榜；
+        // page-1-10
+        this.int = type;
+        this.int = page;
+    },
+    // 查询赛季奖励
+    3312(gameId) {
+        this.int = gameId
+    },
+    // 领取赛季奖励
+    3313(gameId, lv) {
+        this.int = gameId
+        this.int = lv
+    },
+    // :查询锦标赛报名人数(3314)
+    3314(type) {
+        this.int = type;
+    },
+    // :查询杯赛报名人数
+    3315(gameId, matchId) {
+        this.int = gameId;
+        this.int = matchId;
+    },
+    // 查询比赛报名
+    3316() {},
+    // 查询锦标赛排行榜
+    3317(page) {
+        this.int = page
+    },
+    // 排行等级各个阶段信息
+    3318() {},
+    // :查询快速比赛人数
+    3319(matchId, matchLv) {
+        this.int = matchId;
+        this.int = matchLv;
+    },
+
+    // 离开房间
+    3321() {},
+    // 换桌
+    3322() {},
+
+    3323() {},
+
+    14005(playId, cityId, plays, players, round, roundType = 2) {
+        this.int = playId;
+        this.int = cityId;
+        this.string = plays;
+        this.int = players;
+        this.int = round;
+        this.int = roundType;
+    },
+    14006(password) {
+        this.int = password;
+    },
+    14007() {},
+    14008() {},
+    14009(state) {
+        this.int = state;
+    },
+    14010(playerId) {
+        this.int = playerId;
+    },
+    14011() { MahjongStatus.READY = true; },
+    14012() {},
+    14015(recordId) {
+        __data.replayCode = recordId;
+        this.int = recordId;
+    },
+    14016() {},
+    14017(position) {
+        this.int = position;
+    },
+    14018() {},
+
+    14021(page, size) { this.int = page;this.int = size },
+}

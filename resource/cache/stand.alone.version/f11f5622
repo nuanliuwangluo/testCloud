@@ -1,0 +1,8 @@
+class MM_remove_rule extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_remove_rule',
+            layer: 'panel'
+        })
+    }
+}

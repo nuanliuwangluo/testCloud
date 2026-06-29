@@ -1,0 +1,36 @@
+class MM_fail extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_fail',
+            layer: 'panel'
+        })
+        this.btn_re.addComponent(S_mm_pause_re)
+        this.btn_re.addComponent(S_mm_show_gameCount)
+        this.btn_return.addComponent(S_fail_return)
+    }
+    added() {
+        __sound.playGameYx('lose')
+        miniApi.trackEvent('Mj_Stages', {
+            Mj_VIP: __data.vip.isVip ? '是' : '否',
+            Mj_StagesType: '消消乐',
+            Mj_StagesNum: __data.mjSmallGame.level,
+            Mj_StagesResult: '失败',
+        })
+    }
+    onDisable() {
+    }
+    clickMask() { }
+}
+class S_fail_return extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        game.scene.get(MjMatch_ui_left).removeTimer()
+        game.scene.removeAll()
+        S_3D_mjMatch.$this.mainScene();
+        game.scene.add(MM_main_scene)
+        game.scene.add(MM_main_scene_return)
+        game.scene.add(MM_main_scene_rank)
+        game.scene.add(MM_main_scene_garden)
+        game.scene.add(MM_ui_res)
+    }
+}

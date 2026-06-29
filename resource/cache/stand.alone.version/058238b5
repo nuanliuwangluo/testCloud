@@ -1,0 +1,1185 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-03-02 18:18:32
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-03-02 18:34:54
+ */
+
+'use strict';
+
+class MahjongBlueImageButton extends Laya.Image {
+    constructor(__txt) {
+        super();
+        this.skin = 'local/button/1/bt_smallblue.png'
+
+        this.imgTxt = new Laya.Label();
+        this.imgTxt.width = this.width;
+        this.imgTxt.height = this.height;
+        this.imgTxt.bold = true;
+        this.imgTxt.fontSize = 36;
+        this.imgTxt.color = '#ffffff';
+        this.imgTxt.align = 'center';
+        this.imgTxt.valign = 'middle'
+        this.imgTxt.stroke = 3;
+        this.imgTxt.strokeColor = '#2d7da7'
+        this.imgTxt.x = this.width - this.imgTxt.width >> 1
+        this.imgTxt.y = this.height - this.imgTxt.height - 10 >> 1
+        this.imgTxt.text = __txt
+        this.addChild(this.imgTxt)
+
+        this.addComponent(Btn_Scale_Sound)
+    }
+}
+
+
+
+class MahjongStatus{
+    static set READY(value){ this._ready = value; }
+    static get READY(){ return this._ready; }
+
+    static start(){ 
+        PrayStatistics.instance.newGame();
+        game.cb.event("show_desk_cost_rate_tips"); 
+    }
+}
+
+
+let __compUtils = {}
+
+__compUtils.getDeskLx = function () {
+    let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+    let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+    let safe_area = miniApi.statusBarRatio() * game.width;
+    let x = desk ? desk.x : 0;
+    return -x + 30 + safe_area + 145 * 1.5;
+}
+__compUtils.getDeskRx = function () {
+    let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+    let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+    let safe_area = miniApi.statusBarRatio() * game.width;
+    let x = desk ? desk.x : 0;
+    let width = desk ? desk.width : config.gameW;
+    return width + x - safe_area - 145 * 1.5 - 30;
+}
+__compUtils.getDeskUy = function () {
+    let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+    let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+    let y = desk ? desk.y : 0;
+    return -y;
+}
+__compUtils.getDeskDy = function () {
+    let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+    let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+    let y = desk ? desk.y : 0;
+    let height = desk ? desk.height : config.gameH;
+    return y + height;
+}
+
+__compUtils.toMatrix = function (view, point) {
+    let cp = this.getAnchorPoint(view);
+    let matrix = new Laya.Matrix(1, 0, 0, 1, point.x + cp.x - view.width / 2, point.y + cp.y - view.height / 2);
+    return matrix;
+}
+
+__compUtils.transformViewToContainer = function (view, container) {
+    let cp = this.getAnchorPoint(view);
+    let matrix = new Laya.Matrix(1, 0, 0, 1, point.x + cp.x - view.width / 2, point.y + cp.y - view.height / 2);
+    return matrix;
+}
+
+
+/**
+ * 获取对象的中心点的真实坐标(切记对象需要能回去到宽高，已经设定锚点的对象会设置宽高，没有的sprite对象可能存在宽高为0的情况)
+ * @param {Laya.Image} icon 
+ */
+__compUtils.getCenterPoint = function (view) {
+    let point = this.getAnchorPoint(view);
+    // 没有设定锚点返回view 的中心点
+    return new Laya.Point(view.x + view.width / 2 - point.x, view.y + view.height / 2 - point.y);
+}
+
+/**
+ * 获取对象的锚点距离
+ * @param {Laya.Image} view 
+ */
+__compUtils.getAnchorPoint = function (view) {
+    // 便宜位置  默认0
+    let anchor = new Laya.Point(0, 0);
+    // 已经设定锚点了
+    if (view.pivotX != 0 || view.pivotY != 0) {
+        anchor.x = view.pivotX || 0;
+        anchor.y = view.pivotY || 0;
+    }
+    // 已经设定锚点了
+    else if (!isNaN(view.anchorX) && !isNaN(view.anchorY)) {
+        anchor.x = view.anchorX * view.width;
+        anchor.y = view.anchorY * view.height;
+    }
+    return anchor;
+}
+
+/**
+ * 通过房间id  辨别消息号
+ * [idToServerNumber description]
+ * @param  {[type]} value  [description]        房间id
+ * @param  {[type]} server [description]        服务id
+ * @return {[type]}        [description]
+ */
+__compUtils.idToServerNumber = function (value, server) {
+
+    if (value >= 100000 && value < 400000) {
+        return server //麻将
+    } else if (value >= 400000 && value < 500000) {
+        return server + 10000 //斗地主
+    } else if (value >= 500000 && value < 600000) {
+        return server + 20000 //跑得快
+    }
+    return server
+}
+
+/**
+ * 通过房间id  辨别游戏
+ * [idToServerNumber description]
+ * @param  {[type]} value  [description]        房间id
+ * @return {[type]}        [description]
+ */
+__compUtils.idToGame = function (value) {
+    if (value >= 100000 && value < 400000) {
+        return 1 //麻将
+    } else if (value >= 400000 && value < 500000) {
+        return 2 //斗地主
+    } else if (value >= 500000 && value < 600000) {
+        return 3 //跑得快
+    }
+    return 0
+}
+
+
+/**
+ * 时间戳 转换为 年月日  时分秒
+ * [timeToString description]
+ * @param  {[type]} time [description]  时间戳
+ * @param  {[type]} sign [description]  年月日与时分秒之间的间隔  一般多为  空格或者换行  默认换行
+ * @return {[type]}      [description]
+ */
+__compUtils.timeToString = function (time, sign) {
+    if (!time) return ''
+    sign = sign ? sign : '\n'
+    var d = new Date(time)
+    var year = d.getFullYear()
+    var month = (d.getMonth() + 1)
+    month = month < 10 ? '0' + month : month
+    var date = d.getDate()
+    date = date < 10 ? '0' + date : date
+    var hour = d.getHours()
+    hour = hour < 10 ? '0' + hour : hour
+    var minute = d.getMinutes()
+    minute = minute < 10 ? '0' + minute : minute
+    var second = d.getSeconds()
+    second = second < 10 ? '0' + second : second
+    return year + '-' + month + '-' + date + sign + hour + ':' + minute + ':' + second
+}
+__compUtils.timeToShotString = function (time, sign) {
+    if (!time) return ''
+    sign = sign ? sign : '\n'
+    var d = new Date(time)
+    var year = d.getFullYear()
+    var month = (d.getMonth() + 1)
+    month = month < 10 ? '0' + month : month
+    var date = d.getDate()
+    date = date < 10 ? '0' + date : date
+    return year + '-' + month + '-' + date;
+}
+
+/**
+ * [sort description]
+ * @param  {[type]} value     [description]     要排序的数组  根据大小排
+ * @param  {[type]} pre_value [description]     要提前处理的数组
+ * @param  {[type]} end_value [description]     要靠后处理的数组
+ * @return {[type]}           [description]
+ */
+__compUtils.sort = function (value, pre_value, end_value) {
+    let __reArr = []
+    let valArr = []
+    if (typeof value == 'string') {
+        valArr = [].concat(value.split(','))
+    } else valArr = [].concat(value);
+
+    let picks = __compUtils.pickup(valArr, pre_value);
+    //将排提前显示
+    let preArr = picks.pickups || [];
+    valArr = picks.origins;
+
+    picks = __compUtils.pickup(valArr, end_value);
+    //将排靠后显示
+    let endArr = picks.pickups || [];
+    valArr = picks.origins;
+
+    valArr.sort(function (a, b) { return a - b })
+
+    preArr.sort(function (a, b) { return a - b })
+
+    endArr.sort(function (a, b) { return a - b })
+
+    __reArr = __reArr.concat(preArr)
+    __reArr = __reArr.concat(valArr)
+    __reArr = __reArr.concat(endArr)
+    
+    
+    return __reArr
+}
+
+__compUtils.pickup = function (value, rules) {
+    let origins = value;
+    let pickups = [];
+
+    if (rules && rules.length > 0) {
+        for (let i = 0; i < origins.length; i++) {
+            let index = rules.some(function (value) { return value.toString() == origins[i].toString() })
+            if (index) {
+                pickups = pickups.concat(origins.splice(i, 1));
+                i -= 1;
+            }
+        }
+    }
+    return { origins, pickups }
+}
+
+
+/**
+ * 当前是否可以踢人
+ * [autoKick description]
+ * @param  {[type]} alias [description]
+ * @return {[type]}       [description]
+ */
+__compUtils.autoKick = function (alias) {
+    let __info = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)].tag;
+
+    //获取和当前房间类型一样的数据   然后获取
+    let data = __info.filter(function (value) { return value.alias == alias })[0]
+
+    return data.auto_kick
+}
+
+
+
+__compUtils.getAnalysis = function (value) {
+    let analysis = {};
+    let vArr = value.split(',')
+
+    analysis.type = parseInt(vArr.shift());
+    analysis.group = [];
+    analysis.position;
+    switch (analysis.type) {
+        case 1:
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            if (parseInt(vArr[0]) < 10) analysis.design = 'X';
+            if (parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20) analysis.design = 'Y';
+            if (parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30) analysis.design = 'Z';
+            if (parseInt(vArr[0]) >= 40) analysis.design = 'H';
+            analysis.position = parseInt(vArr[1]) //碰牌来源的位置
+            break;
+        case 2:
+            if (parseInt(vArr[0]) == parseInt(vArr[1])) {
+                analysis.group.push(parseInt(vArr[0]) + 1);
+                analysis.group.push(parseInt(vArr[0]));
+                analysis.group.push(parseInt(vArr[0]) + 2);
+                analysis.position = parseInt(vArr[2]) //吃牌来源的位置
+            }
+            //如果头牌和吃的少一位  顺子形式 
+            else if (parseInt(vArr[0]) + 1 == parseInt(vArr[1])) {
+                analysis.group.push(parseInt(vArr[0]));
+                analysis.group.push(parseInt(vArr[0]) + 1);
+                analysis.group.push(parseInt(vArr[0]) + 2);
+                analysis.position = parseInt(vArr[2]) //吃牌来源的位置
+            }
+            //如果头牌和吃的一样后一位在前
+            else if (parseInt(vArr[0]) + 2 == parseInt(vArr[1])) {
+                analysis.group.push(parseInt(vArr[0]));
+                analysis.group.push(parseInt(vArr[0]) + 2);
+                analysis.group.push(parseInt(vArr[0]) + 1);
+                analysis.position = parseInt(vArr[2]) //吃牌来源的位置
+            }
+            if (parseInt(vArr[0]) < 10) analysis.design = 'X';
+            if (parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20) analysis.design = 'Y';
+            if (parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30) analysis.design = 'Z';
+            if (parseInt(vArr[0]) >= 40) analysis.design = 'H';
+            break;
+        case 3:
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            if (parseInt(vArr[0]) < 10) analysis.design = 'X';
+            if (parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20) analysis.design = 'Y';
+            if (parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30) analysis.design = 'Z';
+            if (parseInt(vArr[0]) >= 40) analysis.design = 'H';
+            analysis.position = parseInt(vArr[1]) //支对来源的位置
+            break;
+        case 5:
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            if (parseInt(vArr[0]) < 10) analysis.design = 'X';
+            if (parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20) analysis.design = 'Y';
+            if (parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30) analysis.design = 'Z';
+            if (parseInt(vArr[0]) >= 40) analysis.design = 'H';
+            analysis.position = parseInt(vArr[1]) == 5 ? -1 : parseInt(vArr[1]) //杠牌来源的位置
+            break;
+        case 81:
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[0]));
+            if (parseInt(vArr[0]) < 10) analysis.design = 'X';
+            if (parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20) analysis.design = 'Y';
+            if (parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30) analysis.design = 'Z';
+            if (parseInt(vArr[0]) >= 40) analysis.design = 'H';
+            analysis.position = -1 //亮掌来源的位置
+            break;
+        case 82:
+            vArr.sort(function (a, b) { return a - b });
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.group.push(parseInt(vArr[1]));
+            analysis.group.push(parseInt(vArr[2]));
+            analysis.position = -1 //亮喜来源的位置
+            break;
+        case 83:
+            analysis.group.push(parseInt(vArr[0]));
+            analysis.position = -1 //亮喜来源的位置
+            break;
+        // case 88:
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     if(parseInt(vArr[0]) < 10)analysis.design = 'X';
+        //     if(parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20)analysis.design = 'Y';
+        //     if(parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30)analysis.design = 'Z';
+        //     analysis.position = parseInt(vArr[1]) //杠牌来源的位置
+        //     break;
+        // case 89:
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     analysis.group.push(parseInt(vArr[0]));
+        //     if(parseInt(vArr[0]) < 10)analysis.design = 'X';
+        //     if(parseInt(vArr[0]) >= 10 && parseInt(vArr[0]) < 20)analysis.design = 'Y';
+        //     if(parseInt(vArr[0]) >= 20 && parseInt(vArr[0]) < 30)analysis.design = 'Z';
+        //     analysis.position = parseInt(vArr[1]) //碰牌来源的位置
+        //     break;
+    }
+    let __vo = __data.deskData.roomVo.getPlayer(analysis.position)
+    analysis.seat = __vo ? __vo.seat_tag : 'down'
+    return analysis;
+}
+
+
+
+
+
+
+class RoundLight extends Laya.Script {
+    init() {
+        if (this.inited) { return; }
+        this.inited = true;
+        this.image = new Laya.Image('cdn/queShenRoad_light/tx_txk9.png');
+        game.Clip(this.image, [
+            'cdn/queShenRoad_light/tx_txk1.png',
+            'cdn/queShenRoad_light/tx_txk2.png',
+            'cdn/queShenRoad_light/tx_txk3.png',
+            'cdn/queShenRoad_light/tx_txk4.png',
+            'cdn/queShenRoad_light/tx_txk5.png',
+            'cdn/queShenRoad_light/tx_txk6.png',
+            'cdn/queShenRoad_light/tx_txk7.png',
+            'cdn/queShenRoad_light/tx_txk8.png',
+            'cdn/queShenRoad_light/tx_txk9.png',
+            'cdn/queShenRoad_light/tx_txk10.png'
+        ], 90, true);
+
+        let ratio = 1.2;
+        this.image.size(this.owner.width * ratio, this.owner.height * ratio);
+        let _x = -(this.owner.width * ratio - this.owner.width) / 2;
+        let _y = -(this.owner.height * ratio - this.owner.height) / 2;
+        this.owner.addChild(this.image).pos(_x, _y);
+    }
+
+    play() {
+        this.init();
+        this.image.visible = true;
+        this.image.play(0);
+    }
+
+    stop() {
+        this.init();
+        this.image.visible = false;
+        this.image.stop();
+    }
+}
+
+
+class ReadyManager {
+    static getStatus(vo) {
+        let friendSmallResult = game.scene.get(FriendMahjongSmallResult);
+        let friendAllResult = game.scene.get(FriendMahjongAllResult);
+        // 已经准备了 不显示按钮
+        if (vo && vo.readyState > 0) return false;
+        // 不是好友房  不显示按钮
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) return false;
+        // 等待结算不显示按钮
+        if (__data.deskData.roomVo.waiting_result) return false;
+        // 小结算正在显示 不显示按钮
+        if (friendSmallResult && friendSmallResult.parent) return false;
+        // 大结算正在显示 不显示按钮
+        if (friendAllResult && friendAllResult.parent) return false;
+
+        return true;
+    }
+
+    //获取授权记录
+    static getAuthed() {
+        return new Promise((res, rej) => {
+            try {
+                // 微信环境获取对应结果
+                if (window.wx && typeof window.wx === 'object') {
+                    wx.getSetting({
+                        async success(res1) {
+                            if ('scope.userInfo' in res1.authSetting) {
+                                if (res1.authSetting['scope.userInfo']) {
+                                    res(1)
+                                } else {
+                                    res(0)
+                                }
+                            } else {
+                                res(0);
+                            }
+                        }
+                    })
+                } else { //非微信环境  直接返回同意授权结果
+                    res(1);
+                }
+            } catch (e) {
+                res(0);
+            }
+        })
+    }
+
+    static async auth() {
+        let r = await this.getAuthed();
+        // 没有同意过授权，弹出授权提示
+        if (r == 0) r = await miniApi.getUserProfile();
+        return r;
+    }
+}
+
+
+class MahjongDesk{
+    static getDesk(){
+        let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+        let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+        if(desk)
+            return desk;
+        else
+            return null;
+    }
+}
+
+class MahjongNameUtils {
+    static getPrefix(ruleId) {
+        if (ruleId == -1)
+            return '经典';
+        else
+            return '正宗';
+    }
+}
+
+class MahjongRoomUpdateUtils {
+    static update() {
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            this.status = true;
+            game.server.send(16022);
+            game.server.send(14016);
+        }
+    }
+
+    static get isInDesk() {
+        let uniqueId = MahjongConfig.getUniqueId(HallPlay.lastCityId, HallPlay.curRuleId);
+        let scene = window['MahjongDesk' + uniqueId + '3D'];
+        if (game.scene.get(scene) && game.scene.get(scene).parent)
+            return true;
+        else
+            return false;
+    }
+
+    static set status(value) { this._status = value; }
+    static get status() { return this._status; }
+}
+
+
+
+
+class MahjongDeskShareUtils {
+    static enter() {
+        try {
+            miniApi.shareRoomMenu(__data.deskData.roomVo.roomID, __data.deskData.roomVo.activityId, __data.deskData.roomVo.getNeedPlayer().length, __data.deskData.roomVo.roomPlayer);
+            let { imageUrl, imageUrlId } = __data.shareConfig.getImgUrlIdById('friendRoomShareRoom');
+            wx.onShareAppMessage(function () {
+                miniApi.adsdk_track('SHARE', { target: 'APP_MESSAGE' })
+                return {
+                    title: `${MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId)} ${__data.deskData.roomVo.roomPlayer}人 ${__data.deskData.roomVo.allGame}局`,
+                    imageUrl: imageUrl,
+                    imageUrlId: imageUrlId,
+                    query: `uid=${__data.uid}&roomPwd=${__data.deskData.roomVo.roomID}&roCityId=${HallPlay.lastCityId}`
+                }
+            });
+        } catch (e) {
+
+        }
+    }
+
+    static leave() {
+        let shareVO = {}
+        let titleId, cityId
+        try {
+            miniApi.closeDynamicsMessage();
+            if (!__data.myCityId) {
+                let a = null;
+                a.b = 1;
+            }
+            titleId = __tool.randomRange(1, 10)
+            cityId = __data.myCityId
+        } catch (error) {
+            titleId = 1;
+            cityId = 0
+        }
+        let imgId = titleId;
+        shareVO.title = __data.shareConfig.getTitleById(titleId, cityId)
+        let { imageUrl, imageUrlId } = __data.shareConfig.getImgUrlIdById(imgId);
+        shareVO.imageUrl = imageUrl
+        shareVO.imageUrlId = imageUrlId
+        try {
+            wx.onShareAppMessage(function () {
+                miniApi.adsdk_track('SHARE', { target: 'APP_MESSAGE' })
+                return shareVO
+            })
+        } catch (error) {
+
+        }
+    }
+}
+
+
+
+
+class LxRules {
+
+    static check(group, specials) {
+        return this._checkType(group, specials);
+    }
+
+    static _checkType(values, specials) {
+        let lastType = '';
+        for (let i = 0; i < values.length; i++) {
+            let value = values[i].toString();// 选中的牌
+            let isSpecial = specials.find((element) => element.toString() == value); // 这张牌是否为万能牌
+            if (isSpecial) continue;// 这张牌是混
+            let type = this._getType(values[i]);
+            if (type == this.NONE) { return ''; }// 不符合规则 非幺九
+            // 如果没记录过  记录一下类型
+            if (!lastType) { lastType = type; }
+            else if (lastType == type) { return ''; }// 如果记录过类型 且类型不同  也不符合规则
+            else if (lastType != type) {
+                let sw1 = lastType.split(this.KEY)[0];
+                let sw2 = type.split(this.KEY)[0];
+                if (sw1 != sw2) return '';
+            }// 如果记录过类型 且类型不同  也不符合规则
+        }
+        if (lastType == '' && values.length)// 最后未检测到类型 但是数据存在  那肯定都是混
+            return this.HUN;
+        return lastType;
+    }
+
+    /**
+     * 推荐
+     * @param {Array} list 手牌集合
+     * @param {Array} group 已经选择的组合
+     * @param {Array} specials 混集合
+     * @returns 
+     */
+    static recommend(list, group, specials) {
+        // 有选择的亮喜
+        if (group.length) {
+            // 看选择的亮喜牌是否符合规则， 如果不符合规则 结束亮喜
+            let list = this.lackCheck(group, specials);
+            return list;
+        } else {
+            let list = [];
+            for (let i = 0; i < __data.deskData.roomVo.lxData.length; i++) {
+                //将后端给的组合再次拆分一下
+                let arrays = __data.deskData.roomVo.lxData[i].split('_')
+                //比对数组
+                list = list.concat(arrays);
+                //再次进行排序
+                list.sort(function (a, b) { return a - b })
+            }
+            return list;
+        }
+    }
+
+    /**
+     * 缺失检测
+     * @param {Array} group 
+     * @param {Array} specials 
+     * @returns 
+     */
+    static lackCheck(group, specials) {
+        let t = this._checkType(group, specials);
+        // 合规 
+        if (t) {
+            // 已经选完整了
+            if (group.length == 3) { return []; }
+            else {
+                let list = this.getListByType(t);// 获取亮喜的同类型其他牌
+                for (let i = 0; i < group.length; i++) {
+                    let index = list.findIndex((e) => e == group[i]);// 找到已经选择的牌
+                    if (index >= 0) { list.splice(index, 1); }// 删除掉（同一张牌不可以在一个组合内重复出现）
+                }
+                return [].concat(list).concat(specials);
+            }
+        } else {// 不合规
+            return [];
+        }
+    }
+
+    static _getType(value) {
+        if (value == 0)
+            return this.YAO_W;
+        else if (value == 10)
+            return this.YAO_B;
+        else if (value == 20)
+            return this.YAO_T;
+        else if (value == 8)
+            return this.JIU_W;
+        else if (value == 18)
+            return this.JIU_B;
+        else if (value == 28)
+            return this.JIU_T;
+        else
+            return this.NONE;
+    }
+
+    static getYj(list, specials) {
+        for (let i = 0; i < list.length; i++) {
+            if (parseInt(list[i]) == 0 || parseInt(list[i]) == 10 || parseInt(list[i]) == 20) {
+                // 使用 Set 去重
+                let uniques = [0, 10, 20].filter(item => !list.includes(item));
+                return specials.concat(uniques);
+            }
+            else if (parseInt(list[i]) == 8 || parseInt(list[i]) == 18 || parseInt(list[i]) == 28) {
+                // 使用 Set 去重
+                let uniques = [8, 18, 28].filter(item => !list.includes(item));
+                return specials.concat(uniques);
+            }
+        }
+        return null;
+    }
+
+    static getListByType(type) {
+        if (type == this.YAO_W || type == this.YAO_B || type == this.YAO_T) {
+            return [0, 10, 20]
+        } else if (type == this.JIU_W || type == this.JIU_B || type == this.JIU_T) {
+            return [8, 18, 28]
+        } else if (type == this.HUN) {
+            return [0, 10, 20, 8, 18, 28]
+        } else {
+            return [];
+        }
+    }
+
+    static get NONE() { return 'N'; }
+    static get YAO_W() { return `Y${this.KEY}W`; }
+    static get YAO_B() { return `Y${this.KEY}B`; }
+    static get YAO_T() { return `Y${this.KEY}T`; }
+    static get JIU_W() { return `J${this.KEY}W`; }
+    static get JIU_B() { return `J${this.KEY}B`; }
+    static get JIU_T() { return `J${this.KEY}T`; }
+    static get HUN() { return 'H'; }
+    static get KEY() { return '_'; }
+}
+
+
+
+class MahjongCollectUtils {
+    static getStrategy(){
+        try{
+            let all = MahjongCollectUtils.getAll();
+            let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+            let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+            for (const key in all) {
+                MahjongCollectUtils.getNumber(MahjongCollectUtils.getMap(key), [
+                    desk.downlist.huCardSurps.bind(desk.downlist),
+                    desk.uplist.huCardSurps.bind(desk.uplist),
+                    desk.leftlist.huCardSurps.bind(desk.leftlist),
+                    desk.rightlist.huCardSurps.bind(desk.rightlist),
+                    desk.downoutlist.huCardSurps.bind(desk.downoutlist),
+                    desk.upoutlist.huCardSurps.bind(desk.upoutlist),
+                    desk.leftoutlist.huCardSurps.bind(desk.leftoutlist),
+                    desk.rightoutlist.huCardSurps.bind(desk.rightoutlist)
+                ])
+            }
+            let strategy = MahjongCollectUtils.analyzeArrayKeys();
+            return strategy;
+        }catch(e){
+            trace('%c出牌策略异常：' + JSON.stringify(e), 'color:#ff7575');
+        }
+    }
+
+    static getNumber(list, functions) {
+        for (let i = 0; list && i < list.length; i++) {
+            list[i].num = 0;
+        }
+        for (let i = 0; functions && i < functions.length; i++) {
+            functions[i](list);
+        }
+    }
+
+    static analyzeArrayKeys() {
+        const data = this._map;
+        const maxRateKeys = [];
+        const maxNumSumKeys = [];
+        
+        if (!data || typeof data !== 'object') {
+            return {
+                maxRateKeys: maxRateKeys,
+                maxNumSumKeys: maxNumSumKeys,
+                commonKeys: []
+            };
+        }
+        
+        let maxRate = -Infinity;
+        let maxNumSum = -Infinity;
+        
+        for (const key in data) {
+            if (!data.hasOwnProperty(key)) continue;
+            
+            const arr = data[key];
+            if (!Array.isArray(arr)) continue;
+            
+            const keyNum = Number(key);
+            let localMaxRate = -Infinity;
+            let localNumSum = 0;
+            
+            for (let i = 0; i < arr.length; i++) {
+                const item = arr[i];
+                if (!item) continue;
+                
+                if (typeof item.rate === 'number' && item.rate > localMaxRate) {
+                    localMaxRate = item.rate;
+                }
+                
+                if (typeof item.num === 'number') {
+                    localNumSum += (4 - item.num);
+                }
+            }
+            
+            // 处理最大rate
+            if (localMaxRate > maxRate) {
+                maxRate = localMaxRate;
+                maxRateKeys.length = 0;
+                maxRateKeys.push(keyNum);
+            } else if (localMaxRate === maxRate) {
+                maxRateKeys.push(keyNum);
+            }
+            
+            // 处理最大num总和
+            if (localNumSum > maxNumSum) {
+                maxNumSum = localNumSum;
+                maxNumSumKeys.length = 0;
+                maxNumSumKeys.push(keyNum);
+            } else if (localNumSum === maxNumSum) {
+                maxNumSumKeys.push(keyNum);
+            }
+        }
+        
+        // 找出重合的keys
+        const commonKeys = [];
+        for (let i = 0; i < maxRateKeys.length; i++) {
+            for (let j = 0; j < maxNumSumKeys.length; j++) {
+                if (maxRateKeys[i] === maxNumSumKeys[j]) {
+                    commonKeys.push(maxRateKeys[i]);
+                    break;
+                }
+            }
+        }
+        
+        return {
+            maxRate,
+            maxNumSum,
+            maxRateKeys: maxRateKeys,
+            maxNumSumKeys: maxNumSumKeys,
+            commonKeys: commonKeys
+        };
+    }
+
+    static resetMap() {
+        this._map = {};
+    }
+
+    static setMap(code, list) {
+        if (!this._map) { this._map = {}; }
+        this._map[code] = list;
+    }
+
+    static getMap(code) {
+        if (!this._map) { return []; }
+        return this._map[code]
+    }
+
+    static getAll(){ return this._map; }
+
+    static rate(vo) {
+        let initRate = 1;
+        let rates = [];
+        if (vo) {
+            if (vo.position == __data.deskData.roomVo.bankerPosition) {
+                trace(`[ID:${vo.id} name:${vo.name}]` + '庄家2翻.');
+                rates.push(2);
+            }
+            let doors = vo.doorValue ? vo.doorValue.split(';') : [];
+            let xnumbers = 0;// 万组合个数
+            let ynumbers = 0;// 饼组合个数
+            let znumbers = 0;// 条组合个数
+            for (let i = 0; i < doors.length; i++) {
+                let data = __compUtils.getAnalysis(doors[i]);
+                if (data.type == 82) {// 亮喜
+                    trace(`[ID:${vo.id} name:${vo.name}]` + '亮喜2翻.');
+                    rates.push(2);
+                }
+                if (data.type == 5) {// 杠牌
+                    if (data.position < 0) { // 暗杠
+                        trace(`[ID:${vo.id} name:${vo.name}]` + '暗杠4翻.');
+                        rates.push(4);
+                    } else {// 明杠
+                        trace(`[ID:${vo.id} name:${vo.name}]` + '暗杠2翻.');
+                        rates.push(2);
+                    }
+                }
+                if (data.type == 88) {// 杠门前牌
+                    trace(`[ID:${vo.id} name:${vo.name}]` + '杠门前2翻.');
+                    rates.push(2);
+                }
+                if (data.design == 'X') xnumbers++;
+                else if (data.design == 'Y') ynumbers++;
+                else if (data.design == 'Z') znumbers++;
+            }
+            if (xnumbers == 3) { trace(`[ID:${vo.id} name:${vo.name}]` + '3同花2翻.'); rates.push(2); }
+            else if (xnumbers == 4) { trace(`[ID:${vo.id} name:${vo.name}]` + '4同花4翻.'); rates.push(4); }
+            else if (xnumbers == 5) { trace(`[ID:${vo.id} name:${vo.name}]` + '5同花8翻.'); rates.push(8); }
+            if (ynumbers == 3) { trace(`[ID:${vo.id} name:${vo.name}]` + '3同花2翻.'); rates.push(2); }
+            else if (ynumbers == 4) { trace(`[ID:${vo.id} name:${vo.name}]` + '4同花4翻.'); rates.push(4); }
+            else if (ynumbers == 5) { trace(`[ID:${vo.id} name:${vo.name}]` + '5同花8翻.'); rates.push(8); }
+            if (znumbers == 3) { trace(`[ID:${vo.id} name:${vo.name}]` + '3同花2翻.'); rates.push(2); }
+            else if (znumbers == 4) { trace(`[ID:${vo.id} name:${vo.name}]` + '4同花4翻.'); rates.push(4); }
+            else if (znumbers == 5) { trace(`[ID:${vo.id} name:${vo.name}]` + '5同花8翻.'); rates.push(8); }
+
+            trace(`[ID:${vo.id} name:${vo.name}]` + '翻数集合：', rates);
+        }
+        for (let i = 0; i < rates.length; i++) {
+            initRate *= rates[i];
+        }
+        return initRate;
+    }
+}
+
+
+class Mahjong2DRes{
+    static getRes(prefix, code){
+        let color = __data.mahjong_set.modelIndex.toString() === '0' ? __data.mahjong_set.cardIndex : __data.mahjong_set.cardIndex + 2;
+        let path = `local/mahjong_2D_${color}_card/1/${prefix}_${__data.deskData.roomVo.numberToCard(code)}.png`;
+        return path;
+    }
+}
+
+class ComponentUtils{
+    /**
+     * 清理组件
+     * @param {Array|Object} view 
+     * @param {Class} scriptName 
+     * @returns 
+     */
+    static clearScript(view, scriptName) {
+        if (view instanceof Array) {
+            for (let i = 0; i < view.length; i++) {
+                //如果对象没有getComponents方法  直接跳过
+                if (!this._getComponentProperty(view[i])) { continue; }
+                //否知执行清理组件
+                else this._clearScript(view[i], scriptName);
+            }
+
+        } else if (view instanceof Object) {
+            //如果对象没有getComponents方法  直接跳过
+            if (!this._getComponentProperty(view)) { return; }
+            //否知执行清理组件
+            this._clearScript(view, scriptName);
+        }
+    }
+    static _getComponentProperty(view) {
+        return (typeof(view.getComponents) == 'function');
+    }
+    static _clearScript(view, scriptName) {
+        let scriptArr = view.getComponents(scriptName);
+        if (!scriptArr || scriptArr.length == 0) { return };
+        while (scriptArr.length) {
+            scriptArr[0].destroy();
+            scriptArr.splice(0, 1);
+        }
+    }
+}
+
+
+class MahjongPositionUtils{
+    static posToInfo(myPos, targerPos, players = 4){
+        if(myPos == targerPos){
+            return "本家";
+        }else if((myPos + 1) % players == targerPos % players){
+            return "下家";
+        }else if((myPos - 1) % players == targerPos % players){
+            return "上家";
+        }else if((myPos + 2) % players == targerPos % players){
+            return "对家";
+        }else{
+            console.error('position transform infomation error.');
+            return '';
+        }
+    }
+    static get BEN(){ return '本家'; }
+    static get DUI(){ return '对家'; }
+    static get XIA(){ return '下家'; }
+    static get SHANG(){ return '上家'; }
+}
+
+
+class WuhuMahjongAlarmTest{
+    static test(list, seat){
+        let player = __data.deskData.roomVo.getPlayer(seat);
+        let r = false;
+        r = this.firstAlarm(list);
+        if(r && player){ trace('A警报.');game.cb.event('alarm_event', [player.position]); }
+        r = this.secondAlarm(list);
+        if(r && player){ trace('B警报.');game.cb.event('alarm_event', [player.position]); }
+        r = this.thirdAlarm(list);
+        if(r && player){ trace('C警报.');game.cb.event('alarm_event', [player.position]); }
+    }
+
+    /**
+     * 门前三个同色或有红中的刻子 警告的是 清一色 混一色
+     * @param {*} object 
+     * @returns 
+     */
+    static firstAlarm(list){
+        let chains = [];
+        for (let i = 0; i < list.length; i++) {
+            let data = __compUtils.getAnalysis(list[i]);
+            // 碰 或者 杠
+            if(data.type == 1 || data.type == 5){
+                // 根据花色计算数量
+                if(data.design){
+                    chains.push({ design:data.design, type:data.type });
+                }
+            }
+        }
+        let index = 0;
+        let next = '';
+        let result = chains.length >= 3 ? this.YES : this.NO;
+        while(index < chains.length && chains.length >= 3){
+            // 花色 不符合
+            if(chains[index].design != 'H' && chains[index].design != next && next && index < 3){
+                index = chains.length;
+                result = this.NO;
+            }
+            if(chains[index] && chains[index].design != 'H' && !next){
+                next = chains[index].design;
+            }
+            index++;
+        }
+        if(result == this.YES)
+            return true;
+        else if(result == this.NO)
+            return false;
+    }
+
+    /**
+     * 门前同色两杠加另一色刻子   警告的双八支
+     * @param {*} object 
+     * @returns 
+     */
+    static secondAlarm(list){
+        let chains = [];
+        let designs = [];
+        let objects = {};
+        for (let i = 0; i < list.length; i++) {
+            let data = __compUtils.getAnalysis(list[i]);
+            // 碰 或者 杠
+            if(data.type == 1 || data.type == 5){
+                // 根据花色计算数量
+                if(data.design){
+                    objects[`${data.design}_${data.type}`] = objects[`${data.design}_${data.type}`] || 0;
+                    objects[`${data.design}_${data.type}`] ++;
+
+                    chains.push({ design:data.design, type:data.type });
+
+                    let isIn = designs.indexOf(data.design) > -1;
+                    if(!isIn)designs.push(data.design);
+                }
+            }
+        }
+
+        let result = this.NO;
+        if(objects[`X_5`] >= 2){
+            if(objects[`Y_5`] >= 1 || objects[`Y_1`] >= 1){
+                result = this.YES;
+            }else if(objects[`Z_5`] >= 1 || objects[`Z_1`] >= 1){
+                result = this.YES;
+            }
+        }else if(objects[`Y_5`] >= 2){
+            if(objects[`X_5`] >= 1 || objects[`X_1`] >= 1){
+                result = this.YES;
+            }else if(objects[`Z_5`] >= 1 || objects[`Z_1`] >= 1){
+                result = this.YES;
+            }
+        }else if(objects[`Z_5`] >= 2){
+            if(objects[`X_5`] >= 1 || objects[`X_1`] >= 1){
+                result = this.YES;
+            }else if(objects[`Y_5`] >= 1 || objects[`Y_1`] >= 1){
+                result = this.YES;
+            }
+        }
+
+        if(objects[`H_5`] >= 1 || objects[`H_1`] >= 1)result = this.NO;
+        if(designs.length > 2)result = this.NO;
+
+        if(result == this.YES)
+            return true;
+        else if(result == this.NO)
+            return false;
+    }
+
+    /**
+     * 门前两个同色刻子                警告的胡双四核  
+     * @param {*} object 
+     * @returns 
+     */
+     static thirdAlarm(list){
+        let chains = [];
+        let designs = [];
+        let objects = {};
+        let len = list.length > 3 ? 3:list.length;
+        for (let i = 0; i < len; i++) {
+            let data = __compUtils.getAnalysis(list[i]);
+            // 碰 或者 杠
+            if(data.type == 1 || data.type == 5){
+                // 根据花色计算数量
+                if(data.design){
+                    objects[`${data.design}_${data.type}`] = objects[`${data.design}_${data.type}`] || 0;
+                    objects[`${data.design}_${data.type}`] ++;
+
+                    chains.push({ design:data.design, type:data.type });
+
+                    let isIn = designs.indexOf(data.design) > -1;
+                    if(!isIn)designs.push(data.design);
+                }
+            }
+        }
+
+        let result = this.NO;
+        if(objects['X_1'] >= 2 || objects['Y_1'] >= 2 || objects['Z_1'] >= 2){ result = this.YES }
+
+        if(result == this.YES)
+            return true;
+        else if(result == this.NO)
+            return false;
+    }
+
+
+    static get NO(){ return 'no'; }
+    static get YES(){ return 'yes'; }
+}
+
+
+class MahjongBackPickError{
+
+    static listen(code, position, type){
+        try{
+            // 好友房不增加此检测
+            if(__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND){ return; }
+            if(__data.deskData.roomVo.phase == "result"){ return; }
+            // 最后检测 吃碰的牌 是否为 最后打出的牌
+            let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+            let desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']);
+            var seat = __data.deskData.roomVo.getPlayer(position).seat_tag;
+            if(desk[`${seat}outlist`].data.length > 0){
+                // 最后一次出的牌
+                let value = desk[`${seat}outlist`].data[desk[`${seat}outlist`].data.length - 1];
+                let reporter = MahjongBackPickError.getReporter();// 获取上报人
+                if(value == code && reporter == __data.uid){
+                    console.log("%c触发Mj_Error：" + type + '<--->' + code + '<--->' + position + '<--->' + seat, "color:#ff5500");
+                    miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': `碰回手牌`, 'Mj_ErrorInfo': type });
+                }
+            }
+        }catch(e){
+            console.log('碰回手牌事件检测异常');
+        }
+    }
+
+    // 获取一个上报人
+    static getReporter(){
+        let reporter = 0;
+        let ids = __data.deskData.roomVo.getPlayerIds();
+        for(let i = 0;i < ids.length;i++){
+            // 如果没有上报人， 先确定一个上报人
+            if(!reporter){ reporter = ids[i]; }
+            // 然后取一个Id最小的人确定为上报人
+            else{ reporter = Math.min(reporter, ids[i]); }
+        }
+        return reporter;
+    }
+}
+
+
+
+
+class GdGhost{
+    static getGhost(code){
+        let ghost = -1;
+        for (const key in this.rule) {
+            const index = this.rule[key].indexOf(parseInt(code));
+            if(index != -1){
+                ghost = this.rule[key][(index + 1) % this.rule[key].length];
+                break;
+            }
+        }
+        return ghost;
+    }
+
+    static getOrigin(code){
+        let ghost = code;
+        for (const key in this.rule) {
+            const index = this.rule[key].indexOf(parseInt(code));
+            if(index != -1){
+                ghost = this.rule[key][(index - 1 + this.rule[key].length) % this.rule[key].length];
+                break;
+            }
+        }
+        return ghost;
+    }
+
+    static get rule(){
+        if(!this._rule){
+            this._rule = {
+                "万":[0,1,2,3,4,5,6,7,8],
+                "筒":[10,11,12,13,14,15,16,17,18],
+                "条":[20,21,22,23,24,25,26,27,28],
+                "花":[30,31,32,33,40,41,42]
+            }
+        }
+        return this._rule;
+    }
+}

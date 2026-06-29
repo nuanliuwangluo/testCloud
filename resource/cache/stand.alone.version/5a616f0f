@@ -1,0 +1,9 @@
+class MM_guide_bombbox extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_guide_bombbox',
+            layer: 'panel'
+        })
+        this.btn_go.addComponent(S_show_mjSmallGame)
+    }
+}

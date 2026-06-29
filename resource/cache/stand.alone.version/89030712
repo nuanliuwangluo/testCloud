@@ -1,0 +1,113 @@
+__data.d_match = {
+    showReliefConditionGold: 1500,
+    // 1-4
+    lastGold: 0,
+    async startMatch(matchModelType, ruleId, cityId, isInMjScene = 0) {
+        let r = this.allowMatch(matchModelType, ruleId, cityId, isInMjScene)
+        if (r) {
+            if (!isInMjScene) {
+                await __showScene.load_game_resource_by_gameId(cityId)
+                game.server.send(3303, ruleId, matchModelType, HallPlay.lastCityId)
+            }
+            return true
+        } else {
+            return false;
+        }
+    },
+
+    allowMatch(matchModelType, ruleId, cityId, isInMjScene = 0) {
+        let d = __data.matchData.find((e) => {
+            if (ruleId < 0) return matchModelType == e.matchModelType && ruleId == e.ruleId
+            else return matchModelType == e.matchModelType && cityId == e.cityId && ruleId == e.ruleId
+        })
+        if (!d) {
+            __tips('玩法开发中')
+            return false
+        }
+        // d.maxGold = '9999999'
+        // d.minGold = '9999999' 
+        if (__bigNumberCal.gt(__data.gold, d.maxGold) && matchModelType != 4) {
+            __showScene.show_prompt_select(__lang.goldGtTips, () => {
+                S_hall_play_quick_start__click(1)
+            }, null, '快速前往', '我知道了')
+            return false
+        }
+        if (__bigNumberCal.lt(__data.gold, d.minGold)) {
+            // IOS能支付修改
+            // if (miniApi.isIOS) {
+            //     if (__bigNumberCal.lt(__data.gold, this.showReliefConditionGold)) {
+            //         if (__data.helpGold_count >= 1) {
+            //             __showScene.show_gameMain_relief()
+            //         } else {
+            //             __tips(__lang.goldLtTips)
+            //         }
+            //     } else {
+            //         __tips(__lang.goldLtTips)
+            //     }
+            //     // } else if (!isInMjScene) {
+            // } else if (1) {
+            // 玩家界面匹配
+            this.lastGold = -1;
+            if (__bigNumberCal.lt(__data.gold, this.showReliefConditionGold)) {
+                if (__data.helpGold_count >= 1) {
+                    __showScene.show_gameMain_relief()
+                } else {
+                    if (__data.firstPay.isHasBuy) {
+                        __showScene.show_gameMain_goldNoEnough(matchModelType, d.minGold)
+                    } else {
+                        __showScene.show_gameMain_firstPay(2, matchModelType)
+                    }
+                }
+            } else {
+                if (__data.firstPay.isHasBuy) {
+                    __showScene.show_gameMain_goldNoEnough(matchModelType, d.minGold)
+                } else {
+                    __showScene.show_gameMain_firstPay(2, matchModelType)
+                }
+            }
+            // }
+            return false
+        }
+        if (__bigNumberCal.gt(__data.gold, d.maxGold) && matchModelType != 4) {
+            __showScene.show_prompt_select(__lang.goldGtTips, () => {
+                S_hall_play_quick_start__click(1)
+            }, null, '快速前往', '我知道了')
+            return false
+        }
+        return true;
+    },
+    async preMatch(matchModelType, ruleId, cityId, isInMjScene = 0) {
+        let d = __data.matchData.find((e) => {
+            if (ruleId < 0) return matchModelType == e.matchModelType && ruleId == e.ruleId
+            else return matchModelType == e.matchModelType && cityId == e.cityId && ruleId == e.ruleId
+        })
+        if (!d) {
+            __tips('玩法开发中')
+            return
+        } else {
+            let r = this.allowMatch(matchModelType, ruleId, cityId, isInMjScene = 0)
+            if (r) {
+                __data.deskData.roomVo.clear();
+                await __showScene.load_game_resource_by_gameId(cityId);
+
+                __data.prev_match_modelId = ruleId;
+                __data.prev_match_lv = matchModelType;
+
+                __data.deskData.roomVo.matchName = __data.hashMatchModelTypeName[d.matchModelType];
+                __data.deskData.roomVo.bottomScore = d.bottomScore;
+                __data.deskData.roomVo.modelId = ruleId;
+                __data.deskData.roomVo.indexId = matchModelType;
+                __showScene.show_game_mahjong(false, true, true);
+                game.scene.add(GameMahjongPreMatch, [__data.deskData.roomVo.matchName, __data.deskData.roomVo.bottomScore, (isVideoMax) => {
+                    console.log('开始匹配...' + '视频匹配方式：' + isVideoMax);
+                    if (isVideoMax) {
+                        game.server.send(14002, ruleId, matchModelType, HallPlay.lastCityId)
+                    } else {
+                        game.server.send(3303, ruleId, matchModelType, HallPlay.lastCityId)
+                    }
+                }]);
+                game.cb.event('update_roomId');
+            }
+        }
+    }
+}

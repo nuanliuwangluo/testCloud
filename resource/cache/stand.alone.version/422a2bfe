@@ -1,0 +1,8 @@
+__data.newPlayerGift = {
+    isReceive: 0, // 0没有领取新人大礼包 1领取了新人大礼包
+    reward: [
+        // { propId: '1', num: 5000 },
+        // { propId: '8005', num: 10 },
+        // { propId: '3', num: 10 },
+    ]
+}

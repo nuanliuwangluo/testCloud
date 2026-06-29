@@ -1,0 +1,42 @@
+
+let HallPlayMatchItem_font_url = {};
+HallPlayMatchItem_font_url['1'] = `local/hall_play/1/1.png`
+HallPlayMatchItem_font_url['2'] = `local/hall_play/1/2.png`
+HallPlayMatchItem_font_url['3'] = `local/hall_play/1/3.png`
+HallPlayMatchItem_font_url['4'] = `local/hall_play/1/4.png`
+HallPlayMatchItem_font_url['5'] = `local/hall_play/1/5.png`
+HallPlayMatchItem_font_url['6'] = `local/hall_play/1/6.png`
+HallPlayMatchItem_font_url['7'] = `local/hall_play/1/7.png`
+HallPlayMatchItem_font_url['8'] = `local/hall_play/1/8.png`
+HallPlayMatchItem_font_url['9'] = `local/hall_play/1/9.png`
+HallPlayMatchItem_font_url['0'] = `local/hall_play/1/0.png`
+HallPlayMatchItem_font_url['万'] = `local/hall_play/1/w.png`
+HallPlayMatchItem_font_url['.'] = `local/hall_play/1/dot.png`
+class HallPlayMatchItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_play_matchItem',
+            module: false
+        })
+        this.__vo = null;
+
+        game.utils.updateLabelY(this.txt_people)
+        game.utils.updateLabelY(this.txt_cost)
+        this.txt_bottomScore = new game.NumText(HallPlayMatchItem_font_url);
+        this.addChild(this.txt_bottomScore).align = 'center'
+        this.txt_bottomScore.x = this.width / 2
+        this.txt_bottomScore.y = 236;
+    }
+    onEnable() {
+
+    }
+    set dataSource(vo) {
+        if (!vo) return
+        this.__vo = vo;
+    }
+    updatePeopleNum(e) {
+        this.txt_people.text = e;
+        __tool.labelParentCenterAndSetXY(this.sp_people, this.width / 2, 5)
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall_play.hall_play_matchItemUI', HallPlayMatchItem);

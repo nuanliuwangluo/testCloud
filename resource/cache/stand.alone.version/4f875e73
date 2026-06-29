@@ -1,0 +1,29 @@
+class GardenNoTask extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_noTask',
+            layer: 'panel',
+        })
+        this.btn_sure.addComponent(S_garden_no_task_sure)
+    }
+    onEnable() {
+        this.btn_sure.visible = miniApi.clientType != 'app';
+    }
+}
+class S_garden_no_task_sure extends Laya.Script {
+    async onClick(e) {
+        // __tips('反馈成功')
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '花园催促加急' });
+
+        if (!__data.sub.isSubSystemUpdate) {
+            let a = await miniApi.systemUpdateSubscribe();
+            if (a == 1) {
+                game.server.send(16006, 2)
+                game.scene.remove(GardenNoTask)
+            }
+        }
+        else {
+            game.scene.remove(GardenNoTask)
+        }
+    }
+}

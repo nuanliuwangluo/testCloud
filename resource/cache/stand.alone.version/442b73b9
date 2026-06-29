@@ -1,0 +1,120 @@
+class HallPlayDailyMatch extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_play_dailyMatch',
+            module: false
+        })
+        this.s_bar = this.img_bar_dailyMatch.addComponent(S_progress_bar)
+        // this.s_box = this.btn_box.addComponent(S_click_show_des_set).init(__lang.des_goldBox)
+        this.btn_vipReceive.addComponent(S_click_dailyMatch_vipReceive)
+        this.btn_receive.addComponent(S_click_HallPlay_dailyMatch_receive)
+        this.btn_vipReceive.addComponent(S_click_HallPlay_dailyMatch_receive_vip)
+
+        game.Clip(this.img_light, [
+            'cdn/queShenRoad_light/tx_txk1.png',
+            'cdn/queShenRoad_light/tx_txk2.png',
+            'cdn/queShenRoad_light/tx_txk3.png',
+            'cdn/queShenRoad_light/tx_txk4.png',
+            'cdn/queShenRoad_light/tx_txk5.png',
+            'cdn/queShenRoad_light/tx_txk6.png',
+            'cdn/queShenRoad_light/tx_txk7.png',
+            'cdn/queShenRoad_light/tx_txk8.png',
+            'cdn/queShenRoad_light/tx_txk9.png',
+        ], 90, true)
+    }
+    onEnable() {
+        game.server.send(10002) // 查询是否可领取每日挑战奖励
+        game.server.send(15001) // 查询是否可领取每日挑战奖励
+        this.update_daliyMatch_data()
+        game.cb.on('update_daliyMatch_data', this, this.update_daliyMatch_data)
+        game.cb.on('daliyMatch_visible_false', this, this.daliyMatch_visible_false)
+    }
+    onDisable() {
+        game.cb.off('update_daliyMatch_data', this, this.update_daliyMatch_data)
+        game.cb.off('daliyMatch_visible_false', this, this.daliyMatch_visible_false)
+        this.img_light.stop()
+    }
+    daliyMatch_visible_false() {
+        this.visible = false
+    }
+    update_daliyMatch_data() {
+        let data = __data.dailyMatch;
+        this.img_red.visible = false;
+        this.img_light.visible = false;
+        this.img_light.stop()
+        if (!data) {
+            this.txt_dailyMatch.text = '0/0'
+            this.s_bar.progress = 0
+            return;
+        }
+        let maxCount = data.maxCount;
+        let curCount = data.curCount;
+
+        if (curCount > maxCount) curCount = maxCount
+
+        if (__data.dailyMatch.reward.length) {
+            this.img_prop.skin = PropIcon.icon[__data.dailyMatch.reward[0].id].skin
+            this.txt_num.text = '×' + __data.dailyMatch.reward[0].count
+        }
+
+        this.s_bar.progress = curCount / maxCount
+        this.txt_dailyMatch.text = `${curCount}/${maxCount}`
+        this.txt_tips.text = `赢得${maxCount}场胜利`
+        // if (miniApi.isIOS && !__data.vip.isVip) {
+        //     this.btn_vipReceive.visible = false
+        //     this.btn_receive.visible = true
+        //     if (curCount >= maxCount) {
+        //         this.btn_receive.disabled = data.isHasReceive == 1;
+        //         this.btn_receive.skin = data.isHasReceive == 1 ? `local/matchCount/1/img_ylq.png` : `local/matchCount/1/bt_lqjl.png`
+        //         if (!data.isHasReceive) this.img_red.visible = true;
+        //     } else {
+        //         this.btn_receive.skin = `local/matchCount/1/bt_lqjl.png`
+        //         this.btn_receive.disabled = true;
+        //     }
+        // } else {
+        if (curCount >= maxCount) {
+            this.btn_vipReceive.visible = false
+            this.btn_receive.visible = true
+            this.btn_receive.disabled = data.isHasReceive == 1;
+            this.btn_receive.skin = data.isHasReceive == 1 ? `local/matchCount/1/img_ylq.png` : `local/matchCount/1/bt_lqjl.png`
+            if (!data.isHasReceive) this.img_red.visible = true;
+        } else {
+            this.btn_receive.skin = `local/matchCount/1/bt_lqjl.png`
+            this.btn_vipReceive.visible = true
+            this.btn_receive.visible = false
+        }
+        // }
+        if (this.img_red.visible) {
+            this.img_light.visible = true;
+            this.img_light.play(0)
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall_play.hall_play_dailyMatchUI', HallPlayDailyMatch);
+class S_click_HallPlay_dailyMatch_receive extends Laya.Script {
+    onClick(e) {
+        __data.dailyMatch.send_msg_receive()
+    }
+}
+class S_click_dailyMatch_vipReceive extends Laya.Script {
+    onClick(e) {
+        if (!__data.vip.isVip) {
+            // IOS能支付修改
+            // if (miniApi.isIOS) {
+            //     // __tips('VIP过期')
+            //     // game.cb.event('update_daliyMatch_data')
+            //     // __showScene.show_vipSales(2)
+            //     __showScene.show_vip()
+            // } else {
+            __showScene.show_vipSales(2)
+            // }
+        }
+    }
+}
+class S_click_HallPlay_dailyMatch_receive_vip extends Laya.Script {
+    onClick(e) {
+        if (__data.vip.isVip && __data.dailyMatch.curCount < __data.dailyMatch.maxCount && !__data.dailyMatch.isHasReceive) {
+            __data.dailyMatch.send_msg_aKeyCom()
+        }
+    }
+}

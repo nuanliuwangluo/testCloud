@@ -1,0 +1,320 @@
+class GameMainQueShenRoad extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_queShenRoad',
+            layer: 'panel',
+            scaleType: 'width',
+        })
+        this.btn_question.addComponent(S_queshenRoad_question)
+        this.btn_close.addComponent(S_queshenRoad_close)
+        this.__list.hScrollBarSkin = ``
+    }
+    added() {
+        GameMainQueShenRoad.maxCityCup = __data.queShenRoad.maxCityCup;
+        // GameMainQueShenRoad.maxCityCup = 5510
+        this.update_queShenRoad_data(1)
+        game.cb.on('update_queShenRoad_data', this, this.update_queShenRoad_data)
+    }
+    onDisable() {
+        game.cb.off('update_queShenRoad_data', this, this.update_queShenRoad_data)
+        ResUtils.clearAtlas("res/atlas/cdn/queShenRoad.atlas")
+        ResUtils.clearTextureRes(['cdn.queShenRoad', 'cdn.email', 'cdn.ui1', 'cdn.rank_sign'], [
+            // 'cdn/queShenRoad/img_qszlbg1.png',
+            // 'cdn/queShenRoad/img_qszlbg2.png',
+        ])
+    }
+    update_queShenRoad_data(isScrollTo) {
+        this.__list.array = __data.queShenRoad.rewardArray;
+        if (isScrollTo) {
+            for (let index = __data.queShenRoad.rewardArray.length - 1; index >= 0; index--) {
+                const e = __data.queShenRoad.rewardArray[index];
+                if (GameMainQueShenRoad.maxCityCup > e.score) {
+                    this.__list.scrollTo(index - 2)
+                    this.__list.scrollBar.value += 50
+                    break;
+                }
+                if (GameMainQueShenRoad.maxCityCup == e.score) {
+                    this.__list.scrollTo(index - 2)
+                    this.__list.scrollBar.value -= 120
+                    break;
+                }
+            };
+        }
+    }
+}
+
+class S_queshenRoad_question extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.img_tips.visible = !this.owner.parent.img_tips.visible;
+        e && e.stopPropagation();
+    }
+    onEnable() {
+        this.owner.parent.img_tips.visible = false;
+    }
+    onStageClick() {
+        this.owner.parent.img_tips.visible = false;
+    }
+}
+class S_queshenRoad_close extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainQueShenRoad)
+    }
+}
+
+class GameMainQueShenRoadItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_queShenRoadItem',
+            module: false
+        })
+        game.utils.remove(this.txt_cup_of)
+        this.img_p.addComponent(S_queshenRoad_receive)
+
+        this.y1 = this.txt_num.y
+
+        game.Clip(this.img_light, [
+            'cdn/queShenRoad_light/tx_txk1.png',
+            'cdn/queShenRoad_light/tx_txk2.png',
+            'cdn/queShenRoad_light/tx_txk3.png',
+            'cdn/queShenRoad_light/tx_txk4.png',
+            'cdn/queShenRoad_light/tx_txk5.png',
+            'cdn/queShenRoad_light/tx_txk6.png',
+            'cdn/queShenRoad_light/tx_txk7.png',
+            'cdn/queShenRoad_light/tx_txk8.png',
+            'cdn/queShenRoad_light/tx_txk9.png',
+        ], 90, true)
+    }
+    onEnable() { }
+    onDisable() {
+        this.img_light.stop && this.img_light.stop();
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo
+
+        let rd1 = RankUtils.getRankLvDataByScore(GameMainQueShenRoad.maxCityCup, 0)
+        if (vo.level == 2 && rd1.level == 2 && !__data.queShenRoad.hasReceiveLvArray.includes(vo.level)) {
+            if (!this.img_hand) {
+                this.img_hand = new Laya.Image('cdn/a_seven_hand/1.png')
+                game.Clip(this.img_hand, [
+                    'cdn/a_seven_hand/1.png',
+                    'cdn/a_seven_hand/2.png',
+                    'cdn/a_seven_hand/3.png',
+                    'cdn/a_seven_hand/4.png',
+                    'cdn/a_seven_hand/5.png',
+                    'cdn/a_seven_hand/6.png',
+                    'cdn/a_seven_hand/7.png',
+                    'cdn/a_seven_hand/8.png',
+                    'cdn/a_seven_hand/9.png',
+                ], 90, true)
+            }
+            this.addChild(this.img_hand)
+            this.img_hand.x = 45;
+            this.img_hand.y = 70;
+            this.img_hand.play()
+        } else {
+            this.img_hand && this.img_hand.stop()
+            game.utils.remove(this.img_hand)
+            this.img_hand = null;
+        }
+
+        // this.txt_cup.text = vo.score;
+        if (GameMainQueShenRoad.maxCityCup >= vo.score && !__data.queShenRoad.hasReceiveLvArray.includes(vo.level) && vo.rewards[0]) {
+            this.img_red.visible = true
+            this.img_light.play && this.img_light.play(0);
+            this.img_light.visible = true;
+
+            this.img_light.scaleX = this.img_light.scaleY = PropIcon.icon[vo.rewards[0].id].isHeadFrame ? 1 : 0.75;
+        } else {
+            this.img_red.visible = false;
+            this.img_light.stop && this.img_light.stop();
+            this.img_light.visible = false;
+        }
+        let rd = RankUtils.getRankLvDataByScore(vo.score)
+        if (rd.toNextLevelNeedCup == 0) {
+            this.img_queshen.visible = true
+            this.txt_lv_num.visible = false
+        } else {
+            this.img_queshen.visible = false
+            this.txt_lv_num.visible = true
+            this.txt_lv_num.text = rd.level;
+        }
+        this.txt_lv_name.text = rd.name;
+        this.img_lv.skin = `local/lvNameBg/1/rank_${rd.iconIndex}.png`;
+        this.img_lv_sign.skin = `cdn/rank_sign/img_rank_sign_${rd.iconIndex}.png`;
+        this.img_hasReceive.visible = __data.queShenRoad.hasReceiveLvArray.includes(vo.level) ? true : false;
+        // if (!PropIcon.icon[vo.rewards[0].id]) debugger
+        if (!vo.rewards[0]) {
+            this.img_p.visible = false
+            return;
+        }
+        let id1 = vo.rewards[0].id
+        this.img_p.visible = true
+        this.txt_num.text = PropIcon.icon[id1].name + '×' + bigNumberToCH(vo.rewards[0].count * 1);
+        this.img_prop.skin = PropIcon.icon[id1].skin
+        let a, b;
+        if (PropIcon.icon[id1].isHeadFrame) {
+            a = 250 / gtool.fileWH.getWHById(id1).w
+            b = 250 / gtool.fileWH.getWHById(id1).h
+
+            this.img_p.skin = 'cdn/queShenRoad/img_jlbox2.png'
+            this.txt_num.y = this.y1 + 24
+            this.img_head.visible = true
+            this.img_head.width = 140
+            this.img_head.height = 140
+            this.txt_num.text = PropIcon.icon[id1].name
+        } else {
+            a = 170 / gtool.fileWH.getWHById(id1).w
+            b = 170 / gtool.fileWH.getWHById(id1).h
+
+            this.img_p.skin = 'cdn/queShenRoad/img_jlbox.png'
+            this.txt_num.y = this.y1
+            this.img_head.visible = false;
+        }
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_queShenRoadItemUI', GameMainQueShenRoadItem);
+
+class S_queshenRoad_receive extends Laya.Script {
+    onClick(e) {
+        // if (GameMainQueShenRoad.maxCityCup > this.owner.parent.vo.score) {
+        //     if (!__data.queShenRoad.hasReceiveLvArray.includes(this.owner.parent.vo.level)) {
+        //         trace('领取雀神之路奖励', this.owner.parent.vo);
+        game.server.send(13003, this.owner.parent.vo.level)
+        //         return
+        //     }
+        // }
+        // trace('领取雀神之路奖励-不满足条件');
+    }
+}
+
+class GameMainQueShenRoadItem1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_queShenRoadItem1',
+            module: false
+        })
+        // this.txt_score1.visible = false;
+    }
+    onEnable() { }
+    onDisable() { }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+        let line_index = 1;
+        let item_index = 1;
+        this.img_line1.visible = false
+        // this.txt_score1.visible = false
+        this.txt_cup && (this.txt_cup.visible = false);
+        this.item1.visible = false
+        const e = vo;
+        if (e.rewards.length == 0) {
+            this['item' + item_index].visible = true
+            this['item' + item_index].dataSource = e;
+            item_index++;
+            line_index++;
+        } else {
+            this['item' + item_index].visible = true;
+            this['item' + item_index].dataSource = e;
+            item_index++;
+        }
+
+        let rd = RankUtils.getRankLvDataByScore(vo.score)
+        let d1 = RankUtils.getRankLvDataByLv(rd.level - 1)
+        let d2 = RankUtils.getRankLvDataByLv(rd.level + 1)
+        // trace(vo.score, d1, d2)
+        let startScore;
+        let centerScore = rd.minCup;
+        let endScore;
+        if (!d1) {
+            startScore = centerScore;
+            endScore = centerScore + (d2.minCup - centerScore) / 2
+
+            this.img_bar.x = this.width / 2;
+            this.img_bar_bg.x = this.width / 2;
+            this.img_bar.width = this.img_bar_bg.width = this.width / 2;
+        } else if (!d2) {
+            startScore = d1.minCup + (centerScore - d1.minCup) / 2 + 1;
+            endScore = centerScore
+
+            // this.img_bar.x = 0
+            // this.img_bar_bg.x = 0
+            // this.img_bar.width = this.img_bar_bg.width = this.width / 2;
+        } else {
+            startScore = d1.minCup + (centerScore - d1.minCup) / 2 + 1;
+            endScore = centerScore + (d2.minCup - centerScore) / 2
+
+            this.img_bar.x = 0
+            this.img_bar_bg.x = 0
+            this.img_bar.width = this.img_bar_bg.width = this.width;
+        }
+
+        // GameMainQueShenRoad.maxCityCup = 16
+        this.img_curCup.visible = false
+        if (d1 && GameMainQueShenRoad.maxCityCup >= d1.minCup && GameMainQueShenRoad.maxCityCup < rd.minCup) {
+            this.img_curCup.visible = true
+            this.txt_uplv_cup.text = d1.toNextLevelNeedCup - (GameMainQueShenRoad.maxCityCup - d1.minCup);
+            __tool.labelParentCenterAndSetXY(this.sp_txt, this.img_curCup.width / 2, 10)
+        }
+
+
+        if (GameMainQueShenRoad.maxCityCup > endScore) {
+            this.img_bar.width = this.img_bar_bg.width * 1;
+            if (!d2) {
+                // 最后奖励 没有 进度条就是一半 所以需要特殊处理 所以位置不变
+                // this.txt_curCup.text = GameMainQueShenRoad.maxCityCup;
+                // this.img_curCup.visible = true
+                // this.img_curCup.x = this.width / 2;
+            }
+        } else if (GameMainQueShenRoad.maxCityCup >= centerScore) {
+            // this.txt_curCup.text = GameMainQueShenRoad.maxCityCup;
+            // this.img_curCup.visible = true
+            // if (!d1) {
+            //     let a = __tool.toFixed((GameMainQueShenRoad.maxCityCup - centerScore) / (endScore - centerScore) * 1, 2);
+            //     this.img_bar.width = this.img_bar_bg.width * a;
+            // } else if (!d2) {
+            //     // 最后奖励 没有 进度条就是一半 所以需要特殊处理 所以位置不变
+            // } else {
+            //     let a = __tool.toFixed((GameMainQueShenRoad.maxCityCup - centerScore) / (endScore - centerScore) * 0.5 + 0.5, 2);
+            //     this.img_bar.width = this.img_bar_bg.width * a
+            // }
+
+            if (!d2) {
+                // this.img_curCup.x = this.width / 2;
+                this.img_bar.width = this.img_bar_bg.width
+                // this.txt_uplv_cup.text = rd.toNextLevelNeedCup - vo.score - rd.minCup;
+            } else if (GameMainQueShenRoad.maxCityCup == centerScore) {
+                this.img_bar.width = this.img_bar_bg.width / 2
+                // this.img_curCup.x = this.width / 2;
+                if (!d1) {
+                    this.img_bar.width = 1
+                    // this.img_curCup.x = this.width / 2;
+                }
+            } else {
+                this.img_bar.width = this.img_bar_bg.width
+                // this.img_curCup.x = this.width;
+            }
+        } else if (GameMainQueShenRoad.maxCityCup >= startScore) {
+            // this.txt_curCup.text = GameMainQueShenRoad.maxCityCup;
+            this.img_curCup.visible = true
+            // if (!d2) {
+            //     // 最后奖励 没有 进度条就是一半 所以需要特殊处理
+            //     this.img_bar.width = this.img_bar_bg.width * __tool.toFixed((GameMainQueShenRoad.maxCityCup - startScore) / (centerScore - startScore) * 0.5, 2);
+            // } else {
+            //     this.img_bar.width = this.img_bar_bg.width * __tool.toFixed((GameMainQueShenRoad.maxCityCup - startScore) / (centerScore - startScore) * 0.5, 2);
+            // }
+            // if (GameMainQueShenRoad.maxCityCup == startScore) {
+            //     this.img_curCup.x = this.width / 2;
+            // } else {
+            this.img_bar.width = 0
+            // this.img_curCup.x = 0;
+            // }
+        } else {
+            // this.img_curCup.visible = false
+            this.img_bar.width = 0
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_queShenRoadItem1UI', GameMainQueShenRoadItem1);

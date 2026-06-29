@@ -1,0 +1,23 @@
+__data.queShenRoad = {
+    get maxCityCup() {
+        let maxCityCup = 0;
+        for (const key in __data.hashCityLevelCup) {
+            maxCityCup = Math.max(maxCityCup, __data.hashCityLevelCup[key].cup)
+        }
+        return maxCityCup
+    },
+    get isRed() {
+        let maxCityCup = this.maxCityCup;
+        let isRed = __data.queShenRoad.rewardArray.some((e) => {
+            if (__data.queShenRoad.isHaveReceiveLvData && e.rewards.length > 0 && maxCityCup >= e.score && !__data.queShenRoad.hasReceiveLvArray.includes(e.level)) {
+                return true
+            } else {
+                return false
+            }
+        })
+        return isRed;
+    },
+    isHaveReceiveLvData: false,
+    hasReceiveLvArray: [],
+    rewardArray: [],
+}

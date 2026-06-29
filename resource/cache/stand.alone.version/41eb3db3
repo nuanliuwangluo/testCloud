@@ -1,0 +1,173 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-03 18:19:33
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-02-03 18:53:14
+ */
+
+class MahjongGift extends Laya.Sprite {
+    constructor(c) {
+        super();
+        this.container = c
+        this.flower = game.cache.registe(MahjongGiftFlower)
+        this.beer = game.cache.registe(MahjongGiftBeer)
+        this.egg = game.cache.registe(MahjongGiftEgg)
+        this.bomb = game.cache.registe(MahjongGiftBomb)
+        this.slipper = game.cache.registe(MahjongGiftSlipper)
+        this.idToid = []
+        this.idToid[501] = this.flower
+        this.idToid[502] = this.egg
+        this.idToid[503] = this.beer
+        this.idToid[504] = this.bomb
+        this.idToid[505] = this.slipper
+    }
+    remove() {
+        game.cache.recoverAll(this.flower)
+        game.cache.recoverAll(this.beer)
+        game.cache.recoverAll(this.egg)
+        game.cache.recoverAll(this.bomb)
+        game.cache.recoverAll(this.slipper)
+    }
+    start(sendPlayerID, receivePlayerID, giftID) {
+        this.sendPlayerID = sendPlayerID;
+        this.receivePlayerID = receivePlayerID;
+        this.giftID = giftID;
+
+        __sound.gameSound('throw')
+
+        var a = game.cache.get(this.idToid[giftID])
+        this.container.addChild(a)
+        a.skip0()
+
+        let __vo = __data.deskData.roomVo.getPlayer(sendPlayerID)
+        let __sendName = __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition ? 'player_down' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 1 ? 'player_right' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 2 ? 'player_up' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 3 ? 'player_left' : ''
+
+        let __cc = __data.deskData.roomVo.phase == 'ready' ? this.container.ready : this.container.game
+
+        let x1 = __cc.getChildByName(__sendName).x + __cc.getChildByName(__sendName).width / 2
+        let y1 = __cc.getChildByName(__sendName).y + __cc.getChildByName(__sendName).height / 2
+
+        __vo = __data.deskData.roomVo.getPlayer(receivePlayerID)
+        let __receiveName = __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition ? 'player_down' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 1 ? 'player_right' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 2 ? 'player_up' : __vo.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 3 ? 'player_left' : ''
+        let x2 = __cc.getChildByName(__receiveName).x + __cc.getChildByName(__receiveName).width / 2
+        let y2 = __cc.getChildByName(__receiveName).y + __cc.getChildByName(__receiveName).height / 2
+
+        a.x = x1
+        a.y = y1
+        var dis = Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2))
+
+        Laya.Tween.to(a, {
+            x: x2,
+            y: y2
+        }, dis / 310 * 0.25 * 1000, null, Laya.Handler.create(this, this.moveComHandler, [a]))
+    }
+    moveComHandler(target) {
+        Laya.Tween.clearAll(target)
+        target.play()
+
+        var n = game.utils.getClassName(target)
+        if (n == 'MahjongGiftFlower') {
+            __sound.gameSound('flower')
+        } else if (n == 'MahjongGiftBeer') {
+            __sound.gameSound('beer')
+        } else if (n == 'MahjongGiftEgg') {
+            __sound.gameSound('egg')
+        } else if (n == 'MahjongGiftBomb') {
+            __sound.gameSound('bomb')
+        } else if (n == 'MahjongGiftSlipper') {
+            __sound.gameSound('shoe')
+        }
+
+        game.cb.event('AITalking_receive_gift', [this.receivePlayerID, this.sendPlayerID, this.giftID]);
+    }
+}
+
+
+
+
+function MahjongGiftLogic(img, url, timeDelay) {
+    timeDelay = timeDelay > 0 ? timeDelay : 100
+    url = url && url.length ? url : []
+    img.index = 0
+    img.firstSkin = img.skin
+    img.skip0 = function () {
+        img.alpha = 1
+        img.skin = img.firstSkin
+    }
+
+    img.play = function () {
+        img.index = 0
+        Laya.Tween.clearAll(img)
+        img.skip0()
+        img.completeHandler()
+        // img.alpha = 0
+        // TweenMax.to(img, 0.25, {alpha:1, onComplete:img.completeHandler})
+    }
+
+    img.completeHandler = function () {
+        Laya.timer.loop(timeDelay, img, img.update);
+        img.update()
+    }
+
+    img.update = function () {
+        if (url[img.index]) img.skin = url[img.index]
+        img.index++;
+        if (img.index >= url.length) {
+            Laya.timer.clear(img, img.update);
+            var delay = url.length ? 0 : 0.5
+            Laya.Tween.to(img, {
+                alpha: 0
+            }, 250, null, Laya.Handler.create(img, img.removeHandler), delay * 1000)
+        }
+    }
+
+    img.stop = function () {
+        Laya.timer.clear(img, img.update);
+        Laya.Tween.clearAll(img)
+        game.cache.recover(img)
+    }
+
+    img.removeHandler = function () {
+        Laya.Tween.clearAll(img)
+        game.cache.recover(img)
+    }
+}
+class MahjongGiftBase extends Laya.Image {
+    constructor(defaultSkin, effectSkinPrefix, effectSkinNum) {
+        super()
+        this.skin = defaultSkin
+        this.anchorX = 0.5
+        this.anchorY = 0.5
+
+        this.scaleX = 0.5;
+        this.scaleY = 0.5;
+        var a = []
+        for (var i = 1; i <= effectSkinNum; i++) a.push(effectSkinPrefix + i + '.png')
+        MahjongGiftLogic(this, a)
+    }
+}
+class MahjongGiftFlower extends MahjongGiftBase {
+    constructor() {
+        super('local/gift/1/flower.png', 'local/gift/1/flower', 3)
+    }
+}
+class MahjongGiftBeer extends MahjongGiftBase {
+    constructor() {
+        super('local/gift/1/beer.png', 'local/gift/1/beer', 3)
+    }
+}
+class MahjongGiftEgg extends MahjongGiftBase {
+    constructor() {
+        super('local/gift/1/egg.png', 'local/gift/1/egg', 3)
+    }
+}
+class MahjongGiftBomb extends MahjongGiftBase {
+    constructor() {
+        super('local/gift/1/boon.png', 'local/gift/1/boon', 3)
+    }
+}
+class MahjongGiftSlipper extends MahjongGiftBase {
+    constructor() {
+        super('local/gift/1/sliper.png', 'local/gift/1/sliper', 3)
+    }
+}

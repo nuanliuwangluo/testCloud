@@ -1,0 +1,509 @@
+class GameMainSelectPlayBG extends game.ModuleBase {
+    static get clearRes() {
+        this._clearRes = this._clearRes ||
+            ['local.a_selectPlay.1'];
+        return this._clearRes
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlayBG',
+            scaleType: 'max',
+        })
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(GameMainSelectPlayBG.clearRes, ['local/a_selectPlay/1/mainSceneBg2.png'])
+        ResUtils.clearAtlas("res/atlas/local/a_selectPlay/1.atlas")
+    }
+}
+
+class GameMainSelectPlay1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay1',
+        })
+    }
+    onAwake() {
+        for (let index = 100001, length = 100013; index <= length; index++) {
+            const e = this['btn' + index];
+            e.img_name.skin = `local/a_selectPlay/1/city${index}.png`
+            e.bigCityId = index;
+        };
+
+        let a = [
+            'cdn/a_seven_hand/1.png',
+            'cdn/a_seven_hand/2.png',
+            'cdn/a_seven_hand/3.png',
+            'cdn/a_seven_hand/4.png',
+            'cdn/a_seven_hand/5.png',
+            'cdn/a_seven_hand/6.png',
+            'cdn/a_seven_hand/7.png',
+            'cdn/a_seven_hand/8.png',
+            'cdn/a_seven_hand/9.png',
+        ]
+        for (let index = 2, length = 14; index <= length; index++) {
+            game.Clip(this['hand' + index], a, 90, true)
+        };
+    }
+    added() {
+        if (!GameMainSelectPlayBG.isClose) {
+            for (let index = 2, length = 14; index <= length; index++) {
+                this['hand' + index].play(0)
+                this['hand' + index].visible = true;
+            };
+        } else {
+            for (let index = 2, length = 14; index <= length; index++) {
+                this['hand' + index].stop()
+                this['hand' + index].visible = false;
+            };
+        }
+
+        if (GameMainSelectPlayBG.isCur) {
+            this.img_title.skin = 'local/a_selectPlay/1/img_qxz.png'
+        } else {
+            this.img_title.skin = 'local/a_selectPlay/1/img_qxz2.png'
+        }
+    }
+    onDisable() {
+        for (let index = 2, length = 14; index <= length; index++) {
+            this['hand' + index].stop()
+            this['hand' + index].visible = false;
+        };
+    }
+}
+
+class GameMainSelectPlay1_return extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay1_return',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_return.addComponent(S_click_selectPlay_return)
+    }
+    added() {
+        this.btn_return.visible = GameMainSelectPlayBG.isClose
+    }
+}
+class GameMainSelectPlay1_otherArea extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay1_otherArea',
+            left: true,
+            down: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_goMap0.addComponent(S_select_play_map0)
+    }
+    onAwake() {
+        let a = [
+            'cdn/a_seven_hand/1.png',
+            'cdn/a_seven_hand/2.png',
+            'cdn/a_seven_hand/3.png',
+            'cdn/a_seven_hand/4.png',
+            'cdn/a_seven_hand/5.png',
+            'cdn/a_seven_hand/6.png',
+            'cdn/a_seven_hand/7.png',
+            'cdn/a_seven_hand/8.png',
+            'cdn/a_seven_hand/9.png',
+        ]
+        game.Clip(this['hand_other'], a, 90, true)
+    }
+    added() {
+        if (!GameMainSelectPlayBG.isClose) {
+            this['hand_other'].play(0)
+            this['hand_other'].visible = true;
+        } else {
+            this['hand_other'].stop()
+            this['hand_other'].visible = false;
+        }
+    }
+    onDisable() {
+        this['hand_other'].stop()
+        this['hand_other'].visible = false;
+    }
+}
+
+class GameMain_selectPlayMapBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlayMapBtn',
+            module: false
+        })
+        this.bigCityId;
+        this.__vo;
+        this.addComponent(S_click_show_select2)
+        this.addComponent(S_scelet_play_light)
+    }
+    set vo(vo) {
+        if (!vo) return;
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_selectPlayMapBtnUI', GameMain_selectPlayMapBtn);
+
+class S_click_show_select2 extends Laya.Script {
+    onClick(e) {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '选择玩法-1级城市' })
+        trace(this.owner.bigCityId)
+        game.scene.add(GameMainSelectPlay2, [this.owner.bigCityId])
+    }
+}
+
+class S_scelet_play_light extends Laya.Script {
+    onEnable() {
+        this.onDisable()
+        this.owner.img_light.alpha = 0
+        this.start()
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.owner.img_light)
+        this.clearAwait && this.clearAwait()
+    }
+    async start() {
+        let time = 500;
+        await __tool.tweenp(this.owner.img_light, { alpha: 1 }, time)
+        await __tool.tweenp(this.owner.img_light, { alpha: 0 }, time)
+        this.start()
+    }
+}
+
+class GameMainSelectPlay2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay2',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = '';
+        this.btn_other.addComponent(S_click_close_remove_parent)
+        // this.btn_more.addComponent(S_selectPlay_more)
+        // this.btn_close.visible = false;
+    }
+    async added(bigCityId, is_province) {
+        // 检测是不是黑龙江地区
+        let a1 = game.scene.get(GameMainSelectPlay1)
+        let isHeilongjiang = a1 && a1.parent;
+        this.btn_other.visible = !isHeilongjiang;
+        this.img_bg_province.visible = !isHeilongjiang;
+
+        // is_province 1 bigCityId是省份
+        // is_province 0 bigCityId不是省份
+        this.__list.array = []
+
+        // GameMainSelectPlay.defaultIndex = GameMainSelectPlay.defaultIndex || 0
+        // 这里需要延迟 不延迟 onSelect 里面设置颜色不好使 laya bug
+        if (!is_province)
+            this.showSmallCityList(bigCityId);
+        else this.showSmallCityListByProvince(bigCityId)
+
+        this.txt_title.text = '请选择玩法'
+
+        if (!isHeilongjiang) this.tween1()
+    }
+    onDisable() {
+        this.clearAwait && this.clearAwait()
+        Laya.Tween.clearAll(this.btn_other)
+    }
+    showSmallCityList(bigCityId) {
+        let bigCityName = excelUtils.getBigCityName(bigCityId);
+        let a = excelUtils.getSmallCityListByBigCity(bigCityName)
+        this.show_list(a)
+    }
+    showSmallCityListByProvince(provinceId) {
+        this.img_province.skin = `local/a_selectPlay/1/img_sheng${provinceId}.png`;
+
+        let v = [];
+        for (const key in __data.excelConfig.hashCityIdVO) {
+            let e = __data.excelConfig.hashCityIdVO[key];
+            if (e.provinceId == provinceId) {
+                v.push({
+                    cityName: e.cityName,
+                    cityId: e.cityId,
+                })
+            }
+        }
+        this.show_list(v)
+    }
+    show_list(a) {
+        a.sort((a1, a2) => {
+            let s1 = excelUtils.getPlayOnOff(a1.cityId)
+            let defaultPlayId = s1 && s1.defaultPlayId || -1;
+            let hot1 = parseInt(defaultPlayId) != -1;
+
+            let s2 = excelUtils.getPlayOnOff(a2.cityId)
+            defaultPlayId = s2 && s2.defaultPlayId || -1;
+            let hot2 = parseInt(defaultPlayId) != -1;
+
+            let v1 = 0;
+            let v2 = 0;
+            if (hot1) v1 = 1000
+            if (hot2) v2 = 1000
+            return v2 - v1;
+        })
+        this.__list.array = a
+    }
+    clickMask() {
+        if (GameMainSelectPlayBG.isClose) {
+            game.scene.remove(this)
+        }
+    }
+    async tween1() {
+        await __tool.tweenp(this.btn_other, {
+            scaleX: 1.1,
+            scaleY: 1.1,
+        }, 500)
+        await __tool.tweenp(this.btn_other, {
+            scaleX: 0.9,
+            scaleY: 0.9,
+        }, 500)
+        this.tween1()
+    }
+}
+
+class GameMainSelectPlayItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlayItem',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_click_selectPlayItem)
+    }
+    onEnable() {
+        this.img_effect.visible = false;
+    }
+    onDisable() {
+        this.clearAwait && this.clearAwait()
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        let a2 = excelUtils.getPlayOnOff(vo.cityId)
+        let defaultPlayId = a2 && a2.defaultPlayId || -1
+        this.txt_name.text = vo.cityName + '麻将';
+        this.txt_name.color = '#505374'
+        this.img_sign.visible = false;
+        this.img_bg.skin = 'local/a_selectPlay/1/bt_unchooce.png'
+        if (GameMainSelectPlayBG.isCur) {
+            this.img_sign.skin = 'local/a_selectPlay/1/img_dq.png'
+            if (vo.cityId == __data.myCityId) {
+                this.img_sign.visible = true;
+                this.img_bg.skin = 'local/a_selectPlay/1/bt_chooce.png'
+                this.txt_name.color = '#5aa73c'
+            }
+        } else {
+            this.img_sign.skin = 'local/a_selectPlay/1/img_zj.png'
+            let nearCityId = miniApi.getItem(__data.uid + '_near_play')
+            if (vo.cityId == nearCityId) {
+                this.img_sign.visible = true;
+                this.img_bg.skin = 'local/a_selectPlay/1/bt_chooce.png'
+                this.txt_name.color = '#5aa73c'
+            }
+        }
+        this.img_hot.visible = parseInt(defaultPlayId) > 0;
+        if (miniApi.clientType == 'app') {
+            this.img_hot.visible = false;
+        }
+
+        if (!__data.myCityId) {
+            this.playEffect()
+        }
+    }
+    async playEffect() {
+        this.clearAwait && this.clearAwait()
+        this.img_effect.visible = true
+        Laya.Tween.clearAll(this.img_effect)
+        this.img_effect.alpha = 1;
+        await __tool.tweenp(this.img_effect, {
+            alpha: 0,
+        }, 500)
+        await __tool.tweenp(this.img_effect, {
+            alpha: 1,
+        }, 500)
+        this.playEffect()
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_selectPlayItemUI', GameMainSelectPlayItem);
+
+class S_click_selectPlayItem extends Laya.Script {
+    onClick(e) {
+        miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '选择玩法-2级玩法' })
+        let cityId = this.owner.__vo.cityId;
+        if (GameMainSelectPlayBG.isCur) {
+            hall_modifyMyCityId(cityId)
+            if (!GameMainSelectPlayBG.isClose) {
+                miniApi.trackEvent('Mj_Login', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_LoginType': '完成选区', 'Mj_LoginDate': __data.Mj_LoginDate })
+            }
+        } else {
+            game.server.send(11004, cityId)
+            let a = __data.lastSceneQueue.pop();
+            a && a(cityId)
+        }
+    }
+}
+
+let hall_modifyMyCityId = window.hall_modifyMyCityId = (myCityId) => {
+    miniApi.setItem(__data.uid + ':offline_action_change_city', 1)
+    if (!__data.myCityId) {
+        miniApi.adsdk_track('REGISTER')
+        let a = __data.excelConfig.hashCityIdVO[myCityId]
+        let Mj_SetProvince = a && a.province || '其他'
+        let Mj_SetCounty = a && a.cityName || '其他'
+        let Mj_Results = ''
+        if (__data.province) {
+            if (__data.province.includes(Mj_SetProvince)) {
+                Mj_Results = '正确'
+            } else {
+                Mj_Results = '错误'
+            }
+        } else {
+            Mj_Results = '未知'
+        }
+
+        miniApi.trackEvent('Mj_IPAnalysis', {
+            Mj_APIProvince: __data.province || '未知',
+            Mj_SetProvince,
+            Mj_SetCounty,
+            Mj_Results,
+        })
+
+    }
+
+
+
+    __data.myCityId = myCityId;
+    game.server.send(2216, myCityId)
+
+    let a = __data.lastSceneQueue.pop();
+    a && a(myCityId)
+}
+
+class S_selectPlay_more extends Laya.Script {
+    onClick() {
+        hall_modifyMyCityId(169) // 位置玩法
+        miniApi.trackEvent('Mj_UIClick', { Mj_County: '未知', 'Mj_ClickScene': `未找到按钮` })
+    }
+}
+
+class GameMainSelectPlay0 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay0',
+        })
+    }
+    onAwake() {
+        for (let index = 1, length = 28; index <= length; index++) {
+            let e = this.getChildByName('p' + index)
+            if (e) {
+                e.img_name.skin = `local/a_selectPlay/1/img_sheng${index}.png`
+            }
+        };
+    }
+}
+class GameMainSelectPlay0_return extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay0_return',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_return.addComponent(S_click_selectPlay_return)
+    }
+    onEnable() {
+        this.btn_return.visible = GameMainSelectPlayBG.isClose
+    }
+}
+class GameMainSelectPlay0_otherArea extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlay0_otherArea',
+            left: true,
+            down: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_select2.addComponent(S_selectPlay_more)
+    }
+}
+
+class S_click_selectPlay_return extends Laya.Script {
+    onClick(e) {
+        if (!__data.myCityId) {
+            return
+        }
+        let a = __data.lastSceneQueue.pop()
+        a && a()
+    }
+}
+class S_select_play_map0 extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainSelectPlay1)
+        game.scene.remove(GameMainSelectPlay1_return)
+        game.scene.remove(GameMainSelectPlay1_otherArea)
+        game.scene.add(GameMainSelectPlay0)
+        game.scene.add(GameMainSelectPlay0_return)
+        game.scene.add(GameMainSelectPlay0_otherArea)
+    }
+}
+
+class GameMain_selectPlayMapBtn0 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlayMapBtn0',
+            module: false
+        })
+        this.addComponent(S_scelet_play_light)
+        this.addComponent(S_scelet_play_0_click)
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_selectPlayMapBtn0UI', GameMain_selectPlayMapBtn0);
+class GameMain_selectPlayMapBtn01 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_selectPlayMapBtn01',
+            module: false
+        })
+        this.addComponent(S_scelet_play_light)
+        this.addComponent(S_scelet_play_0_click)
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_selectPlayMapBtn01UI', GameMain_selectPlayMapBtn01);
+
+class S_scelet_play_0_click extends Laya.Script {
+    onClick(e) {
+        let pp = this.owner.name.slice(1)
+        if (pp == 1) {
+            // 如果是黑龙江
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '选择玩法-省份黑龙江' })
+            game.scene.remove(GameMainSelectPlay0)
+            game.scene.remove(GameMainSelectPlay0_return)
+            game.scene.remove(GameMainSelectPlay0_otherArea)
+            game.scene.add(GameMainSelectPlay1)
+            game.scene.add(GameMainSelectPlay1_return)
+            game.scene.add(GameMainSelectPlay1_otherArea)
+        } else if (pp == 25 || pp == 26 || pp == 27 || pp == 28) {
+            // 点击北京、上海、天津、重庆的也直接视为选完玩法了
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '选择玩法-省份其他' })
+            for (const key in __data.excelConfig.hashCityIdVO) {
+                let e = __data.excelConfig.hashCityIdVO[key]
+                if (e.provinceId == pp) {
+                    hall_modifyMyCityId(e.cityId) // 位置玩法
+                    break
+                }
+            }
+        } else {
+            miniApi.trackEvent_gameStep('Mj_StepAnalysis', { 'Mj_Steps': '选择玩法-省份其他' })
+            game.scene.add(GameMainSelectPlay2, [pp, 1])
+        }
+    }
+}

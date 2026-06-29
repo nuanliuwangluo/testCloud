@@ -1,0 +1,45 @@
+class MahjongResultShare extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/result/MahjongResultShare',
+            layer: 'panel'
+        })
+
+        this.btn_close.addComponent(MahjongShareClose);
+        this.btn_share.on(Laya.Event.CLICK, this, this._onShare);
+    }
+
+    onDisable() {
+        ResultPanelManager.show();
+    }
+
+    added(numbers) {
+        __sound.gameSound("cheer");
+        // 时间埋点
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '连胜炫耀界面' });
+
+        this.numbers = numbers;
+        // this.numberText.text = this.numbers;
+        // this.addChild(this.numberText);
+        this.txt_number.text = this.numbers;
+    }
+
+    _onShare() {
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '连胜炫耀', 'Mj_Participation': '参与分享' });
+        miniApi.share({
+            titleId: __tool.randomRange(1, 5),
+            imgId: 'win' + this.numbers,
+            cityId: HallPlay.lastCityId,
+            // title: `${this.numbers}连胜！请问怎么输？`,
+            params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+        });
+    }
+
+    clickMask() { }
+}
+
+class MahjongShareClose extends Laya.Script {
+    onClick() {
+        game.scene.remove(MahjongResultShare);
+    }
+}

@@ -1,0 +1,129 @@
+class GardenRank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_rank',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = ''
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+        this.btn_close.addComponent(S_click_GardenRank_close)
+    }
+    onEnable() {
+        // game.server.send(2407, nextPage)
+        this.update_rank()
+        game.cb.on('update_garden_rank_data', this, this.update_garden_rank_data)
+    }
+
+    onDisable() {
+        game.cb.off('update_garden_rank_data', this, this.update_garden_rank_data)
+    }
+    updateItem(e, index) {
+        let useData = __data.garden.rank;
+        let array = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            array.push(...useData[page])
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !useData[nextPage]) {
+            game.server.send(15011, nextPage)
+        }
+    }
+    update_rank() {
+        this.update_garden_rank_data()
+        this.__list.scrollTo(0, 0)
+    }
+    update_garden_rank_data() {
+        let useData = __data.garden.rank;
+        let data = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            data.push(...useData[page])
+        }
+        if (useData[`my`]) {
+            useData[`my`].isMy = true;
+            this.item_me.visible = true
+            this.item_me.dataSource = useData[`my`]
+        } else {
+            this.item_me.visible = false;
+        }
+        this.__list.array = data;
+    }
+}
+
+class S_click_GardenRank_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GardenRank)
+    }
+}
+
+class GardenRankItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_rank_item',
+            module: false
+        })
+        this.btn_look.addComponent(S_garden_rank_look)
+    }
+    onEnable() { }
+
+    onDisable() { }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        LabelHiddenUtils.getAdapterContent(this.txt_player_name, vo.name)
+        this.img_head.skin = __data.getHeadTestDefault(vo.head);
+        this.txt_score.text = vo.score;
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.rank == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.rank <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.rank;
+        }
+        let n1 = excelUtils.getCityName_mj(vo.cityId)
+        this.txt_mjName.text = n1;
+
+        this.img_head_frame.skin = PropIcon.icon[vo.headFrameId || 301].skin
+    }
+}
+Laya.ClassUtils.regClass('ui.garden.Garden_rank_itemUI', GardenRankItem);
+
+class S_garden_rank_look extends Laya.Script {
+    async onClick(e) {
+        let uid = this.owner.parent.__vo.uid;
+        if (uid == __data.uid) return;
+        S_garden_rank_look.uid = uid;
+        await game.server.send(15013, uid)
+        game.cb.event('garden_remove_main_ui')
+        game.scene.remove(GardenRank)
+        game.scene.add(GardenOther_leftUp, [this.owner.parent.__vo])
+        game.scene.add(GardenOther_centerDown)
+        game.cb.event('garden_groud_toOtherGarden', [uid, S_garden_rank_look.hashUsePositionIdCompId]);
+
+        let a = () => {
+            game.cb.event('garden_groud_toOtherGarden', [__data.uid, __data.garden.hashUsePositionIdCompId]);
+
+            game.scene.add(GardenMainUI_leftUp_return)
+            game.scene.add(GardenMainUI_leftUp_res)
+            game.scene.add(GardenMainUI_leftDown)
+            game.scene.add(GardenMainUI_rightDown)
+
+            game.scene.get(GardenOther_centerDown).removeUI()
+            game.scene.get(GardenOther_leftUp).removeUI()
+
+            __showScene.show_garden_rank()
+        }
+        __data.lastSceneQueue.push(a)
+        // game.cb.event('garden_toOthers', [S_garden_rank_look.taskId, S_garden_rank_look.hashUsePositionIdCompId])
+    }
+}

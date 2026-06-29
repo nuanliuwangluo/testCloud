@@ -1,0 +1,232 @@
+__data.activity = {}
+
+// 金币罐
+__data.activity.goldBox = {
+    gold: 0,// 储值金额
+    level: 0,// 等级
+    // 格式化需求金币数量
+    formatGold(num) {
+        if (num < 10000) {
+            return num;
+        }
+        let wan = num / 10000;
+        // 保留两位小数
+        let fixed = wan.toFixed(2);
+        // 如果最后一位是 0，去掉它
+        if (fixed.endsWith('0')) {
+            fixed = fixed.slice(0, -1);
+        }
+        // 如果小数点最后一位还是 0（例如 3.10 -> 3.1），再处理一次
+        if (fixed.endsWith('.0')) {
+            fixed = fixed.slice(0, -2);
+        }
+        return fixed + '万';
+    },
+
+    get openNeedStone() {
+        return 30 * this.level;
+    },// 开启需要的钻石数量
+    get isOpen() {
+        return this.gold >= 30000 * this.level
+    },// 是否开启
+
+    get isFull() {
+        return this.gold >= this.fullNumber;
+    },// 是否满
+
+    get fullNumber() {
+        return 30000 * this.level * 1.6;
+    },// 已满对应的金额
+
+    get fullStone() {
+        return __data.activity.goldBox.fullNumber / 1000;
+    }// 已满对应的钻石价值
+}
+
+// 今日特惠
+__data.activity.todayDiscount = {
+    allCount: 2,// 每日购买上限
+    dailyDealId: 0,// 礼包id
+    purchaseCount: 0, // 已购买次数
+    deals: {
+        // 原价  新价  金币  富贵竹  折扣
+        10032: { old: 10, new: 3, gold: 54000, bamboo: 40, dc: 3 },
+        10033: { old: 19, new: 6, gold: 108000, bamboo: 80, dc: 3 },
+        10034: { old: 34, new: 12, gold: 216000, bamboo: 120, dc: 3 }
+    },// 套餐
+
+    formatGold(gold) {
+        if (gold < 10000)
+            return gold
+        return `${(gold / 10000).toFixed(1)}万`;
+    },// 格式化金币
+
+    getRemainingTimeToMidnight() {// 获取至24时剩余时间
+        const now = new Date();
+        const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const diff = endOfDay - now;
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    },
+
+    get deal() {// 今日随机的套餐
+        return this.deals[this.dailyDealId];
+    },
+
+    get isAllowBuy() {// 是否允许购买
+        return this.purchaseCount < this.allCount;
+    }
+}
+
+__data.activity.stepstepGift = {
+    isGeted: false,// 是否领取过 ，用于动画监听
+    stepGiftProgress: 0, // index
+    rewards: [
+        { level: 1, gold: 0, stone: 0, reward: { id: 8005, number: 1, skin: 'cdn/marketActivity_stepstepGift/img_a1.png' } },
+        { level: 2, gold: 0, stone: 0, reward: { id: 1, number: 888, skin: 'cdn/marketActivity_stepstepGift/img_a2.png' } },
+        { level: 3, gold: 0, stone: 10, reward: { id: 1, number: 12000, skin: 'cdn/marketActivity_stepstepGift/img_a3.png' } },
+        { level: 4, gold: 0, stone: 0, reward: { id: 1, number: 8000, skin: 'cdn/marketActivity_stepstepGift/img_a2.png' } },
+        { level: 5, gold: 0, stone: 0, reward: { id: 8005, number: 5, skin: 'cdn/marketActivity_stepstepGift/img_a1.png' } },
+        { level: 6, gold: 0, stone: 30, reward: { id: 1, number: 43000, skin: 'cdn/marketActivity_stepstepGift/img_a3.png' } },
+        { level: 7, gold: 0, stone: 0, reward: { id: 1, number: 20000, skin: 'cdn/marketActivity_stepstepGift/img_a2.png' } },
+        { level: 8, gold: 0, stone: 0, reward: { id: 8005, number: 10, skin: 'cdn/marketActivity_stepstepGift/img_a1.png' } },
+        { level: 9, gold: 0, stone: 60, reward: { id: 1, number: 90000, skin: 'cdn/marketActivity_stepstepGift/img_a3.png' } },
+        { level: 10, gold: 0, stone: 0, reward: { id: 1, number: 40000, skin: 'cdn/marketActivity_stepstepGift/img_a2.png' } },
+        { level: 11, gold: 0, stone: 0, reward: { id: 8005, number: 15, skin: 'cdn/marketActivity_stepstepGift/img_a1.png' } },
+        { level: 12, gold: 0, stone: 90, reward: { id: 1, number: 150000, skin: 'cdn/marketActivity_stepstepGift/img_a3.png' } }
+    ],// 日常奖励
+    finnals: [{ id: 1, number: 50000 }, { id: 8005, number: 20 }],// 最终奖励
+
+    get isFinal() { return this.stepGiftProgress == this.rewards.length; },// 是否可以领取最终奖励
+    get isEnd() { return this.stepGiftProgress > this.rewards.length; },// 是否全部领取完成
+
+    getRewardByStep(step) {
+        let item = this.rewards[step];
+        if (item) {
+            return [item.reward];
+        } else if (step == this.rewards.length) {
+            return this.finnals;
+        }
+    },
+    // 获取本周日期范围 (周一 - 周日)
+    getWeekRange() {
+        const now = new Date();
+        const currentDay = now.getDay(); // 0 (周日) - 6 (周六)
+        // 计算周一的偏移量：如果今天是周日(0)，则偏移 -6 天；否则偏移 1 - currentDay
+        const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+        const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+        const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+        const pad = (num) => num < 10 ? '0' + num : '' + num;
+        const startStr = `${pad(monday.getMonth() + 1)}.${pad(monday.getDate())}`;
+        const endStr = `${pad(sunday.getMonth() + 1)}.${pad(sunday.getDate())}`;
+        return `${startStr} - ${endStr}`;
+    },
+    // 格式化需求数量
+    formatNumber(num) {
+        if (num < 10000) {
+            return num;
+        }
+        let wan = num / 10000;
+        // 保留两位小数
+        let fixed = wan.toFixed(2);
+        // 如果最后一位是 0，去掉它
+        if (fixed.endsWith('0')) {
+            fixed = fixed.slice(0, -1);
+        }
+        // 如果小数点最后一位还是 0（例如 3.10 -> 3.1），再处理一次
+        if (fixed.endsWith('.0')) {
+            fixed = fixed.slice(0, -2);
+        }
+        return fixed + '万';
+    },
+}
+
+// 瓜分礼金
+__data.activity.inviteRed = {
+
+    // {
+    //     "top_list": [{
+    //                      "index": int, //排名
+    //                      "name": string,  //昵称
+    //                      "avatar": string,  //头像
+    //                      "value": double //累计红包
+    //                  }],
+    //     "player": { 
+    //                      "index": int,  //排名
+    //                      "value": double //累计红包
+    //                  }
+    // }
+    rankData: {},// 邀请红包排行榜
+
+    // {
+    //     "state": int, //0-未领取任务 1-已领取任务
+    //     "hb_count": int, //剩余红包数量
+    //     "all_invite": int, //总邀请数量
+    //     "total": double, //总领取金额
+    //     "data": [{
+    //                 "lq": int, //0-未邀请 1-邀请成功 2-红包已领取
+    //                 "data": {
+    //                     "name": string, //邀请成功玩家的昵称
+    //                     "avatar": string //头像
+    //                 }
+    //             }] //长度为3
+    // }
+    taskData: {},// 邀请红包任务数据
+
+    taskStatus: "",
+
+    get isOpen() {// 是否有可以开启的红包
+        // 邀请红包功能未开启，或入口关闭
+        if (!__data.redPacket.canShowInviteRedIcon()) {
+            return false;
+        } else if (this.taskData && this.taskData.data) {// 看邀请人中是否已经存在 未领取的奖励 返回true
+            return this.taskData.data.some(item => item.lq == 0);
+        }
+        // 默认返回false
+        return false;
+    },// 是否开启
+
+    // 是否全部领取完成
+    get isAllDone() {
+        if (this.taskData.state == 1 && this.taskData.data) {
+            // 全部领取完成
+            return this.taskData.data.every(item => item.lq == 2);
+        }
+        return false;
+    },
+
+    // 增加接任务次数
+    addMissionCount(count = 1) {
+        let mission_count = LocalUtils.get(this.MISSION_COUNT) || 0;
+        mission_count = parseInt(mission_count) + count;
+        LocalUtils.set(this.MISSION_COUNT, mission_count);
+    },
+    // 获取接任务次数
+    getMissionCount() {
+        let mission_count = LocalUtils.get(this.MISSION_COUNT) || 0;
+        mission_count = parseInt(mission_count);
+        return mission_count;
+    },
+
+    // 增加已邀请人数
+    addInviteNumbers(count = 1) {
+        let invite_numbers = LocalUtils.get(this.INVITE_NUMBERS) || 0;
+        invite_numbers = parseInt(invite_numbers) + count;
+        LocalUtils.set(this.INVITE_NUMBERS, invite_numbers);
+    },
+    // 获取已邀请人数
+    getInviteNumbers() {
+        let invite_numbers = LocalUtils.get(this.INVITE_NUMBERS) || 0;
+        invite_numbers = parseInt(invite_numbers);
+        return invite_numbers;
+    },
+
+    get MISSION_COUNT() { return `INVITE_RED_MISSION_COUNT_${__data.uid}`; },// 接任务次数
+    get INVITE_NUMBERS() { return `INVITE_RED_INVITE_NUMBERS_${__data.uid}`; },// 已邀请人数
+
+    // 这几个返回的字符串对应UI中的对象名称  不能变
+    get STATUS_READY() { return 0; },
+    get STATUS_ING() { return 1; },
+}

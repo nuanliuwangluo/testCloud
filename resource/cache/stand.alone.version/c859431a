@@ -1,0 +1,2176 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-01-22 09:07:50
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-30 10:06:40
+ */
+
+'use strict';
+class ShmjMahjongDesk3D extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongDesk',
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+
+        this.addComponent(MahjongQuickPrayComponent);
+
+        // this.addComponent(MahjongDesk_info_Script);
+        this.addComponent(MahjongDesk_Pop_Scipt)
+        // this.addComponent(MahjongDesk_Compass_Scipt)
+        this.addComponent(MahjongDesk_Compass3D_Scipt)
+
+        this.ready.getChildByName('player_up').getChildByName('btn_kick').addComponent(MahjongDesk_Kick_Script)
+        this.ready.getChildByName('player_left').getChildByName('btn_kick').addComponent(MahjongDesk_Kick_Script)
+        this.ready.getChildByName('player_right').getChildByName('btn_kick').addComponent(MahjongDesk_Kick_Script)
+
+        this.ready.getChildByName('btn_ready').addComponent(MahjongDesk_Ready_Script)
+        this.game.getChildByName('btn_ready').addComponent(MahjongDesk_Ready_Script)
+        this.game.getChildByName('auto_box').getChildByName('btn_cancelAuto').addComponent(MahjongDesk_Cancel_Auto_Script)
+
+        this.ready.getChildByName('player_up').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.ready.getChildByName('player_down').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.ready.getChildByName('player_left').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.ready.getChildByName('player_right').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.game.getChildByName('player_up').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.game.getChildByName('player_down').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.game.getChildByName('player_left').getChildByName('head').on('click', this, this.playerInfoHandler)
+        this.game.getChildByName('player_right').getChildByName('head').on('click', this, this.playerInfoHandler)
+
+        this.ready.getChildByName('empty_up').addComponent(MahjongMovePosition).extra(2)
+        this.ready.getChildByName('empty_down').addComponent(MahjongMovePosition).extra(0)
+        this.ready.getChildByName('empty_left').addComponent(MahjongMovePosition).extra(3)
+        this.ready.getChildByName('empty_right').addComponent(MahjongMovePosition).extra(1)
+
+        this.readyCenterPoint = __compUtils.getCenterPoint(this.ready.getChildByName('btn_ready'));
+        this.gameCenterPoint = __compUtils.getCenterPoint(this.game.getChildByName('btn_ready'));
+
+        this.prayIcon = new MahjongPrayIcon();
+        this.fortuneIcon = new MahjongFortuneIcon();
+        this.addComponent(PrayAnimationComponent);
+
+        this.upRateTips = new MahjongOthersRateTips('up');
+        this.downRateTips = new MahjongRateSelfTips('down');
+        this.leftRateTips = new MahjongOthersRateTips('left');
+        this.rightRateTips = new MahjongOthersRateTips('right');
+        // this.game.getChildByName('desk').addChild(this.upRateTips)
+        // this.game.getChildByName('desk').addChild(this.downRateTips)
+        // this.game.getChildByName('desk').addChild(this.leftRateTips)
+        // this.game.getChildByName('desk').addChild(this.rightRateTips)
+
+        //手牌列表
+        this.uplist = new ShmjMahjongUpHandList3D()
+        this.uplist.x = 300;
+        this.uplist.y = this.game.getChildByName('player_up').y + 30;
+        this.game.getChildByName('desk').addChild(this.uplist)
+
+        this.upoutlist = new ShmjMahjongUpOutList3D();
+        this.upoutlist.x = config.gameW / 2 + (this.upoutlist.row / 2 - 1) * 42;
+        this.upoutlist.y = this.game.getChildByName('player_up').y + this.game.getChildByName('player_up').height + 15;
+        this.game.getChildByName('desk').addChild(this.upoutlist)
+
+        this.leftlist = new ShmjMahjongLeftHandList3D()
+        this.leftlist.x = this.game.getChildByName('player_left').x + this.game.getChildByName('player_left').width + 50;
+        this.leftlist.y = this.game.getChildByName('player_up').y + this.game.getChildByName('player_up').height * .75;
+        this.game.getChildByName('desk').addChild(this.leftlist)
+
+        this.leftoutlist = new ShmjMahjongLeftOutList3D();
+        this.leftoutlist.x = this.game.getChildByName('compass_box').x - 250;
+        this.leftoutlist.y = config.gameH - this.leftoutlist.height >> 1;
+        this.game.getChildByName('desk').addChild(this.leftoutlist)
+
+        this.rightlist = new ShmjMahjongRightHandList3D()
+        this.rightlist.x = this.game.getChildByName('player_right').x - 75;
+        this.rightlist.y = this.game.getChildByName('player_up').y + this.game.getChildByName('player_up').height;
+        this.game.getChildByName('desk').addChild(this.rightlist)
+
+        this.rightoutlist = new ShmjMahjongRightOutList3D();
+        this.rightoutlist.x = this.game.getChildByName('compass_box').x + 210;
+        this.rightoutlist.y = config.gameH - this.rightoutlist.height >> 1;
+        this.game.getChildByName('desk').addChild(this.rightoutlist)
+
+
+        this.downoutlist = new ShmjMahjongDownOutList3D();
+        this.downoutlist.x = config.gameW - this.downoutlist.width >> 1;
+        this.downoutlist.y = this.game.getChildByName('compass_box').y + 76;
+        this.game.getChildByName('desk').addChild(this.downoutlist)
+
+        this.downlist = new ShmjMahjongDownHandList3D()
+        this.downlist.x = 20;
+        this.downlist.y = this.game.getChildByName('player_down').y + this.game.getChildByName('player_down').height; // * 1.6;
+        this.game.getChildByName('desk').addChild(this.downlist)
+
+
+        // this.downlisten = new Laya.Image('local/mahjong_common/1/tng1a.png')
+        // this.downlisten.x = this.width - this.downlisten.width >> 1
+        // this.downlisten.y = this.downlist.y - this.downlisten.height
+        // this.leftlisten = new Laya.Image('local/mahjong_common/1/tng2a.png')
+        // this.leftlisten.x = this.leftlist.x + 50
+        // this.leftlisten.y = this.height - this.leftlisten.height >> 1
+        // this.rightlisten = new Laya.Image('local/mahjong_common/1/tng2a.png')
+        // this.rightlisten.x = this.rightlist.x - this.rightlisten.width
+        // this.rightlisten.y = this.height - this.leftlisten.height >> 1
+        // this.uplisten = new Laya.Image('local/mahjong_common/1/tng3a.png')
+        // this.uplisten.x = this.width - this.uplisten.width >> 1
+        // this.uplisten.y = this.uplist.y + 60
+
+
+        this.downlisten = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('ting'), __data.deskData.roomVo.scene.getChildByName('Desk'))
+        this.leftlisten = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('ting'), __data.deskData.roomVo.scene.getChildByName('Desk'))
+        this.rightlisten = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('ting'), __data.deskData.roomVo.scene.getChildByName('Desk'))
+        this.uplisten = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('ting'), __data.deskData.roomVo.scene.getChildByName('Desk'))
+        this.downlisten.transform.rotationEuler = new Laya.Vector3(90, 90, 0)
+        this.uplisten.transform.rotationEuler = new Laya.Vector3(90, 90, 0)
+        this.leftlisten.transform.rotationEuler = new Laya.Vector3(90, 0, 0)
+        this.rightlisten.transform.rotationEuler = new Laya.Vector3(90, 0, 0)
+
+        this.rightlisten.transform.localPosition = new Laya.Vector3(-60, 0.3, 0)
+        this.leftlisten.transform.localPosition = new Laya.Vector3(60, 0.3, 0)
+        this.uplisten.transform.localPosition = new Laya.Vector3(0, 0.3, 62)
+        this.downlisten.transform.localPosition = new Laya.Vector3(0, 0.3, -62)
+
+        this.uplisten.active = this.downlisten.active = this.leftlisten.active = this.rightlisten.active = false;
+
+        this.operation = new ShmjMahjongOperation();
+
+        this.huPreview = new MahjongHuList(false);
+        // this.huTips = new MahjongHuIcon();
+        // this.huTips.bind(new MahjongHuList());
+        this.huTips = new MahjongHuTips();
+
+        this.upHuEffect = Laya.Pool.getItemByClass(__cName.he, MahjongEffectHu)
+        this.downHuEffect = Laya.Pool.getItemByClass(__cName.he, MahjongEffectHu)
+        this.leftHuEffect = Laya.Pool.getItemByClass(__cName.he, MahjongEffectHu)
+        this.rightHuEffect = Laya.Pool.getItemByClass(__cName.he, MahjongEffectHu)
+
+        this.upHuCard = Laya.Pool.getItemByClass(__cName.hc, ShmjMahjongHuCard3D)
+        this.downHuCard = Laya.Pool.getItemByClass(__cName.hc, ShmjMahjongHuCard3D)
+        this.leftHuCard = Laya.Pool.getItemByClass(__cName.hc, ShmjMahjongHuCard3D)
+        this.rightHuCard = Laya.Pool.getItemByClass(__cName.hc, ShmjMahjongHuCard3D)
+
+        game.utils.remove(this.ready, this.game)
+    }
+
+    sceneInit() {
+        if (!__data.deskData.roomVo.scene) return;
+        __data.deskData.roomVo.scene.getChildByName('tiles').active = false;
+        __data.deskData.roomVo.scene.getChildByName('Sign').active = false;
+        __data.deskData.roomVo.scene.getChildByName('arrow').active = false;
+        __data.deskData.roomVo.scene.getChildByName('ting').active = false;
+
+        if (this.name3d) {
+            this.name3d.removeSelf();
+            this.name3d.active = false;
+        }
+        if (this.name3d_plane) {
+            this.name3d_plane.removeSelf();
+            this.name3d_plane.active = false;
+        }
+        if (this.score3d) {
+            this.score3d.removeSelf();
+            this.score3d.active = false;
+        }
+        if (this.score3d_plane) {
+            this.score3d_plane.removeSelf();
+            this.score3d_plane.active = false;
+        }
+
+        __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').active = false;
+        this.name3d = this.create3dText({ value: MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId), color: '#ffffff', fontSize: 42, width:256, height:256, font: "bold 42px 黑体" });
+        this.name3d_plane = Laya.Sprite3D.instantiate(this.name3d, __data.deskData.roomVo.scene.getChildByName('container'));
+        this.name3d_plane.transform.localPosition = new Laya.Vector3(0, -1.65, 19.8); // __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').transform.localPosition;
+        this.name3d_plane.meshRenderer.material.albedoColor = new Laya.Vector4(0, 0, 0, 0.25);
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            let bottom = FriendRoomPlays.getPlay(__data.deskData.roomVo.modelId).getScoreInfo(__data.deskData.roomVo.roomPlay);
+            let top = FriendRoomPlays.getPlay(__data.deskData.roomVo.modelId).getTopInfo(__data.deskData.roomVo.roomPlay);
+            let name = `好友房  底分${bottom}`;
+            this.score3d = this.create3dText({ value: name, color: '#ffffff', font: "bold 34px 黑体" });
+            this.score3d_plane = Laya.Sprite3D.instantiate(this.score3d, __data.deskData.roomVo.scene.getChildByName('container'));
+            this.score3d_plane.transform.localPosition = new Laya.Vector3(0, -1.65, -18.5); // __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').transform.localPosition;
+            this.score3d_plane.meshRenderer.material.albedoColor = new Laya.Vector4(0, 0, 0, 0.25);
+        } else if (__data.deskData.roomVo.indexId) {
+            let name = __data.hashMatchModelTypeName[__data.deskData.roomVo.indexId] + '  底分' + GoldFormatUtils.format(__data.deskData.roomVo.bottomScore, 2);
+            this.score3d = this.create3dText({ value: name, color: '#ffffff', font: "bold 34px 黑体" });
+            this.score3d_plane = Laya.Sprite3D.instantiate(this.score3d, __data.deskData.roomVo.scene.getChildByName('container'));
+            this.score3d_plane.transform.localPosition = new Laya.Vector3(0, -1.65, -18.5); // __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').transform.localPosition;
+            this.score3d_plane.meshRenderer.material.albedoColor = new Laya.Vector4(0, 0, 0, 0.25);
+        }
+        // this.nameMaterial = new Laya.UnlitMaterial();
+        // this.nameMaterial.renderMode = Laya.UnlitMaterial.RENDERMODE_TRANSPARENT
+        // this.nameMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_' + __data.domain + '.png')
+        // __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').meshRenderer.material = this.nameMaterial;
+        // __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('title').meshRenderer.material.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/title/name_' + __data.domain + '.png');
+        // this.leftHand3D = {x :-50, y : 3, z : 75, width : 7.4, height : 10.2}
+        // this.rightHand3D = {x :-50, y : 3, z : 75, width : 7.4, height : 10.2}
+
+        for (let i = 0; i < this.wallArr.length; i++) { this.wallArr[i].meshRenderer.material = __data.deskData.roomVo.material }
+    }
+
+    updateWallSurps() {
+        let __out = 112 - 13 * __data.deskData.roomVo.roomPlayer - __data.deskData.roomVo.surplus;
+        for (let i = 0; i < __out; i++)
+            this.wallArr[13 * __data.deskData.roomVo.roomPlayer + i] && (this.wallArr[13 * __data.deskData.roomVo.roomPlayer + i].active = false);
+    }
+
+    resetWall() {
+        for (let i = 0; i < this.wallArr.length; i++) { this.wallArr[i].active = true; }
+    }
+
+    hideWall() {
+        for (let i = 0; i < this.wallArr.length; i++) { this.wallArr[i].active = false; }
+    }
+
+
+    dispatchHandler() {
+        for (let i = 0; i < this.wallArr.length; i++) { this.wallArr[i].active = true; }
+
+        let randomBegin = Math.floor(Math.random() * this.wallArr.length)
+        //如果随机到下面的那个牌  没有从那抓的  所以减去1个  让用户从上面开始抓
+        randomBegin = (randomBegin % 2 != 0) ? randomBegin - 1 : randomBegin;
+
+        this.wallArr = this.wallArr.concat(this.wallArr.splice(0, randomBegin));
+        for (let i = 0; i < 13 * __data.deskData.roomVo.roomPlayer; i++) { this.wallArr[i].active = false; }
+
+    }
+
+
+
+    onEnable() {
+        __sound.playGameMusic('bgm_room');
+        this.cleanPlayerHead();
+        this.init();
+        this.sceneInit();
+        this.registerEvent();
+
+        this.initReadyCommon();
+        DeskDissolveCheck.check();
+        MahjongDeskShareUtils.enter();
+        Laya.timer.callLater(this, this.adapterPlayer);
+        Laya.timer.callLater(this, this.sceneInit);
+    }
+    onDisable() {
+        this.removeLxPanelHandler();
+        this.destroyEvent();
+
+        this.clearGame();
+
+        this.clearList();
+
+        this.clearCountDownPlane();
+        this.stopCompassTimer();
+        MahjongDeskShareUtils.leave();
+        miniApi.hideCustomAd_leftRight('down');
+    }
+
+    adapterPlayer() {
+        let safe_area = miniApi.statusBarRatio() * game.width;
+
+        this.mouseThrough = true;
+        let up = this.game.getChildByName('player_up');
+        let down = this.game.getChildByName('player_down');
+        let left = this.game.getChildByName('player_left');
+        let right = this.game.getChildByName('player_right');
+
+        let auto = this.game.getChildByName('auto_box');
+        this.downlist.y = this.height + this.y - 180 - 15;
+        down.y = this.downlist.y - 300;
+        auto.y = this.height + this.y - this.height;
+
+        left.x = -this.x + 30 + safe_area;
+        left.y = right.y;
+        down.x = -this.x + 30 + safe_area;
+        right.x = this.width + this.x - safe_area - right.width - 30;
+        up.y = -this.y;
+
+        this.upRateTips.pos(up.x + up.width + 0, up.y + (up.height - this.upRateTips.height) / 2);
+        this.downRateTips.pos(down.x + down.width + 15, this.downlist.y - this.downRateTips.height - 15);
+        this.leftRateTips.pos(left.x + left.width + 0, left.y + (left.height - this.leftRateTips.height) / 2);
+        this.rightRateTips.pos(right.x - this.rightRateTips.width - 0, right.y + (right.height - this.rightRateTips.height) / 2);
+
+        let pop_down = this.game.getChildByName('popContainer').getChildByName('pop_down');
+        let pop_right = this.game.getChildByName('popContainer').getChildByName('pop_right');
+        let pop_up = this.game.getChildByName('popContainer').getChildByName('pop_up');
+        let pop_left = this.game.getChildByName('popContainer').getChildByName('pop_left');
+        pop_down.pos(down.x + down.width / 2, down.y + down.height / 2);
+        pop_right.pos(right.x + right.width / 2, right.y + right.height / 2);
+        pop_up.pos(up.x + up.width / 2, up.y + up.height / 2);
+        pop_left.pos(left.x + left.width / 2, left.y + left.height / 2);
+
+        let ready_up = this.ready.getChildByName('player_up');
+        let ready_down = this.ready.getChildByName('player_down');
+        let ready_left = this.ready.getChildByName('player_left');
+        let ready_right = this.ready.getChildByName('player_right');
+        ready_up.pos(up.x, up.y);
+        ready_down.pos(down.x, down.y);
+        ready_left.pos(left.x, left.y);
+        ready_right.pos(right.x, right.y);
+
+        pop_down = this.ready.getChildByName('popContainer').getChildByName('pop_down');
+        pop_right = this.ready.getChildByName('popContainer').getChildByName('pop_right');
+        pop_up = this.ready.getChildByName('popContainer').getChildByName('pop_up');
+        pop_left = this.ready.getChildByName('popContainer').getChildByName('pop_left');
+        pop_down.pos(ready_down.x + ready_down.width / 2, ready_down.y + ready_down.height / 2);
+        pop_right.pos(ready_right.x + ready_right.width / 2, ready_right.y + ready_right.height / 2);
+        pop_up.pos(ready_up.x + ready_up.width / 2, ready_up.y + ready_up.height / 2);
+        pop_left.pos(ready_left.x + ready_left.width / 2, ready_left.y + ready_left.height / 2);
+
+        let ready_empty_up = this.ready.getChildByName('empty_up');
+        let ready_empty_down = this.ready.getChildByName('empty_down');
+        let ready_empty_left = this.ready.getChildByName('empty_left');
+        let ready_empty_right = this.ready.getChildByName('empty_right');
+        ready_empty_up.pos(ready_up.x + (ready_up.width - ready_empty_up.width) / 2, ready_up.y + (ready_up.height - ready_empty_up.height) / 2);
+        ready_empty_down.pos(ready_down.x + (ready_down.width - ready_empty_down.width) / 2, ready_down.y + (ready_down.height - ready_empty_down.height) / 2);
+        ready_empty_left.pos(ready_left.x + (ready_left.width - ready_empty_left.width) / 2, ready_left.y + (ready_left.height - ready_empty_left.height) / 2);
+        ready_empty_right.pos(ready_right.x + (ready_right.width - ready_empty_right.width) / 2, ready_right.y + (ready_right.height - ready_empty_right.height) / 2);
+
+        this.ready.getChildByName('desk').x = this.width + this.x - safe_area - this.ready.getChildByName('desk').width - 30;
+        this.updateIcon();
+    }
+
+    setChangeHandler() {
+        //根据设置里面的内容显示和隐藏 颜色进行区分
+        // this.ready.getChildByName('img_wall').visible = __data.setData.data.desk_wall == 0 ? true : false
+
+
+        this.game.getChildByName('compass_box').visible = false
+
+        this.game.getChildByName('txt_name').visible = false
+
+
+
+        // if(__data.setData.data.desk_wall == 0){ 
+        //     if(this.wallHideIndex > -1){
+        //         for(let i = this.wallHideIndex;i < this.wallArr.length;i++){ this.wallArr[i].active = true; }
+        //         this.wallHideIndex = -1;
+        //     }
+        //     else if(__data.deskData.roomVo.phase === 'ready' || __data.deskData.roomVo.phase === 'result'){ this.resetWall(); }
+        //     else{ this.dispatchHandler();if(__data.deskData.roomVo.surplus > 0){ this.updateWallSurps(); } }
+        // }
+        // else { for(let i = 0;i < this.wallArr.length;i++){ if(this.wallArr[i].active){ this.wallHideIndex = i;break } }this.hideWall(); }
+
+        // if (__data.deskData.roomVo.phase === 'ready') {
+        //     if (__data.mahjong_set.wallIndex == 1) this.hideWall();
+        //     else this.resetWall();
+        // } else this.hideWall();
+        this.hideWall();
+    }
+
+    /**
+     * [reset description]
+     * @return {[type]} [description]
+     */
+    init() {
+        //当前大区信息，留存以备不时之需
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+
+
+        this.game.getChildByName('txt_name').alpha = 0.3
+
+        this.ready.getChildByName('explain').getChildByName('txt_name').text = `${MahjongNameUtils.getPrefix(HallPlay.curRuleId)}${MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId)} - ${__data.deskData.roomVo.roomPlayer}人${__data.deskData.roomVo.allGame}局`;
+        this.ready.getChildByName('explain').getChildByName('txt_play').text = FriendRoomPlays.getPlaysInfo(__data.deskData.roomVo.modelId, __data.deskData.roomVo.roomPlay);
+        this.ready.getChildByName('explain').getChildByName('txt_roomId').text = `房间号：${__data.deskData.roomVo.roomID}`;
+        this.game.getChildByName('txt_name').text = __data.deskData.roomVo.aliasToName(1)
+        this.ready.getChildByName('explain').height = this.ready.getChildByName('explain').getChildByName('txt_play').y + Math.max(this.ready.getChildByName('explain').getChildByName('txt_play').textField.textHeight, this.ready.getChildByName('explain').getChildByName('txt_play').textField.height) + 50;
+
+        this.game.getChildByName('nb_box').visible = false
+        // this.game.getChildByName('nb_box').getChildByName('txt_nb').text = this.areaInfo.haveNb.txt
+
+        game.utils.remove(this.ready, this.game)
+
+        game.utils.remove(this.operation)
+
+        //根据设置里面的内容显示和隐藏 颜色进行区分
+        // this.game.getChildByName('nb_box').getChildByName('img_nb_block').texture = 'local/mahjong_common/1/' + (__data.setData.data.desk_size_color_3D % 2).toString() + '_bao.png'
+
+        // game.cb.event('BatteryStatusChange', [Interface.phoneBattery])
+
+        this.game.getChildByName('player_up').visible = false
+        this.game.getChildByName('player_down').visible = false
+        this.game.getChildByName('player_left').visible = false
+        this.game.getChildByName('player_right').visible = false
+
+        this.ready.getChildByName('player_up').getComponent(Mahjong_Limit_Time_Script) && this.ready.getChildByName('player_up').getComponent(Mahjong_Limit_Time_Script).destroy()
+        this.ready.getChildByName('player_down').getComponent(Mahjong_Limit_Time_Script) && this.ready.getChildByName('player_down').getComponent(Mahjong_Limit_Time_Script).destroy()
+        this.ready.getChildByName('player_left').getComponent(Mahjong_Limit_Time_Script) && this.ready.getChildByName('player_left').getComponent(Mahjong_Limit_Time_Script).destroy()
+        this.ready.getChildByName('player_right').getComponent(Mahjong_Limit_Time_Script) && this.ready.getChildByName('player_right').getComponent(Mahjong_Limit_Time_Script).destroy()
+
+
+        __data.deskData.roomVo.mixed = -1;
+        __data.deskData.roomVo.mixedArr = [];
+
+
+        this.wallNameArr = ['upWall', 'rightWall', 'downWall', 'leftWall']
+        this.wallArr = [];
+
+        for (let name = 0; name < this.wallNameArr.length; name++) {
+            for (let i = 1; i <= 28; i++) {
+                this.wallArr.push(__data.deskData.roomVo.scene.getChildByName('wall').getChildByName(this.wallNameArr[name]).getChildByName(i.toString()))
+            }
+        }
+
+        this.lightIntensity();
+
+        this.hideWall();
+    }
+
+
+    /**
+     * 灯光强度
+     */
+    lightIntensity() {
+        try {
+            let light = __data.deskData.roomVo.scene.getChildByName('Directional Light');
+            // 绿色手牌
+            // light.intensity = __data.mahjong_set.cardIndex.toString() === '0' ? 0.8 : 1;
+        } catch (e) {
+            trace(e);
+        }
+    }
+
+    //注册事件
+    registerEvent() {
+        game.cb.on(__eh + "show_phase", this, this.updatePhaseHandler);
+
+        //用户加入房间
+        game.cb.on(__eh + "player_join_room", this, this.updateReadyPlayer)
+        //房间踢人限制检测
+        game.cb.on(__eh + "update_limit_kick_time", this, this.updateLimitKick)
+        //记录检测
+        game.cb.on(__eh + 'recheck_distance', this, this.checkPlayerDistance)
+        //更新用户信息
+        game.cb.on(__eh + 'update_user_info', this, this.updateReadyPlayer)
+        //更新用户准备
+        game.cb.on(__eh + 'update_player_ready', this, this.updateReadyPlayer)
+        //更新用户积分
+        game.cb.on(__eh + 'update_player_score', this, this.updateScorePlayer)
+        //解散退出
+        game.cb.on(__eh + 'common_dissolve', this, this.dissolveRoomHandler)
+        game.cb.on(__eh + 'common_quit', this, this.quitRoomHandler)
+        //送礼物
+        game.cb.on(__eh + 'add_a_gift', this, this.addGiftHandler)
+        //添加一张打出去的牌
+        game.cb.on(__eh + 'add_out_card', this, this.addOutCardHandler)
+        //发牌
+        game.cb.on(__eh + 'show_give_card', this, this.giveHandler)
+        //添加门前牌
+        game.cb.on(__eh + 'update_door_card', this, this.addDoorHandler)
+        //杠门前被抢
+        game.cb.on(__eh + 'change_door_Qg', this, this.addDoorBeRobbedHandler)
+        //打牌
+        game.cb.on(__eh + 'player_out_card', this, this.addOutHandler)
+        //操作处理
+        game.cb.on(__eh + 'show_operation', this, this.operationHandler)
+        //显示胡牌提示
+        game.cb.on(__eh + 'show_hu_tips', this, this.huTipsHandler)
+        game.cb.on(__eh + 'show_hu_preview', this, this.showHuPreview)
+        //显示宝
+        game.cb.on(__eh + 'show_game_bao', this, this.showBaoHandler)
+        //显示亮喜
+        game.cb.on(__eh + 'show_lx', this, this.showLxPanelHandler)
+        //移除亮喜
+        game.cb.on(__eh + 'remove_lx', this, this.removeLxPanelHandler)
+        //显示听
+        game.cb.on(__eh + 'update_player_tingTips', this, this.showTingHandler)
+        //更新手牌数量
+        game.cb.on(__eh + 'update_hand_number', this, this.showHandNumberHandler)
+        //更新桌面剩余拍数 圈数
+        game.cb.on(__eh + 'update_desk_info', this, this.initGameCommon)
+        //更换庄的位置
+        game.cb.on(__eh + 'update_banker', this, this.updateBankerHandler)
+        //换宝
+        game.cb.on(__eh + 'change_bao_effect', this, this.changeBaoEffectHandler)
+        //游戏结束
+        game.cb.on(__eh + 'game_over', this, this.overGameHandler)
+        //申请获取用户数据
+        game.cb.on(__eh + 'request_map_data', this, this.requestHandler)
+        //更改设置
+        game.cb.on(__eh + 'save_set_data', this, this.setChangeHandler)
+        //录像操作的显示
+        game.cb.on(__eh + 'video_operation', this, this.videoOperationHandler)
+
+        game.cb.on(__eh + 'remove_video_operation', this, this.removeVideoOperationHandler)
+
+        game.cb.on(__eh + "update_all_handlist_card", this, this.syncList)
+
+        game.cb.on("play_voice_start", this, this.voiceAni)
+        game.cb.on("play_voice_complete", this, this.voiceEnd)
+
+        game.cb.on(__eh + 'ready_to_clear', this, this.resultReadyClear)
+
+        game.cb.on(__eh + "update_player_result", this, this.showResult);
+
+        game.cb.on(__eh + "change_compass", this, this.changeCompass);
+
+        game.cb.on(__eh + "sign_out", this, this.signOutHandler);
+        game.cb.on('update_ting_auto_status', this, this.updateTingAutoStatus);
+
+        game.cb.on('update_head_frame', this, this.updateReadyPlayer);
+        this.ready.getChildByName('btn_invite').on('click', this, this.inviteHandler)
+        game.cb.on('resize', this, this.adapterPlayer);
+        game.cb.on('start_game', this, this.sceneInit);
+    }
+
+    //注销事件
+    destroyEvent() {
+        game.cb.off(__eh + "show_phase", this, this.updatePhaseHandler);
+        game.cb.off(__eh + "player_join_room", this, this.updateReadyPlayer)
+        game.cb.off(__eh + "update_limit_kick_time", this, this.updateLimitKick)
+        game.cb.off(__eh + 'recheck_distance', this, this.checkPlayerDistance)
+        game.cb.off(__eh + 'update_user_info', this, this.updateReadyPlayer)
+        game.cb.off(__eh + 'update_player_ready', this, this.updateReadyPlayer)
+        game.cb.off(__eh + 'update_player_score', this, this.updateScorePlayer)
+        game.cb.off(__eh + 'common_dissolve', this, this.dissolveRoomHandler)
+        game.cb.off(__eh + 'common_quit', this, this.quitRoomHandler)
+        game.cb.off(__eh + 'add_a_gift', this, this.addGiftHandler)
+        game.cb.off(__eh + 'add_out_card', this, this.addOutCardHandler)
+        game.cb.off(__eh + 'show_give_card', this, this.giveHandler)
+        game.cb.off(__eh + 'show_operation', this, this.operationHandler)
+        game.cb.off(__eh + 'show_hu_tips', this, this.huTipsHandler)
+        game.cb.off(__eh + 'show_hu_preview', this, this.showHuPreview)
+        game.cb.off(__eh + 'show_game_bao', this, this.showBaoHandler)
+        game.cb.off(__eh + 'show_lx', this, this.showLxPanelHandler)
+        game.cb.off(__eh + 'remove_lx', this, this.removeLxPanelHandler)
+        game.cb.off(__eh + 'update_door_card', this, this.addDoorHandler)
+        game.cb.off(__eh + 'change_door_Qg', this, this.addDoorBeRobbedHandler)
+        game.cb.off(__eh + 'player_out_card', this, this.addOutHandler)
+        game.cb.off(__eh + 'update_player_tingTips', this, this.showTingHandler)
+        game.cb.off(__eh + 'update_hand_number', this, this.showHandNumberHandler)
+        game.cb.off(__eh + 'update_desk_info', this, this.initGameCommon)
+        game.cb.off(__eh + 'update_banker', this, this.updateBankerHandler)
+        game.cb.off(__eh + 'change_bao_effect', this, this.changeBaoEffectHandler)
+        game.cb.off(__eh + 'game_over', this, this.overGameHandler)
+        game.cb.off(__eh + 'request_map_data', this, this.requestHandler)
+        game.cb.off(__eh + 'save_set_data', this, this.setChangeHandler)
+        game.cb.off(__eh + 'video_operation', this, this.videoOperationHandler)
+        game.cb.off(__eh + 'remove_video_operation', this, this.removeVideoOperationHandler)
+        game.cb.off(__eh + "update_all_handlist_card", this, this.syncList)
+        game.cb.off("play_voice_start", this, this.voiceAni)
+        game.cb.off("play_voice_complete", this, this.voiceEnd)
+        game.cb.off(__eh + "ready_to_clear", this, this.resultReadyClear)
+        game.cb.off(__eh + "update_player_result", this, this.showResult);
+        game.cb.off(__eh + "change_compass", this, this.changeCompass);
+        game.cb.off(__eh + "sign_out", this, this.signOutHandler);
+        game.cb.off('update_head_frame', this, this.updateReadyPlayer);
+        game.cb.off('update_ting_auto_status', this, this.updateTingAutoStatus);
+        this.ready.getChildByName('btn_invite').off('click', this, this.inviteHandler)
+        game.cb.off('resize', this, this.adapterPlayer);
+        game.cb.off('start_game', this, this.sceneInit);
+    }
+
+    cleanPlayerHead() {
+        SkinUtils.load(this.ready.getChildByName('player_up').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.game.getChildByName('player_up').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.ready.getChildByName('player_down').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.game.getChildByName('player_down').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.ready.getChildByName('player_left').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.game.getChildByName('player_left').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.ready.getChildByName('player_right').getChildByName('head').getChildByName('head'), '');
+        SkinUtils.load(this.game.getChildByName('player_right').getChildByName('head').getChildByName('head'), '');
+    }
+
+
+    /**
+     * 解散房间
+     * [dissolveRoomHandler description]
+     * @return {[type]} [description]
+     */
+    dissolveRoomHandler() {
+        if (__data.deskData.roomVo.phase == 'ready') {
+            //准备阶段  房主有权限解散  其他人无法解散该房间
+            if (__data.deskData.roomVo.roomOwner == __data.uid) {
+                game.scene.add(MultipleBtnPrompt, [__tipsName[7014], function () { game.server.send(3005) }])
+            } else { __tips(__tipsName[7033]) }
+        } else if (__data.deskData.roomVo.phase == 'game' || __data.deskData.roomVo.phase == 'result') {
+            //游戏阶段 或者 结算阶段 都可解散该房间
+            game.server.send(3005)
+        }
+    }
+
+    /**
+     * 退出房间
+     * [quitRoomHandler description]
+     * @return {[type]} [description]
+     */
+    quitRoomHandler() {
+        if (__data.deskData.roomVo.phase == 'ready') {
+            //准备阶段  且是体验房间的话  允许房主退出房间   否则  房主只能解散
+            if (__data.deskData.roomVo.roomOwner == __data.uid && __data.deskData.roomVo.createModel == 3) { game.server.send(3004) } else if (__data.deskData.roomVo.roomOwner != __data.uid) { game.server.send(3004) } else { __tips(__tipsName[7033]) }
+        } else if (__data.deskData.roomVo.phase == 'game' || __data.deskData.roomVo.phase == 'result') {
+            //游戏阶段 或者 结算阶段 都不可退出房间
+            __tips(__tipsName[7033])
+        }
+    }
+
+
+    /**
+     * 游戏阶段界面
+     * [updatePhaseHandler description]
+     * @return {[type]} [description]
+     */
+    updatePhaseHandler() {
+        if (__data.deskData.roomVo.phase == "ready" && __data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            this.readyGame();
+            this.setChangeHandler();
+        } //房卡场有准备阶段。 金币场是没有的 
+        else if (__data.deskData.roomVo.phase == "game") {
+            game.cb.event('AITalking_init');
+            this.playGame()
+        } else if (__data.deskData.roomVo.phase == "result") {
+            this.clearGame();
+            this.clearList();
+            if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) this.sceneInit();
+            this.setChangeHandler();
+        }
+    }
+
+
+    //房号 延时等数据同步
+    initReadyCommon() {
+        game.cb.event('update_roomId', ['房间号：' + __data.deskData.roomVo.roomID + '\n' + __data.deskData.roomVo.roundToString()])
+        this.updateIcon();
+        // DeskCommonUI_Update_Play_Script.play = __data.deskData.roomVo.playToString();
+    }
+
+    //房号 延时等数据同步
+    initGameCommon() {
+        game.cb.event('update_roomId', ['房间号：' + __data.deskData.roomVo.roomID + '\n' + __data.deskData.roomVo.roundToString(), true, '×' + __data.deskData.roomVo.surplus])
+        // DeskCommonUI_Update_Play_Script.play = __data.deskData.roomVo.playToString();
+
+        this.updateWallSurps()
+
+        this.surpView = this.createSurpView();
+
+        this.updateIcon();
+    }
+
+    updateIcon() {
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) {
+            if (__data.deskData.roomVo.phase == "ready") {
+                let down = this.ready.getChildByName('player_down');
+                let desk = this.ready;
+                desk.addChild(this.prayIcon).pos(down.x + down.width + 30, this.downlist.y - this.prayIcon.height - 15);
+                desk.addChild(this.fortuneIcon).pos(this.prayIcon.x + this.prayIcon.width / 2 - this.fortuneIcon.width / 2, this.prayIcon.y - this.fortuneIcon.height + 30);
+                this.downRateTips && this.downRateTips.pos(this.prayIcon.x + this.prayIcon.width + 35, this.downlist.y - this.downRateTips.height - 15);
+            } else {
+                let down = this.game.getChildByName('player_down');
+                let desk = this.game;
+                desk.addChild(this.prayIcon).pos(down.x + down.width + 30, this.downlist.y - this.prayIcon.height - 15);
+                desk.addChild(this.fortuneIcon).pos(this.prayIcon.x + this.prayIcon.width / 2 - this.fortuneIcon.width / 2, this.prayIcon.y - this.fortuneIcon.height + 30);
+                this.downRateTips && this.downRateTips.pos(this.prayIcon.x + this.prayIcon.width + 35, this.downlist.y - this.downRateTips.height - 15);
+            }
+        } else {
+            game.utils.remove(this.prayIcon, this.fortuneIcon);
+        }
+    }
+
+    /**
+     * 准备阶段
+     * [readyGame description]
+     * @return {[type]} [description]
+     */
+    readyGame() {
+        this.addChild(this.ready);
+        this.initReadyCommon();
+        this.updateReadyPlayer();
+        this.defaultHandNumber();
+    }
+
+    defaultHandNumber() {
+        this.uplist.createList = 13;
+        this.leftlist.createList = 13;
+        this.rightlist.createList = 13;
+    }
+
+    //还原 准备界面 用户状态等
+    updateReadyPlayer() {
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        //所有用户的准备状态
+        let status = (__up_vo && __down_vo && __left_vo && __right_vo && __data.othersVO[__up_vo.id] && __data.othersVO[__down_vo.id] && __data.othersVO[__left_vo.id] && __data.othersVO[__right_vo.id]) || (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND);
+        if (status) {
+            //准备按钮
+            this.ready.getChildByName('player_up').getChildByName('ready').visible = (__up_vo && __up_vo.readyState > 0) ? true : false
+            this.ready.getChildByName('player_down').getChildByName('ready').visible = (__down_vo && __down_vo.readyState > 0) ? true : false
+            this.ready.getChildByName('player_left').getChildByName('ready').visible = (__left_vo && __left_vo.readyState > 0) ? true : false
+            this.ready.getChildByName('player_right').getChildByName('ready').visible = (__right_vo && __right_vo.readyState > 0) ? true : false
+
+            //昵称
+            this.ready.getChildByName('player_up').getChildByName('txtName').text = (__up_vo && __data.othersVO[__up_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.ready.getChildByName('player_up').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__up_vo.id].area) + __up_vo.name) : ""
+            this.game.getChildByName('player_up').getChildByName('txtName').text = (__up_vo && __data.othersVO[__up_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.game.getChildByName('player_up').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__up_vo.id].area) + __up_vo.name) : ""
+
+            this.ready.getChildByName('player_down').getChildByName('txtName').text = (__down_vo && __data.othersVO[__down_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.ready.getChildByName('player_down').getChildByName('txtName'), __down_vo.name) : ""
+            this.game.getChildByName('player_down').getChildByName('txtName').text = (__down_vo && __data.othersVO[__down_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.game.getChildByName('player_down').getChildByName('txtName'), __down_vo.name) : ""
+
+            this.ready.getChildByName('player_left').getChildByName('txtName').text = (__left_vo && __data.othersVO[__left_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.ready.getChildByName('player_left').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__left_vo.id].area) + __left_vo.name) : ""
+            this.game.getChildByName('player_left').getChildByName('txtName').text = (__left_vo && __data.othersVO[__left_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.game.getChildByName('player_left').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__left_vo.id].area) + __left_vo.name) : ""
+
+            this.ready.getChildByName('player_right').getChildByName('txtName').text = (__right_vo && __data.othersVO[__right_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.ready.getChildByName('player_right').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__right_vo.id].area) + __right_vo.name) : ""
+            this.game.getChildByName('player_right').getChildByName('txtName').text = (__right_vo && __data.othersVO[__right_vo.id]) ? LabelHiddenUtils.getAdapterContent(this.game.getChildByName('player_right').getChildByName('txtName'), RankUtils.getAreaEasyName(__data.othersVO[__right_vo.id].area) + __right_vo.name) : ""
+
+
+            this.updateTeamPlayer();
+
+            //房主标志
+            if (__up_vo) {
+                this.ready.getChildByName('player_up').getChildByName('img_owner').visible = (__up_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+                this.game.getChildByName('player_up').getChildByName('img_owner').visible = (__up_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+            }
+            if (__down_vo) {
+                this.ready.getChildByName('player_down').getChildByName('img_owner').visible = (__down_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+                this.game.getChildByName('player_down').getChildByName('img_owner').visible = (__down_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+            }
+            if (__left_vo) {
+                this.ready.getChildByName('player_left').getChildByName('img_owner').visible = (__left_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+                this.game.getChildByName('player_left').getChildByName('img_owner').visible = (__left_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+            }
+            if (__right_vo) {
+                this.ready.getChildByName('player_right').getChildByName('img_owner').visible = (__right_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+                this.game.getChildByName('player_right').getChildByName('img_owner').visible = (__right_vo.id == __data.deskData.roomVo.roomOwner) ? true : false
+            }
+
+            //性感荷官  在线踢人
+            if ((__data.deskData.roomVo.roomModel != 6 && __data.deskData.roomVo.roomModel != 7) && __data.deskData.roomVo.phase == 'ready' && __data.uid == __data.deskData.roomVo.roomOwner) {
+                this.ready.getChildByName('player_up').getChildByName('btn_kick').visible = true
+                this.ready.getChildByName('player_down').getChildByName('btn_kick').visible = false
+                this.ready.getChildByName('player_left').getChildByName('btn_kick').visible = true
+                this.ready.getChildByName('player_right').getChildByName('btn_kick').visible = true
+
+                //方便踢人使用
+                this.ready.getChildByName('player_up').getChildByName('btn_kick').__targetID = __up_vo ? __up_vo.id : ''
+                this.ready.getChildByName('player_left').getChildByName('btn_kick').__targetID = __left_vo ? __left_vo.id : ''
+                this.ready.getChildByName('player_right').getChildByName('btn_kick').__targetID = __right_vo ? __right_vo.id : ''
+            } else {
+                this.ready.getChildByName('player_up').getChildByName('btn_kick').visible = false
+                this.ready.getChildByName('player_down').getChildByName('btn_kick').visible = false
+                this.ready.getChildByName('player_left').getChildByName('btn_kick').visible = false
+                this.ready.getChildByName('player_right').getChildByName('btn_kick').visible = false
+
+                // 好友圈特殊处理
+                if (__data.deskData.roomVo.roomModel == 6 || __data.deskData.roomVo.roomModel == 7) {
+                    // 普通房
+                    if (__data.deskData.roomVo.roomType == 2) {
+                        // 房主 且不是普通用户  只能解散
+                        if (__data.deskData.roomVo.roomOwner == __data.uid) {
+                            let __info = __data.friendData.getInfo(__data.deskData.roomVo.friendId);
+                            // 房主 是好友圈普通成员 只能解散
+                            if (__info && __info.role == 2) {
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_down').getChildByName('btn_kick').visible = false
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').visible = true
+                                //方便踢人使用
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').__targetID = __up_vo ? __up_vo.id : ''
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').__targetID = __left_vo ? __left_vo.id : ''
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').__targetID = __right_vo ? __right_vo.id : ''
+                            }
+                            // 房主是特殊成员  解散退出都有
+                            else if (__info && __info.role != 2) {
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_down').getChildByName('btn_kick').visible = false
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').visible = true
+                                //方便踢人使用
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').__targetID = __up_vo ? __up_vo.id : ''
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').__targetID = __left_vo ? __left_vo.id : ''
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').__targetID = __right_vo ? __right_vo.id : ''
+                            }
+                            // 自己的列表里没有这个好友圈
+                            else if (!__info) {
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_down').getChildByName('btn_kick').visible = false
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').visible = true
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').visible = true
+                                //方便踢人使用
+                                this.ready.getChildByName('player_up').getChildByName('btn_kick').__targetID = __up_vo ? __up_vo.id : ''
+                                this.ready.getChildByName('player_left').getChildByName('btn_kick').__targetID = __left_vo ? __left_vo.id : ''
+                                this.ready.getChildByName('player_right').getChildByName('btn_kick').__targetID = __right_vo ? __right_vo.id : ''
+                            }
+                        }
+                    }
+                }
+            }
+
+            //在线状态
+            if (__up_vo && __up_vo.onlineState == 1) {
+                this.ready.getChildByName('player_up').getChildByName('img_offline').visible = false;
+                this.game.getChildByName('player_up').getChildByName('img_offline').visible = false;
+            } else if (__up_vo && __up_vo.onlineState == 0) {
+                this.ready.getChildByName('player_up').getChildByName('img_offline').visible = true;
+                this.game.getChildByName('player_up').getChildByName('img_offline').visible = true;
+            }
+            if (__down_vo && __down_vo.onlineState == 1) {
+                this.ready.getChildByName('player_down').getChildByName('img_offline').visible = false;
+                this.game.getChildByName('player_down').getChildByName('img_offline').visible = false;
+            } else if (__down_vo && __down_vo.onlineState == 0) {
+                this.ready.getChildByName('player_down').getChildByName('img_offline').visible = true;
+                this.game.getChildByName('player_down').getChildByName('img_offline').visible = true;
+            }
+            if (__left_vo && __left_vo.onlineState == 1) {
+                this.ready.getChildByName('player_left').getChildByName('img_offline').visible = false;
+                this.game.getChildByName('player_left').getChildByName('img_offline').visible = false;
+            } else if (__left_vo && __left_vo.onlineState == 0) {
+                this.ready.getChildByName('player_left').getChildByName('img_offline').visible = true;
+                this.game.getChildByName('player_left').getChildByName('img_offline').visible = true;
+            }
+            if (__right_vo && __right_vo.onlineState == 1) {
+                this.ready.getChildByName('player_right').getChildByName('img_offline').visible = false;
+                this.game.getChildByName('player_right').getChildByName('img_offline').visible = false;
+            } else if (__right_vo && __right_vo.onlineState == 0) {
+                this.ready.getChildByName('player_right').getChildByName('img_offline').visible = true;
+                this.game.getChildByName('player_right').getChildByName('img_offline').visible = true;
+            }
+            //托管状态
+            if (__up_vo && __up_vo.autoState == 0) {
+                this.ready.getChildByName('player_up').getChildByName('img_auto').visible = false;
+                this.game.getChildByName('player_up').getChildByName('img_auto').visible = false;
+            } else if (__up_vo && __up_vo.autoState == 1) {
+                this.ready.getChildByName('player_up').getChildByName('img_auto').visible = true;
+                this.game.getChildByName('player_up').getChildByName('img_auto').visible = true;
+            }
+            if (__down_vo && __down_vo.autoState == 0) {
+                this.ready.getChildByName('player_down').getChildByName('img_auto').visible = false;
+                this.game.getChildByName('player_down').getChildByName('img_auto').visible = false;
+                this.game.getChildByName('auto_box').visible = false;
+            } else if (__down_vo && __down_vo.autoState == 1) {
+                this.ready.getChildByName('player_down').getChildByName('img_auto').visible = true;
+                this.game.getChildByName('player_down').getChildByName('img_auto').visible = true;
+                this.game.getChildByName('auto_box').visible = true;
+                MahjongCollectUtils.resetMap();
+                game.utils.remove(this.operation);
+                game.utils.remove(window.frameContiner);
+                this.removeLxPanelHandler();
+                this.downlist.removeLxScript();
+                this.downlist.removelxGuideHandler();
+            }
+            if (__left_vo && __left_vo.autoState == 0) {
+                this.ready.getChildByName('player_left').getChildByName('img_auto').visible = false;
+                this.game.getChildByName('player_left').getChildByName('img_auto').visible = false;
+            } else if (__left_vo && __left_vo.autoState == 1) {
+                this.ready.getChildByName('player_left').getChildByName('img_auto').visible = true;
+                this.game.getChildByName('player_left').getChildByName('img_auto').visible = true;
+            }
+            if (__right_vo && __right_vo.autoState == 0) {
+                this.ready.getChildByName('player_right').getChildByName('img_auto').visible = false;
+                this.game.getChildByName('player_right').getChildByName('img_auto').visible = false;
+            } else if (__right_vo && __right_vo.autoState == 1) {
+                this.ready.getChildByName('player_right').getChildByName('img_auto').visible = true;
+                this.game.getChildByName('player_right').getChildByName('img_auto').visible = true;
+            }
+
+            if (__data.deskData.roomVo.phase == 'ready') {
+                //当前用户是否准备了
+                this.game.getChildByName('btn_ready').transform = __compUtils.toMatrix(this.game.getChildByName('btn_ready'), this.gameCenterPoint);
+                this.ready.getChildByName('btn_ready').transform = __compUtils.toMatrix(this.ready.getChildByName('btn_ready'), this.readyCenterPoint);
+                this.ready.getChildByName('btn_ready').visible = ReadyManager.getStatus(__down_vo);
+                this.game.getChildByName('btn_ready').visible = ReadyManager.getStatus(__down_vo);
+            } else if (__data.deskData.roomVo.phase == 'result') {
+                this.game.getChildByName('player_up').getChildByName('ready').visible = (__up_vo && __up_vo.readyState > 0) ? true : false
+                this.game.getChildByName('player_down').getChildByName('ready').visible = (__down_vo && __down_vo.readyState > 0) ? true : false
+                this.game.getChildByName('player_left').getChildByName('ready').visible = (__left_vo && __left_vo.readyState > 0) ? true : false
+                this.game.getChildByName('player_right').getChildByName('ready').visible = (__right_vo && __right_vo.readyState > 0) ? true : false
+
+                this.game.getChildByName('btn_ready').transform = __compUtils.toMatrix(this.game.getChildByName('btn_ready'), this.gameCenterPoint);
+                this.ready.getChildByName('btn_ready').transform = __compUtils.toMatrix(this.ready.getChildByName('btn_ready'), this.readyCenterPoint);
+                this.game.getChildByName('btn_ready').visible = ReadyManager.getStatus(__down_vo);
+                this.ready.getChildByName('btn_ready').visible = ReadyManager.getStatus(__down_vo);
+            } else if (__data.deskData.roomVo.phase == 'game') {
+                this.game.getChildByName('player_up').getChildByName('ready').visible = false
+                this.game.getChildByName('player_down').getChildByName('ready').visible = false
+                this.game.getChildByName('player_left').getChildByName('ready').visible = false
+                this.game.getChildByName('player_right').getChildByName('ready').visible = false
+            }
+
+            if (__up_vo && __up_vo.url) {
+                SkinUtils.load(this.ready.getChildByName('player_up').getChildByName('head').getChildByName('head'), __up_vo.url)
+                SkinUtils.load(this.game.getChildByName('player_up').getChildByName('head').getChildByName('head'), __up_vo.url)
+                SkinUtils.load(this.ready.getChildByName('player_up').getChildByName('head').getChildByName('frame'), __up_vo.frameUrl)
+                SkinUtils.load(this.game.getChildByName('player_up').getChildByName('head').getChildByName('frame'), __up_vo.frameUrl)
+            }
+            if (__down_vo && __down_vo.url) {
+                SkinUtils.load(this.ready.getChildByName('player_down').getChildByName('head').getChildByName('head'), __down_vo.url)
+                SkinUtils.load(this.game.getChildByName('player_down').getChildByName('head').getChildByName('head'), __down_vo.url)
+                SkinUtils.load(this.ready.getChildByName('player_down').getChildByName('head').getChildByName('frame'), __down_vo.frameUrl)
+                SkinUtils.load(this.game.getChildByName('player_down').getChildByName('head').getChildByName('frame'), __down_vo.frameUrl)
+            }
+            if (__left_vo && __left_vo.url) {
+                SkinUtils.load(this.ready.getChildByName('player_left').getChildByName('head').getChildByName('head'), __left_vo.url)
+                SkinUtils.load(this.game.getChildByName('player_left').getChildByName('head').getChildByName('head'), __left_vo.url)
+                SkinUtils.load(this.ready.getChildByName('player_left').getChildByName('head').getChildByName('frame'), __left_vo.frameUrl)
+                SkinUtils.load(this.game.getChildByName('player_left').getChildByName('head').getChildByName('frame'), __left_vo.frameUrl)
+            }
+            if (__right_vo && __right_vo.url) {
+                SkinUtils.load(this.ready.getChildByName('player_right').getChildByName('head').getChildByName('head'), __right_vo.url)
+                SkinUtils.load(this.game.getChildByName('player_right').getChildByName('head').getChildByName('head'), __right_vo.url)
+                SkinUtils.load(this.ready.getChildByName('player_right').getChildByName('head').getChildByName('frame'), __right_vo.frameUrl)
+                SkinUtils.load(this.game.getChildByName('player_right').getChildByName('head').getChildByName('frame'), __right_vo.frameUrl)
+            }
+
+            this.updateGoldPlayer();
+            this.updateScorePlayer();
+
+            if (__up_vo && __data.othersVO[__up_vo.id]) {
+                this.upRateTips.init();
+                this.ready.getChildByName('player_up').visible = true;
+                this.game.getChildByName('player_up').visible = true;
+                this.ready.getChildByName('empty_up').visible = false;
+            } else {
+                this.ready.getChildByName('player_up').visible = false;
+                this.game.getChildByName('player_up').visible = false;
+                this.ready.getChildByName('empty_up').visible = true;
+            }
+            if (__down_vo && __data.othersVO[__down_vo.id]) {
+                this.downRateTips.init();
+                this.ready.getChildByName('player_down').visible = true
+                this.game.getChildByName('player_down').visible = true
+                this.ready.getChildByName('empty_down').visible = false;
+            } else {
+                this.ready.getChildByName('player_down').visible = false;
+                this.game.getChildByName('player_down').visible = false;
+                this.ready.getChildByName('empty_down').visible = true;
+            }
+            if (__left_vo && __data.othersVO[__left_vo.id]) {
+                this.leftRateTips.init();
+                this.ready.getChildByName('player_left').visible = true
+                this.game.getChildByName('player_left').visible = true
+                this.ready.getChildByName('empty_left').visible = false;
+            } else {
+                this.ready.getChildByName('player_left').visible = false;
+                this.game.getChildByName('player_left').visible = false;
+                this.ready.getChildByName('empty_left').visible = true;
+            }
+            if (__right_vo && __data.othersVO[__right_vo.id]) {
+                this.rightRateTips.init();
+                this.ready.getChildByName('player_right').visible = true
+                this.game.getChildByName('player_right').visible = true
+                this.ready.getChildByName('empty_right').visible = false;
+            } else {
+                this.ready.getChildByName('player_right').visible = false;
+                this.game.getChildByName('player_right').visible = false;
+                this.ready.getChildByName('empty_right').visible = true;
+            }
+        } else {
+            this.ready.getChildByName('player_up').visible = false
+            this.ready.getChildByName('player_down').visible = false
+            this.ready.getChildByName('player_left').visible = false
+            this.ready.getChildByName('player_right').visible = false
+
+            this.game.getChildByName('player_up').visible = false
+            this.game.getChildByName('player_down').visible = false
+            this.game.getChildByName('player_left').visible = false
+            this.game.getChildByName('player_right').visible = false
+        }
+    }
+
+    updateTingAutoStatus() {
+        let myVo = __data.deskData.roomVo.getPlayerBySeat(0);
+        if (myVo && myVo.tingAutoStatus) {
+            game.utils.remove(this.operation);
+            game.utils.remove(window.frameContiner);
+            game.utils.remove(this.huPreview);
+        }
+    }
+
+    //更新用户金币
+    updateGoldPlayer() {
+        if (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND) return;
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        this.game.getChildByName('player_up').getChildByName('txtScore').text = __up_vo && parseInt(__up_vo.gold) != 0 ? GoldFormatUtils.format(__up_vo.gold, 2) : '0'
+        this.game.getChildByName('player_down').getChildByName('txtScore').text = __down_vo && parseInt(__down_vo.gold) != 0 ? GoldFormatUtils.format(__down_vo.gold, 2) : '0'
+        this.game.getChildByName('player_left').getChildByName('txtScore').text = __left_vo && parseInt(__left_vo.gold) != 0 ? GoldFormatUtils.format(__left_vo.gold, 2) : '0'
+        this.game.getChildByName('player_right').getChildByName('txtScore').text = __right_vo && parseInt(__right_vo.gold) != 0 ? GoldFormatUtils.format(__right_vo.gold, 2) : '0'
+    }
+
+    //更新用户积分
+    updateScorePlayer() {
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) return;
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        this.ready.getChildByName('player_up').getChildByName('txtScore').text = __up_vo && parseInt(__up_vo.score) != 0 ? __up_vo.score : '0'
+        this.ready.getChildByName('player_down').getChildByName('txtScore').text = __down_vo && parseInt(__down_vo.score) != 0 ? __down_vo.score : '0'
+        this.ready.getChildByName('player_left').getChildByName('txtScore').text = __left_vo && parseInt(__left_vo.score) != 0 ? __left_vo.score : '0'
+        this.ready.getChildByName('player_right').getChildByName('txtScore').text = __right_vo && parseInt(__right_vo.score) != 0 ? __right_vo.score : '0'
+        this.game.getChildByName('player_up').getChildByName('txtScore').text = __up_vo && parseInt(__up_vo.score) != 0 ? __up_vo.score : '0'
+        this.game.getChildByName('player_down').getChildByName('txtScore').text = __down_vo && parseInt(__down_vo.score) != 0 ? __down_vo.score : '0'
+        this.game.getChildByName('player_left').getChildByName('txtScore').text = __left_vo && parseInt(__left_vo.score) != 0 ? __left_vo.score : '0'
+        this.game.getChildByName('player_right').getChildByName('txtScore').text = __right_vo && parseInt(__right_vo.score) != 0 ? __right_vo.score : '0'
+    }
+
+    updateTeamPlayer() {
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        //所有用户的准备状态
+        let status = (__up_vo && __down_vo && __left_vo && __right_vo) || (__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND);
+        if (status) {
+            let upRank = __up_vo ? RankUtils.getPlayerAreaRank(__up_vo.id) : null;
+            let downRank = __down_vo ? RankUtils.getPlayerAreaRank(__down_vo.id) : null;
+            let leftRank = __left_vo ? RankUtils.getPlayerAreaRank(__left_vo.id) : null;
+            let rightRank = __right_vo ? RankUtils.getPlayerAreaRank(__right_vo.id) : null;
+
+            let up_score = upRank && upRank.name ? upRank.name : '';
+            let down_score = downRank && downRank.name ? downRank.name : '';
+            let left_score = leftRank && leftRank.name ? leftRank.name : '';
+            let right_score = rightRank && rightRank.name ? rightRank.name : '';
+            let up_level = upRank && upRank.toNextLevelNeedCup != 0 && upRank.level ? upRank.level : '';
+            let down_level = downRank && downRank.toNextLevelNeedCup != 0 && downRank.level ? downRank.level : '';
+            let left_level = leftRank && leftRank.toNextLevelNeedCup != 0 && leftRank.level ? leftRank.level : '';
+            let right_level = rightRank && rightRank.toNextLevelNeedCup != 0 && rightRank.level ? rightRank.level : '';
+            // 队伍
+            // this.ready.getChildByName('player_up').getChildByName('txtArea').text = __up_vo ? __data.getTeamName(__up_vo.team) : '';
+            this.ready.getChildByName('player_up').getChildByName('txtArea').text = up_score;
+            this.ready.getChildByName('player_up').getChildByName('txtLevel').text = up_level;
+            this.game.getChildByName('player_up').getChildByName('txtArea').text = up_score;
+            this.game.getChildByName('player_up').getChildByName('txtLevel').text = up_level;
+            // this.ready.getChildByName('player_down').getChildByName('txtArea').text = __down_vo ? __data.getTeamName(__down_vo.team) : '';
+            this.ready.getChildByName('player_down').getChildByName('txtArea').text = down_score;
+            this.ready.getChildByName('player_down').getChildByName('txtLevel').text = down_level;
+            this.game.getChildByName('player_down').getChildByName('txtArea').text = down_score;
+            this.game.getChildByName('player_down').getChildByName('txtLevel').text = down_level;
+            // this.ready.getChildByName('player_left').getChildByName('txtArea').text = __left_vo ? __data.getTeamName(__left_vo.team) : '';
+            this.ready.getChildByName('player_left').getChildByName('txtArea').text = left_score;
+            this.ready.getChildByName('player_left').getChildByName('txtLevel').text = left_level;
+            this.game.getChildByName('player_left').getChildByName('txtArea').text = left_score;
+            this.game.getChildByName('player_left').getChildByName('txtLevel').text = left_level;
+            // this.ready.getChildByName('player_right').getChildByName('txtArea').text = __right_vo ? __data.getTeamName(__right_vo.team) : '';
+            this.ready.getChildByName('player_right').getChildByName('txtArea').text = right_score;
+            this.ready.getChildByName('player_right').getChildByName('txtLevel').text = right_level;
+            this.game.getChildByName('player_right').getChildByName('txtArea').text = right_score;
+            this.game.getChildByName('player_right').getChildByName('txtLevel').text = right_level;
+
+            try {
+                upRank && SkinUtils.setSkin(this.ready.getChildByName('player_up').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${upRank.iconIndex}.png`);
+                downRank && SkinUtils.setSkin(this.ready.getChildByName('player_down').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${downRank.iconIndex}.png`);
+                leftRank && SkinUtils.setSkin(this.ready.getChildByName('player_left').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${leftRank.iconIndex}.png`);
+                rightRank && SkinUtils.setSkin(this.ready.getChildByName('player_right').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${rightRank.iconIndex}.png`);
+                upRank && SkinUtils.setSkin(this.game.getChildByName('player_up').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${upRank.iconIndex}.png`);
+                downRank && SkinUtils.setSkin(this.game.getChildByName('player_down').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${downRank.iconIndex}.png`);
+                leftRank && SkinUtils.setSkin(this.game.getChildByName('player_left').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${leftRank.iconIndex}.png`);
+                rightRank && SkinUtils.setSkin(this.game.getChildByName('player_right').getChildByName('rankBg'), `local/lvNameBg/1/img_dwx${rightRank.iconIndex}.png`);
+            } catch (e) {
+
+            }
+            // this.game.getChildByName('player_up').getChildByName('txtArea').text = __up_vo ? __up_vo.team : '';
+            // this.game.getChildByName('player_down').getChildByName('txtArea').text = __down_vo ? __down_vo.team : '';
+            // this.game.getChildByName('player_left').getChildByName('txtArea').text = __left_vo ? __left_vo.team : '';
+            // this.game.getChildByName('player_right').getChildByName('txtArea').text = __right_vo ? __right_vo.team : '';
+        }
+        DeskRadio.start();
+    }
+
+
+    playGame() {
+        this.clearGame()
+
+        game.utils.remove(this.ready)
+        this.addChild(this.game)
+        this.initGameCommon()
+
+        this.game.getChildByName('btn_ready').visible = false
+        game.cb.event(__eh + 'change_dir')
+
+        //2人 出牌 的算法不同
+        // if(__data.deskData.roomVo.roomPlayer == 2){ this.upoutlist.steps = true;this.downoutlist.steps = true }
+        // else { this.upoutlist.steps = false;this.downoutlist.steps = false }
+
+        this.game.getChildByName('player_up').getChildByName('ready').visible = false
+        this.game.getChildByName('player_down').getChildByName('ready').visible = false
+        this.game.getChildByName('player_left').getChildByName('ready').visible = false
+        this.game.getChildByName('player_right').getChildByName('ready').visible = false
+
+        // this.game.getChildByName('nb_box').getChildByName('img_nb_block').visible = true;
+
+        this.showBaoHandler(__data.deskData.roomVo.baoCode)
+        this.updateBankerHandler();
+        this.showTingHandler();
+        this.huTipsHandler();
+        this.setChangeHandler();
+    }
+
+
+    showLxPanelHandler(isMine) {
+        game.scene.add(MahjongLxPanel1).who(isMine)
+    }
+    removeLxPanelHandler() { game.scene.remove(MahjongLxPanel1) }
+
+    showTingHandler(position) {
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        let __tingSignArr = [, , 'piao', 'qidui']
+        if (__up_vo && __up_vo.tingState >= 1) {
+            // this.game.getChildByName('desk').addChildAt(this.uplisten, 0) 
+            this.uplist.ting = true;
+            // this.uplisten.active = true;
+            this.uplist.syncData(true);
+
+            this.game.getChildByName('player_up').getChildByName('ts').visible = true;
+            if (__tingSignArr[__up_vo.tingType] && this.game.getChildByName('player_up').getComponent(Mahjong_Head_Ting_Script)) {
+                this.game.getChildByName('player_up').getComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__up_vo.tingType])
+            } else if (__tingSignArr[__up_vo.tingType]) {
+                this.game.getChildByName('player_up').addComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__up_vo.tingType])
+            }
+
+            if (__up_vo.position == position) {
+                this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+                this.game.getChildByName('desk').addChild(this.commonEffect).start(9, __up_vo.seat_tag);
+            }
+        }
+        if (__down_vo && __down_vo.tingState >= 1) {
+            // this.game.getChildByName('desk').addChildAt(this.downlisten, 0)
+
+            this.downlisten.transform.position = this.downlist.tingPoint;
+            this.downlist.ting = true;
+            // this.downlisten.active = true;
+            this.downlist.syncData(true);
+
+            this.game.getChildByName('player_down').getChildByName('ts').visible = true;
+            if (__tingSignArr[__down_vo.tingType] && this.game.getChildByName('player_down').getComponent(Mahjong_Head_Ting_Script)) {
+                this.game.getChildByName('player_down').getComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__down_vo.tingType])
+            } else if (__tingSignArr[__down_vo.tingType]) {
+                this.game.getChildByName('player_down').addComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__down_vo.tingType])
+            }
+
+            if (__down_vo.position == position) {
+                this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+                this.game.getChildByName('desk').addChild(this.commonEffect).start(9, __down_vo.seat_tag);
+            }
+        }
+        if (__left_vo && __left_vo.tingState >= 1) {
+            // this.game.getChildByName('desk').addChildAt(this.leftlisten, 0)
+
+            this.leftlist.ting = true;
+            // this.leftlisten.active = true;
+            this.leftlist.syncData(true);
+
+            this.game.getChildByName('player_left').getChildByName('ts').visible = true;
+            if (__tingSignArr[__left_vo.tingType] && this.game.getChildByName('player_left').getComponent(Mahjong_Head_Ting_Script)) {
+                this.game.getChildByName('player_left').getComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__left_vo.tingType])
+            } else if (__tingSignArr[__left_vo.tingType]) {
+                this.game.getChildByName('player_left').addComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__left_vo.tingType])
+            }
+
+            if (__left_vo.position == position) {
+                this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+                this.game.getChildByName('desk').addChild(this.commonEffect).start(9, __left_vo.seat_tag);
+            }
+        }
+        if (__right_vo && __right_vo.tingState >= 1) {
+            // this.game.getChildByName('desk').addChildAt(this.rightlisten, 0)
+            this.rightlist.ting = true;
+            // this.rightlisten.active = true;
+            this.rightlist.syncData(true);
+
+            this.game.getChildByName('player_right').getChildByName('ts').visible = true;
+            if (__tingSignArr[__right_vo.tingType] && this.game.getChildByName('player_right').getComponent(Mahjong_Head_Ting_Script)) {
+                this.game.getChildByName('player_right').getComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__right_vo.tingType])
+            } else if (__tingSignArr[__right_vo.tingType]) {
+                this.game.getChildByName('player_right').addComponent(Mahjong_Head_Ting_Script).sign(__tingSignArr[__right_vo.tingType])
+            }
+
+            if (__right_vo.position == position) {
+                this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+                this.game.getChildByName('desk').addChild(this.commonEffect).start(9, __right_vo.seat_tag);
+            }
+        }
+    }
+
+
+
+    showHandNumberHandler(position, number) {
+        try {
+            let __vo = __data.deskData.roomVo.getPlayer(position);
+            if (!__vo) { return }
+            if (__vo.seat_tag == 'up') {
+                if (this.uplist.list.length < number) this.uplist.catch = -1;
+            } else if (__vo.seat_tag == 'left') { if (this.leftlist.list.length < number) this.leftlist.catch = -1; } else if (__vo.seat_tag == 'right') { if (this.rightlist.list.length < number) this.rightlist.catch = -1; }
+
+            __vo && (__vo.handNumber = number)
+        } catch (e) {
+
+        }
+    }
+
+    syncList() {
+        __data.deskData.roomVo.getPlayerBySeat(2) && this.uplist.syncData(true)
+        __data.deskData.roomVo.getPlayerBySeat(3) && this.leftlist.syncData(true)
+        __data.deskData.roomVo.getPlayerBySeat(1) && this.rightlist.syncData(true)
+    }
+
+    giveHandler() {
+        __showScene.clear_matchUI();
+        if(MahjongStatus.READY){ __sound.gameSound("choufeng");MahjongStatus.READY = false;MahjongStatus.start(); }
+        this.addChildAt(this.game, 0);
+        this.game.getChildByName('desk').addChild(this.downlist)
+
+        this.upoutlist.clear()
+        this.leftoutlist.clear()
+        this.rightoutlist.clear()
+        this.downoutlist.clear()
+
+        this.uplist.clear()
+        this.leftlist.clear()
+        this.rightlist.clear()
+        this.downlist.clear()
+
+        let __up_vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        let __down_vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        let __left_vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        let __right_vo = __data.deskData.roomVo.getPlayerBySeat(1)
+
+        this.downlist.createDoorList = __down_vo && __down_vo.doorValue ? __down_vo.doorValue : ''
+        this.downlist.createList = __down_vo && __down_vo.handValue ? __down_vo.handValue : ''
+        this.downoutlist.outlist = __down_vo && __down_vo.outValue ? __down_vo.outValue : ''
+
+        this.leftlist.createDoorList = __left_vo && __left_vo.doorValue ? __left_vo.doorValue : ''
+        this.leftlist.createList = __left_vo && __left_vo.handValue ? __left_vo.handValue : __left_vo ? new Array(__left_vo.handNumber) : ''
+        this.leftoutlist.outlist = __left_vo && __left_vo.outValue ? __left_vo.outValue : ''
+
+        this.uplist.createDoorList = __up_vo && __up_vo.doorValue ? __up_vo.doorValue : ''
+        this.uplist.createList = __up_vo && __up_vo.handValue ? __up_vo.handValue : __up_vo ? new Array(__up_vo.handNumber) : ''
+        this.upoutlist.outlist = __up_vo && __up_vo.outValue ? __up_vo.outValue : ''
+
+        this.rightlist.createDoorList = __right_vo && __right_vo.doorValue ? __right_vo.doorValue : ''
+        this.rightlist.createList = __right_vo && __right_vo.handValue ? __right_vo.handValue : __right_vo ? new Array(__right_vo.handNumber) : ''
+        this.rightoutlist.outlist = __right_vo && __right_vo.outValue ? __right_vo.outValue : ''
+    }
+
+    //显示操作
+    operationHandler(value, valueArr, position) {
+        value = value.toString();
+
+        let __catch_op = value.indexOf(1000);
+        let __play_op
+        let __op_in = false
+        let __vo
+        //抓牌
+        if (__catch_op != -1) {
+            __vo = __data.deskData.roomVo.getPlayer(position)
+            if (__vo.seat_tag == 'down') {
+                this.downlist.catch = valueArr[1000];
+                // if(downlist.checkError){ dataErrorHandler();return }
+                // __data.deskData.roomVo.deal = false;
+                if (__data.deskData.isCanPlay) { game.cb.dispatchEvent(__eh + "playControl") }
+            } else { console.error("操作处理错误:" + '操作类型：', value, '----------', valueArr, '操作位置：', position) }
+        }
+
+        __play_op = value.indexOf(90); //打指定牌
+        if (__play_op > -1) {
+            game.cb.dispatchEvent(__eh + "stopControl")
+            game.cb.dispatchEvent(__eh + "playControl", [valueArr[90]])
+        }
+        __play_op = value.indexOf(91); //打所有牌
+        if (__play_op > -1) {
+            game.cb.dispatchEvent(__eh + "playControl")
+            this.downlist.extract();
+        }
+
+        let __tempArr = value.split(',')
+        for (let i = 0; i < this.operation.opArr.length; i++) {
+            let __in = __tempArr.indexOf(this.operation.opArr[i])
+            if (__in > -1) { __op_in = true }
+        }
+
+        if (__op_in) {
+            this.removeLxPanelHandler();
+            __vo = __data.deskData.roomVo.getPlayerBySeat(0);
+            this.game.getChildByName('desk').addChild(this.operation)
+            this.operation.show_operation(value, valueArr);
+            this.operation.x = config.gameW - this.operation.width - 50
+            this.operation.y = this.downlist.y - this.operation.height
+            game.cb.event('operation_btns_relocation');
+            if (__vo && __vo.seat_tag == 'down' && __vo.tingAutoStatus) { trace('上听托管不展示操作栏'); game.utils.remove(this.operation); }
+        }
+    }
+
+    //胡牌提示
+    huTipsHandler() {
+        if (__data.deskData.roomVo.isRecordPlaying) return
+
+        let __vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        if (__vo && __vo.hupai && __vo.hupai.length > 0) {
+            for (var i = 0; i < __vo.hupai.length; i++) { __vo.hupai[i].num = 0 }
+
+            this.downlist.huCardSurps(__vo.hupai)
+            this.uplist.huCardSurps(__vo.hupai)
+            this.leftlist.huCardSurps(__vo.hupai)
+            this.rightlist.huCardSurps(__vo.hupai)
+
+            this.downoutlist.huCardSurps(__vo.hupai)
+            this.upoutlist.huCardSurps(__vo.hupai)
+            this.leftoutlist.huCardSurps(__vo.hupai)
+            this.rightoutlist.huCardSurps(__vo.hupai)
+
+            this.game.getChildByName('desk').addChild(this.huTips)
+            this.huTips.x = (this.downRateTips && this.downRateTips.parent) ? this.downRateTips.x + this.downRateTips.width + 20 : (this.prayIcon && this.prayIcon.parent) ? this.prayIcon.x + this.prayIcon.width + 20 : this.game.getChildByName('player_down').x + this.game.getChildByName('player_down').width + 20;
+            this.huTips.y = this.downlist.y - this.huTips.height - 30;
+            game.cb.event(__eh + "update_hu_number", [__vo.hupai])
+
+            // let maxRate = 0;
+            // for (var i = 0; i < __vo.hupai.length; i++) { maxRate = Math.max(__vo.hupai[i].rate, maxRate); }
+            // this.huTips.x = this.downRateTips.x + this.downRateTips.width + 20; //this.game.getChildByName('player_down').x + this.game.getChildByName('player_down').width + 20;
+            // this.huTips.y = this.downRateTips.y + this.downRateTips.height - this.huTips.height;
+            // this.game.getChildByName('desk').addChild(this.huTips)
+            // this.game.getChildByName('desk').addChild(this.downRateTips)
+            // game.cb.event(__eh + "update_hu_number", [__vo.hupai])
+            //     // miniApi.showCustomAd_leftRight('down', this.downlist.rightInhibitLine);
+
+            // this.tingMenu = this.tingMenu || new MahjongTingMenu();
+            // this.tingMenu.x = this.huTips.x + this.huTips.width + 20;
+            // this.tingMenu.y = this.downRateTips.y + this.downRateTips.height - this.tingMenu.height * game.scale;
+            // this.game.getChildByName('desk').addChild(this.tingMenu);
+            // this.tingMenu.status = __vo.tingAutoStatus;
+        } else {
+            // game.utils.remove(this.tingMenu)
+            // game.utils.remove(this.huTips)
+            // game.utils.remove(this.downRateTips)
+            // miniApi.hideCustomAd_leftRight('down');
+            game.utils.remove(this.huTips)
+            miniApi.hideCustomAd_leftRight('down');
+        }
+    }
+
+    showHuPreview(code, point) {
+        let list = MahjongCollectUtils.getMap(code);
+        if (list && list.length) {
+            this.game.getChildByName('desk').addChild(this.huPreview);
+            MahjongCollectUtils.getNumber(list, [
+                this.downlist.huCardSurps.bind(this.downlist),
+                this.uplist.huCardSurps.bind(this.uplist),
+                this.leftlist.huCardSurps.bind(this.leftlist),
+                this.rightlist.huCardSurps.bind(this.rightlist),
+                this.downoutlist.huCardSurps.bind(this.downoutlist),
+                this.upoutlist.huCardSurps.bind(this.upoutlist),
+                this.leftoutlist.huCardSurps.bind(this.leftoutlist),
+                this.rightoutlist.huCardSurps.bind(this.rightoutlist)
+            ])
+            // game.cb.event(__eh + "update_hu_number", [list])
+            this.huPreview.updateHandler(list);
+            point = this.game.getChildByName('desk').globalToLocal(point);
+
+            let __x = point.x - this.huPreview.width / 2;
+            let __y = point.y - this.huPreview.height;
+            // this.huPreview.pos(__x, __y);
+
+            let localPoint = this.huPreview.parent.localToGlobal(new Laya.Point(__x, __y));
+            localPoint = this.globalToLocal(localPoint);
+            if (localPoint.x < -this.x) {
+                __x += Math.abs(localPoint.x - (-this.x));
+            } else if (localPoint.x + this.huPreview.width > Math.abs(this.x) + this.width) {
+                __x -= (localPoint.x + this.huPreview.width) - (Math.abs(this.x) + this.width);
+            }
+            this.huPreview.pos(__x, __y);
+        } else {
+            game.utils.remove(this.huPreview);
+        }
+        // this.huPreview
+    }
+
+    //添加门前牌 
+    addDoorHandler(position, value, origin, code) {
+        //code  0 不播  1 播
+        let __vo = __data.deskData.roomVo.getPlayer(position)
+        if (__vo) {
+            if (__vo.seat_tag == 'down') {
+                game.cb.event(__eh + 'remove_lx_guide');
+                this.downlist.addDoor = value
+                this.downlist.syncData(true)
+            } else if (__vo.seat_tag == 'up') {
+                this.uplist.addDoor = value
+                this.uplist.syncData(true)
+            } else if (__vo.seat_tag == 'left') {
+                this.leftlist.addDoor = value
+                this.leftlist.syncData(true)
+            } else if (__vo.seat_tag == 'right') {
+                this.rightlist.addDoor = value
+                this.rightlist.syncData(true)
+            }
+
+            if (code == 1) this.playCommonEffect(__vo.seat_tag, value)
+        }
+
+        __vo = __data.deskData.roomVo.getPlayer(origin.srcPosition)
+        if (__vo && origin.deleFlod >= 0) {
+            if (__vo.seat_tag == 'down') {
+                this.downoutlist.deleateOut = origin.deleFlod
+            } else if (__vo.seat_tag == 'right') {
+                this.rightoutlist.deleateOut = origin.deleFlod
+                this.rightlist.syncData(true)
+            } else if (__vo.seat_tag == 'up') {
+                this.upoutlist.deleateOut = origin.deleFlod
+                this.uplist.syncData(true)
+            } else if (__vo.seat_tag == 'left') {
+                this.leftoutlist.deleateOut = origin.deleFlod
+                this.leftlist.syncData(true)
+            }
+        }
+
+        this.huTipsHandler();
+    }
+    //杠门前被抢
+    addDoorBeRobbedHandler(position, code, srcPosition) {
+        let __vo = __data.deskData.roomVo.getPlayer(position)
+        let __group = '89,' + code + ',' + srcPosition
+        if (__vo) {
+            if (__vo.seat_tag == 'down') {
+                this.downlist.addDoor = __group
+                this.downlist.syncData(true)
+            } else if (__vo.seat_tag == 'up') {
+                this.uplist.addDoor = __group
+                this.uplist.syncData(true)
+            } else if (__vo.seat_tag == 'left') {
+                this.leftlist.addDoor = __group
+                this.leftlist.syncData(true)
+            } else if (__vo.seat_tag == 'right') {
+                this.rightlist.addDoor = __group
+                this.rightlist.syncData(true)
+            }
+        }
+    }
+
+    /**
+     * 标记刚打出去的牌
+     * @return {[type]} [description]
+     */
+    signOutHandler(position) {
+        var __vo = __data.deskData.roomVo.getPlayer(position)
+        if (__vo) {
+            this.downoutlist.sign = false
+            this.upoutlist.sign = false
+            this.leftoutlist.sign = false
+            this.rightoutlist.sign = false
+            if (__vo.seat_tag == 'down') {
+                this.downoutlist.sign = true
+                this.downoutlist.signTween();
+            } else if (__vo.seat_tag == 'left') {
+                this.leftoutlist.sign = true
+                this.leftoutlist.signTween();
+            } else if (__vo.seat_tag == 'right') {
+                this.rightoutlist.sign = true
+                this.rightoutlist.signTween();
+            } else if (__vo.seat_tag == 'up') {
+                this.upoutlist.sign = true
+                this.upoutlist.signTween();
+            }
+        }
+    }
+
+    //打牌
+    addOutHandler(position, value, isDele) {
+        let __vo = __data.deskData.roomVo.getPlayer(position)
+
+        if (__vo) {
+            this.downoutlist.sign = false
+            this.upoutlist.sign = false
+            this.leftoutlist.sign = false
+            this.rightoutlist.sign = false
+
+            if (__vo.seat_tag != 'down') __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __vo.sex + "/pai_" + value)
+
+            if (__vo.seat_tag == 'down') {
+                this.downoutlist.sign = true
+                __data.deskData.isCanPlay = false;
+
+                if (__data.deskData.roomVo.isRecordPlaying) {
+                    //自动出牌
+                    let __endPoint = this.downlist.endPoint(value);
+                    this.downoutlist.addOut = [value, __endPoint]
+                    this.downlist.syncData(true)
+                    __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __vo.sex + "/pai_" + value)
+                } else {
+                    //托管的状态
+                    if (__vo.autoState == 1) {
+                        __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __vo.sex + "/pai_" + value)
+
+                        //自动出牌
+                        let __endPoint = this.downlist.endPoint(value);
+                        this.downoutlist.addOut = [value, __endPoint]
+                        this.downlist.syncData(true)
+                    }
+                    //听牌状态
+                    else if (__vo.tingState >= 1) {
+                        if (__data.deskData.isActiveToOut) {
+                            __data.deskData.isActiveToOut = false;
+                            this.downlist.syncData(true)
+                        } else {
+                            this.downlist.autoPlay(value)
+                            this.downlist.syncData(true)
+                        }
+                    }
+                    //听牌状态/
+                    else if (__vo.hupai && __vo.hupai.length > 0) {
+                        if (__data.deskData.isActiveToOut) {
+                            __data.deskData.isActiveToOut = false;
+                            this.downlist.syncData(true)
+                        } else {
+                            this.downlist.autoPlay(value)
+                            this.downlist.syncData(true)
+                        }
+                    }
+                    //早已记不得这个是处理什么的了  现在全当 上听后第一次打牌
+                    else if (isDele) {
+                        // this.downlist.autoPlay(value)
+                        this.downlist.syncData(true)
+                    }
+                }
+            } else if (__vo.seat_tag == 'left') {
+                this.leftoutlist.addOut = [value, this.leftlist.endPoint]
+                this.leftoutlist.sign = true
+                this.leftlist.syncData(true)
+            } else if (__vo.seat_tag == 'right') {
+                this.rightoutlist.addOut = [value, this.rightlist.endPoint]
+                this.rightoutlist.sign = true
+                this.rightlist.syncData(true)
+            } else if (__vo.seat_tag == 'up') {
+                this.upoutlist.addOut = [value, this.uplist.endPoint]
+                this.upoutlist.sign = true
+                this.uplist.syncData(true)
+            }
+        }
+
+        this.huTipsHandler();
+        this.signOutHandler(position);
+    }
+
+    //自己出去一张牌（特殊处理）
+    addOutCardHandler(value, point) {
+        //不允许当前用户再控制牌了
+        __data.deskData.isCanPlay = false;
+        // trace('打牌：', value, '打牌位置：', point)
+        this.downoutlist.addOut = [value, point]
+
+        game.server.send(6001, 91, parseInt(value))
+
+        this.downoutlist.sign = true
+        this.upoutlist.sign = false
+        this.leftoutlist.sign = false
+        this.rightoutlist.sign = false
+
+        __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __data.sex + "/pai_" + parseInt(value))
+
+        this.downlist.createList = null
+    }
+
+
+    //播放
+    playCommonEffect(seat, code, keep) {
+        let __type = code.split(',')[0]
+
+        if (__type == 1) { //碰
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(1, seat, keep)
+        } else if (__type == 2) { //吃
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(0, seat, keep)
+        } else if (__type == 5) { //杠
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(2, seat, keep)
+        } else if (__type == 81) { //亮掌
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(4, seat, keep)
+        } else if (__type == 82) { //亮喜
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(3, seat, keep)
+        } else if (__type == 88) { //杠
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(2, seat, keep)
+        }
+    }
+
+    clearGame() {
+        //隐藏玩法显示
+        game.cb.event(__eh + 'remove_desk_play')
+
+        // game.utils.remove(this.downlisten)
+        // game.utils.remove(this.uplisten)
+        // game.utils.remove(this.leftlisten)
+        // game.utils.remove(this.rightlisten)
+        game.utils.remove(this.huTips)
+        // game.utils.remove(this.tingMenu)
+        game.utils.remove(this.commonEffect)
+
+        game.utils.remove(this['video_operation_1'], this['video_operation_2'], this['video_operation_3'], this['video_operation_4'])
+
+        let __down_ting_script = this.game.getChildByName('player_down').getComponent(Mahjong_Head_Ting_Script)
+        let __up_ting_script = this.game.getChildByName('player_up').getComponent(Mahjong_Head_Ting_Script)
+        let __left_ting_script = this.game.getChildByName('player_left').getComponent(Mahjong_Head_Ting_Script)
+        let __right_ting_script = this.game.getChildByName('player_right').getComponent(Mahjong_Head_Ting_Script)
+        __down_ting_script && __down_ting_script.destroy()
+        __up_ting_script && __up_ting_script.destroy()
+        __left_ting_script && __left_ting_script.destroy()
+        __right_ting_script && __right_ting_script.destroy()
+
+        this.game.getChildByName('auto_box').visible = false
+        this.game.getChildByName('player_up').getChildByName('branker').visible = false
+        this.game.getChildByName('player_down').getChildByName('branker').visible = false
+        this.game.getChildByName('player_left').getChildByName('branker').visible = false
+        this.game.getChildByName('player_right').getChildByName('branker').visible = false
+
+        this.game.getChildByName('player_up').getChildByName('ts').visible = false
+        this.game.getChildByName('player_down').getChildByName('ts').visible = false
+        this.game.getChildByName('player_left').getChildByName('ts').visible = false
+        this.game.getChildByName('player_right').getChildByName('ts').visible = false
+
+        this.addChildAt(this.game, 0);
+        this.initGameCommon()
+
+        let __minevo = __data.deskData.roomVo.getPlayer('down')
+        this.ready.getChildByName('btn_ready').visible = ReadyManager.getStatus(__minevo);
+        this.game.getChildByName('btn_ready').visible = ReadyManager.getStatus(__minevo);
+
+        game.cb.event(__eh + 'change_dir')
+
+        this.clearBaoView();
+        this.clearSurpView();
+
+        //2人 出牌 的算法不同
+        // if(__data.deskData.roomVo.roomPlayer == 2){ this.upoutlist.steps = true;this.downoutlist.steps = true }
+        // else { this.upoutlist.steps = false;this.downoutlist.steps = false }
+    }
+
+    clearList() {
+        this.uplist.clear();
+        this.downlist.clear();
+        this.leftlist.clear();
+        this.rightlist.clear();
+
+        this.upoutlist.clear();
+        this.downoutlist.clear();
+        this.leftoutlist.clear();
+        this.rightoutlist.clear();
+
+        game.utils.remove(this.upHuCard)
+        game.utils.remove(this.downHuCard)
+        game.utils.remove(this.leftHuCard)
+        game.utils.remove(this.rightHuCard)
+
+        game.utils.remove(this.upHuEffect)
+        game.utils.remove(this.downHuEffect)
+        game.utils.remove(this.leftHuEffect)
+        game.utils.remove(this.rightHuEffect)
+
+        game.utils.remove(this.downRateTips);
+
+        while (__data.deskData.roomVo.scene && __data.deskData.roomVo.scene.getChildByName('container').numChildren) {
+            let ele = __data.deskData.roomVo.scene.getChildByName('container').getChildAt(0)
+            if (ele && 'active' in ele)
+                ele.active = false;
+            __data.deskData.roomVo.scene.getChildByName('container').removeChildAt(0);
+        }
+        this.uplisten.active = this.downlisten.active = this.leftlisten.active = this.rightlisten.active = false;
+    }
+
+    resultReadyClear() {
+        __data.deskData.roomVo.baoCode = 255
+        __data.deskData.roomVo.mixed = -1;
+        __data.deskData.roomVo.mixedArr = [];
+        this.stopCompassTimer();
+        this.clearCountDownPlane();
+    }
+
+
+
+
+
+    /**
+     * 用户信息
+     * [playerInfoHandler description]
+     * @return {[type]} [description]
+     */
+    playerInfoHandler(e) {
+        let __vo = null
+        if (e.currentTarget == this.ready.getChildByName('player_up').getChildByName('head') || e.currentTarget == this.game.getChildByName('player_up').getChildByName('head')) {
+            __vo = __data.deskData.roomVo.getPlayerBySeat(2)
+        } else if (e.currentTarget == this.ready.getChildByName('player_down').getChildByName('head') || e.currentTarget == this.game.getChildByName('player_down').getChildByName('head')) {
+            __vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        } else if (e.currentTarget == this.ready.getChildByName('player_left').getChildByName('head') || e.currentTarget == this.game.getChildByName('player_left').getChildByName('head')) {
+            __vo = __data.deskData.roomVo.getPlayerBySeat(3)
+        } else if (e.currentTarget == this.ready.getChildByName('player_right').getChildByName('head') || e.currentTarget == this.game.getChildByName('player_right').getChildByName('head')) {
+            __vo = __data.deskData.roomVo.getPlayerBySeat(1)
+        }
+        //如果vo存在  显示信息
+        if (__vo) { __showScene.show_playerInfo({ uid: __vo.id, name: __vo.name, headFrameUrl: __vo.frameUrl, isGaming: true, area: __data.othersVO[__vo.id].area, areaRank: __data.othersVO[__vo.id].areaRank }); }
+    }
+
+
+    addGiftHandler(sendPlayerID, receivePlayerID, giftID) {
+        this.gift = this.gift || new MahjongGift(this);
+        this.gift.start(sendPlayerID, receivePlayerID, giftID)
+    }
+
+
+
+    //检测距离问题
+    checkPlayerDistance() {
+        // let __r = __compUtils.mapTest(__data.deskData.roomVo.playerArr)
+        // game.cb.event('DANGEROUS_OR_SAFE', [__r])
+        // let __r = 0
+        // let __rData = __data.deskData.roomVo.playerArr
+        // for(let i = 0;i <= 4;i++){
+        //     //如果没有该用户 或者该用户的经纬度未知  当前用户 跳过
+        //     if(!__rData[i]){continue}
+        //     //如果已经判定过近  跳出循环
+        //     if(__r == 1){ break }
+        //     for(let k = 0;k <= 4;k++){
+        //         //如果没有该用户 或者该用户的经纬度未知  当前用户 跳过
+        //         if(!__rData[k]){continue}
+
+        //         //依次比对距离  （不和自己比对）
+        //         if(__rData[i].id != __rData[k].id){
+        //             //如果两个用户的经纬度都存在  则进行比对
+        //             if(__rData[i].latitude != '0.0' && __rData[i].longitude != '0.0' && __rData[k].latitude != '0.0' && __rData[k].longitude != '0.0'){
+        //                 //获取计算的距离
+        //                 let __distance = __compUtils.getFlatternDistance( __rData[i].latitude, __rData[i].longitude, __rData[k].latitude, __rData[k].longitude )
+        //                 //如果计算的距离小于最小判定距离  则认定距离过近   跳出循环
+        //                 if(__distance <= Interface.closeRange){ 
+        //                     trace('距离比对出现过近：', __rData[i], __rData[k])
+        //                     __r = 1;
+        //                     break 
+        //                 }
+        //             }
+
+        //             if(__rData[i].ipAddress == __rData[k].ipAddress && __rData[i].ipAddress ) { 
+        //                 trace('IP比对出现过近：', __rData[i], __rData[k])
+        //                 __r = 1;
+        //                 break 
+        //             }
+        //         }
+        //     }
+        // }
+        // game.cb.event('DANGEROUS_OR_SAFE', [__r])
+
+    }
+
+    //将用户数据发送出去
+    requestHandler() {
+        game.cb.event(__eh + 'update_map_data', [__data.deskData.roomVo.playerArr])
+    }
+
+    //体验馆超时踢出
+    checkTimeOutKickPlayer() {
+
+    }
+
+
+    //邀请好友
+    inviteHandler() {
+        // let __time = __data.deskData.roomVo.limitKickTime();
+
+        // this.ready.getChildByName('player_up').addComponent(Mahjong_Limit_Time_Script).start(5, true, this.kickUp)
+        // game.scene.add( GameQrcodeShare, ['title', 'des', user.shareAddress()] )
+        // Interface.shareToFriend()
+        // sceneManager.loadShare(this.inviteInfoHandler)
+        miniApi.shareRoomMenu(__data.deskData.roomVo.roomID, __data.deskData.roomVo.activityId, __data.deskData.roomVo.getNeedPlayer().length, __data.deskData.roomVo.roomPlayer);
+        miniApi.share({
+            title: `${MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId)} ${__data.deskData.roomVo.roomPlayer}人 ${__data.deskData.roomVo.allGame}局`,
+            imgId: 'friendRoomShareRoom',
+            params: `uid=${__data.uid}&roomPwd=${__data.deskData.roomVo.roomID}&roCityId=${HallPlay.lastCityId}`,
+            isUpdatableMessage: true
+        })
+    }
+
+    inviteInfoHandler() {
+        let __info = __data.deskData.roomVo.getShareInfo();
+        __info && game.scene.add(SharePanel, [__info.title, __info.des, __info.url, __data.deskData.roomVo.roomModel, true])
+    }
+
+
+    updateLimitKick() {
+        // //不是准备阶段  直接跳过
+        // if (__data.deskData.roomVo.phase != 'ready') { return }
+        // //不为体验馆模式 跳过
+        // // if(__data.deskData.roomVo.roomModel != 5){ return }
+        // //1 为麻将
+        // let have = __compUtils.autoKick(1);
+        // //当前大区没有踢人功能  跳过
+        // if (!have) { return }
+        // //
+        // let __time = __data.deskData.roomVo.limitKickTime();
+
+        // for (let i = 1; i <= 4; i++) {
+        //     let __vo = __data.deskData.roomVo.getPlayer(i)
+        //         //房主忽略掉（亮哥特意要求更改的）
+        //     if (__vo && __vo.id == __data.deskData.roomVo.roomOwner) { continue }
+        //     //离线
+        //     if (__vo && __vo.onlineState != 1) {
+        //         //如果当前离线用户已经开始计时  跳过当前用户
+        //         if (this.ready.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_Limit_Time_Script)) { continue; }
+        //         this.ready.getChildByName('player_' + __vo.seat_tag).addComponent(Mahjong_Limit_Time_Script).start(__time, true, function() {
+        //             if (__data.deskData.roomVo.roomModel == 6 || __data.deskData.roomVo.roomModel == 7)
+        //                 __data.deskData.roomVo.friendId && game.server.send(9205, __vo.id, __data.deskData.roomVo.friendId)
+        //             else
+        //                 game.server.send(8023, __vo.id)
+        //         })
+        //     } else if (__vo && __vo.onlineState == 1) {
+        //         let __script = this.ready.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_Limit_Time_Script)
+        //         __script && __script.destroy();
+        //     }
+        // }
+    }
+
+    voiceAni(id) {
+        let __vo = __data.deskData.roomVo.getPlayer(id);
+        if (!__vo) { return }
+
+        let __script
+        if (__data.deskData.roomVo.phase == 'ready') {
+            __script = this.ready.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_VoiceAni_Script)
+            if (__script) { return } else this.ready.getChildByName('player_' + __vo.seat_tag).addComponent(Mahjong_VoiceAni_Script)
+        } else {
+            __script = this.game.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_VoiceAni_Script)
+            if (__script) { return } else this.game.getChildByName('player_' + __vo.seat_tag).addComponent(Mahjong_VoiceAni_Script)
+        }
+    }
+
+    voiceEnd(id) {
+        let __vo = __data.deskData.roomVo.getPlayer(id);
+        if (!__vo) { return }
+
+        let __script
+        __script = this.ready.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_VoiceAni_Script)
+        if (__script) __script.destroy();
+        __script = this.game.getChildByName('player_' + __vo.seat_tag).getComponent(Mahjong_VoiceAni_Script)
+        if (__script) __script.destroy();
+    }
+
+    //更换庄
+    updateBankerHandler() {
+        this.clearBankerIcon();
+        //找到庄的位置 显示出来标志
+        let __banker_vo = __data.deskData.roomVo.getPlayer(__data.deskData.roomVo.bankerPosition);
+        if (__banker_vo && __banker_vo.seat_tag) { this.game.getChildByName('player_' + __banker_vo.seat_tag).getChildByName('branker').visible = true }
+    }
+
+    clearBankerIcon() {
+        this.game.getChildByName('player_up').getChildByName('branker').visible = false
+        this.game.getChildByName('player_down').getChildByName('branker').visible = false
+        this.game.getChildByName('player_left').getChildByName('branker').visible = false
+        this.game.getChildByName('player_right').getChildByName('branker').visible = false
+    }
+
+    //显示宝
+    showBaoHandler(value) {
+        __data.deskData.roomVo.baoCode = value >= 0 ? value : __data.deskData.roomVo.baoCode
+        if (!this.areaInfo.haveNb.show) { return }
+        
+        if (__data.deskData.roomVo.baoCode == 255)
+            this.baoView = this.createBaoView(__data.deskData.roomVo.baoCode);
+        else {
+            this.baoView = this.createBaoView(__data.deskData.roomVo.baoCode);
+        }
+    }
+
+    //换宝
+    changeBaoEffectHandler(code) {
+        game.scene.add(MahjongEffectChangeBao, [code])
+    }
+
+    //游戏结束
+    overGameHandler(position, value, code) {
+        trace("胡的位置：" + position)
+        trace("特效code：" + code)
+        trace("胡的牌：" + value)
+        //流局
+        if (code == 255) {
+            this.commonEffect = Laya.Pool.getItemByClass(__cName.ce, MahjongEffectCommon)
+            this.game.getChildByName('desk').addChild(this.commonEffect).start(7, '', true)
+            __sound.gameSound("liuju")
+            return
+        }
+
+        let __vo = __data.deskData.roomVo.getPlayer(position)
+        if (!__vo) return
+
+        //如果特效列表里存在当前特效
+        if (ShmjMahjongDesk3D.effect[code]) {
+            this.addHuEffect(ShmjMahjongDesk3D.effect[code].code, __vo.seat_tag)
+            __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __vo.sex + "/" + ShmjMahjongDesk3D.effect[code].sound, ShmjMahjongDesk3D.effect[code].soundNum)
+        } else {
+            this.addHuEffect(31, __vo.seat_tag)
+            __sound.gameSound(MahjongConfig.getMusicPath(HallPlay.curRuleId) + __vo.sex + "/hu_ping", 2)
+        }
+
+        //显示胡的牌
+        if (value >= 0 && value != 255 && __vo) {
+            if (__vo.seat_tag == 'down') {
+                this.game.getChildByName('desk').addChild(this.downHuCard).create(value, 'down')
+            } else if (__vo.seat_tag == 'right') {
+                this.game.getChildByName('desk').addChild(this.rightHuCard).create(value, 'right')
+            } else if (__vo.seat_tag == 'up') {
+                this.game.getChildByName('desk').addChild(this.upHuCard).create(value, 'up')
+            } else if (__vo.seat_tag == 'left') {
+                this.game.getChildByName('desk').addChild(this.leftHuCard).create(value, 'left')
+            }
+        }
+    }
+
+    //添加特效
+    addHuEffect(code, seat) {
+        if (seat == 'up')
+            this.game.getChildByName('desk').addChild(this.upHuEffect).start(code, seat)
+        else if (seat == 'down')
+            this.game.getChildByName('desk').addChild(this.downHuEffect).start(code, seat)
+        else if (seat == 'left')
+            this.game.getChildByName('desk').addChild(this.leftHuEffect).start(code, seat)
+        else if (seat == 'right')
+            this.game.getChildByName('desk').addChild(this.rightHuEffect).start(code, seat)
+    }
+
+
+    /**
+     * 录像回放里的操作
+     * [videoOperationHandler description]
+     * @param  {[type]} position [description]
+     * @param  {[type]} opArr    [description]
+     * @param  {[type]} choice   [description]
+     * @return {[type]}          [description]
+     */
+    videoOperationHandler(position, opArr, choice) {
+        this['video_operation_' + position] = this['video_operation_' + position] || new ShmjMahjongVideoOperation();
+        game.utils.remove(this['video_operation_' + position])
+        this.game.getChildByName('desk').addChild(this['video_operation_' + position]).operation(position, opArr, choice)
+    }
+
+    removeVideoOperationHandler() { game.utils.remove(this['video_operation_1'], this['video_operation_2'], this['video_operation_3'], this['video_operation_4']) }
+
+    createSurpView() {
+        // this.clearSurpView();
+        if (!__data.deskData.roomVo.scene || __data.deskData.roomVo.phase == 'result' || __data.deskData.roomVo.phase == 'ready') return null;
+
+        let ioc = this.surpView || { view: null, txt: null };
+        let compass = __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('compass')
+
+        if (!this.surpView || !this.surpView.view) {
+            let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'))
+            c1.transform.localPosition = new Laya.Vector3(compass.transform.localPosition.x - 19, compass.transform.localPosition.y, compass.transform.localPosition.z - 1);
+            c1.meshRenderer.material = __data.deskData.roomVo.material
+            ioc.view = c1;
+        }
+
+        let td = { value: __data.deskData.roomVo.surplus ? __data.deskData.roomVo.surplus : '0', font: 'bold 32px 黑体' }
+        if (!this.surpView || !this.surpView.txt) {
+            let txt = this.create3dText(td);
+            txt = Laya.Sprite3D.instantiate(txt, __data.deskData.roomVo.scene.getChildByName('container'));
+            txt.transform.localScale = new Laya.Vector3(0.15, 0.15, 0.15);
+            txt.transform.localPosition = new Laya.Vector3(ioc.view.transform.localPositionX, ioc.view.transform.localPositionY + 2.7, ioc.view.transform.localPositionZ);
+            ioc.txt = txt;
+        } else {
+            ioc.txt.meshRenderer.sharedMaterial.albedoTexture = this.getNumberTexture(td);
+        }
+        return ioc
+    }
+    clearSurpView() {
+        if (this.surpView) {
+            // this.surpView.view.active = false;
+            // this.surpView.view.removeSelf();
+            // this.surpView.txt.active = false;
+            // this.surpView.txt.removeSelf();
+        }
+    }
+
+
+    createBaoView(code) {
+        this.clearBaoView();
+        // 这个区不显示宝啥的
+        if (!this.areaInfo.haveNb.show || __data.deskData.roomVo.phase == 'result') return null;
+        // if (__data.deskData.roomVo.roomPlay.indexOf('98') > -1) return null;
+
+        let value = code >= 0 && code != 255 ? __data.deskData.roomVo.numberToCard(code) : 'blank';
+        let compass = __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('compass')
+
+        let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(value), __data.deskData.roomVo.scene.getChildByName('container'))
+        c1.transform.localPosition = new Laya.Vector3(compass.transform.localPosition.x + 19, compass.transform.localPosition.y, compass.transform.localPosition.z - 1);
+        c1.meshRenderer.material = __data.deskData.roomVo.material;
+
+        c1.transform.localRotationEuler = (code >= 0 && code != 255) ? new Laya.Vector3(0, 0, 0) : new Laya.Vector3(180, 0, 0);
+
+        let out = new Laya.Vector4();
+        let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+        camera.worldToViewportPoint(new Laya.Vector3(c1.transform.localPosition.x, c1.transform.localPosition.y, c1.transform.localPosition.z), out);
+
+        let txt = this.create3dText({ value: (code >= 0 && code != 255) ? '' : this.areaInfo.haveNb.txt, font: 'bold 32px 黑体' });
+        txt = Laya.Sprite3D.instantiate(txt, __data.deskData.roomVo.scene.getChildByName('container'));
+        txt.transform.localScale = new Laya.Vector3(0.15, 0.15, 0.15);
+        txt.transform.localPosition = new Laya.Vector3(compass.transform.localPosition.x + 19, compass.transform.localPosition.y + 3.2, compass.transform.localPosition.z - 1.5);
+
+        // let sign = null;
+        // if (code >= 0) {
+        //     sign = Laya.Sprite3D.instantiate(this.createBaoSign(), c1);
+        //     // sign = Laya.Sprite3D.instantiate(sign, __data.deskData.roomVo.scene.getChildByName('container'));
+        //     // sign.transform.localPosition = new Laya.Vector3(c1.transform.localPosition.x, c1.transform.localPosition.y + 3, c1.transform.localPosition.z);
+        //     sign.transform.localPosition = new Laya.Vector3(-2.35, 3, 2.4);
+        //     sign.transform.localScale = new Laya.Vector3(1.2, 1, 1.2);
+        //     sign.transform.localRotationEuler = new Laya.Vector3(0, 180, 0);
+        // }
+
+        return { view: c1, txt: txt };
+    }
+    clearBaoView() {
+        if (this.baoView) {
+            this.baoView.view.removeSelf();
+            this.baoView.view.active = false;
+            this.baoView.txt.removeSelf();
+            this.baoView.txt.active = false;
+        }
+    }
+
+    /**
+     * 清理计时plane
+     */
+    clearCountDownPlane() {
+        if (this.cd_plane) {
+            this.cd_plane.removeSelf();
+            this.cd_plane.active = false;
+        }
+    }
+
+    initCompassTime(time) {
+        this.change_time = time;
+    }
+
+    startCompassTimer() {
+        this.stopCompassTimer();
+        Laya.timer.loop(1000, this, this.countdownloop);
+    }
+
+    stopCompassTimer() {
+        Laya.timer.clear(this, this.countdownloop)
+    }
+
+    /**
+     * 变更用户操作  
+     */
+    changeCompass(position, time = __data.deskData.roomVo.LIMIT_TIME) {
+        // if (!position) time = 30;
+        // if (__data.deskData.roomVo.islx) { return; }
+        // 重置时间
+        this.initCompassTime(time);
+        // 开始第一次计时
+        this.countdownloop();
+        // 打开计时器
+        this.startCompassTimer();
+    }
+
+    countdownloop() {
+        if (!__data.deskData.roomVo.scene || this.change_time < 0) { return }
+        this.clearCountDownPlane();
+        let plane = this.create3dText({ value: this.change_time, color: '#ffffff', font: "bold 50px 黑体" }, 'compass_3d_text');
+        this.cd_plane = Laya.Sprite3D.instantiate(plane, __data.deskData.roomVo.scene.getChildByName('container'));
+        this.cd_plane.transform.localPosition = new Laya.Vector3(0, 0.35, -2);
+        this.cd_plane.transform.localScale = new Laya.Vector3(0.25, 0.25, 0.25);
+        this.change_time--;
+        if (this.change_time < 0) { this.stopCompassTimer(); }
+    }
+
+    /**
+     * 
+     * @param {*} data { value:显示的内容, color: 颜色, width:宽度， height：高度， font：字体信息 }
+     * @param {string} 3d文字分组
+     */
+    create3dText(data, group) {
+        //设置一个面板用来渲染
+        let plane = new Laya.MeshSprite3D(Laya.PrimitiveMesh.createPlane(45, 45));
+        // plane.transform.rotate(new Laya.Vector3(0, 0, 0), true, false);
+        //材质
+        let mat = new Laya.UnlitMaterial();
+        plane.meshRenderer.sharedMaterial = mat;
+
+        let texture2D = this.getNumberTexture(data, group);
+        mat.renderMode = Laya.UnlitMaterial.RENDERMODE_TRANSPARENT;
+
+        //给材质贴图
+        mat.albedoTexture = texture2D;
+        plane.meshRenderer.sharedMaterial.cull = Laya.RenderState.CULL_NONE;
+        plane.transform.localRotationEuler = new Laya.Vector3(0, 0, 180);
+        return plane
+    }
+
+
+    getNumberTexture(data, group = '') {
+        return MahjongTexture2D.createTexture(data, group)
+    }
+
+    /**
+     * 
+     */
+    createBaoSign() {
+        //设置一个面板用来渲染
+        let plane = new Laya.MeshSprite3D(Laya.PrimitiveMesh.createPlane(2, 2));
+        // plane.transform.rotate(new Laya.Vector3(0, 0, 0), true, false);
+        //材质
+        let mat = new Laya.UnlitMaterial();
+        plane.meshRenderer.sharedMaterial = mat;
+        mat.renderMode = Laya.UnlitMaterial.RENDERMODE_TRANSPARENT;
+        //给材质贴图
+        mat.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bao.png');
+        plane.meshRenderer.sharedMaterial.cull = Laya.RenderState.CULL_NONE;
+        return plane
+    }
+
+    /**
+     * 显示手牌
+     */
+    showResult() {
+        let _list = __data.deskData.roomVo.smallResultData.playerArray;
+        for (let i = 0; i < _list.length; i++) {
+            let __vo = __data.deskData.roomVo.getPlayer(_list[i].position);
+            if (!__vo) continue;
+            if (__vo.seat_tag == 'up') {
+                this.uplist.ting = false;
+                this.uplist.createList = _list[i].handTileArray;
+                this.uplist.createDoorList = _list[i].doorValue;
+            } else if (__vo.seat_tag == 'left') {
+                this.leftlist.ting = false;
+                this.leftlist.createList = _list[i].handTileArray;
+                this.leftlist.createDoorList = _list[i].doorValue;
+            } else if (__vo.seat_tag == 'right') {
+                this.rightlist.ting = false;
+                this.rightlist.createList = _list[i].handTileArray;
+                this.rightlist.createDoorList = _list[i].doorValue;
+            }
+        }
+    }
+}
+
+/**
+ * [effect description]
+ * 特效说明
+ * 0宝风,1宝中宝,2对对胡,3地胡,4副子胡,5滚宝胡,6滚宝中,7刮大风,8干里干,9干里干干,10干里干干干
+ * 11干里干干干干,12红中宝,13皇中皇,14红中满天飞,15开牌炸,16漏宝,17漏红中,18摸宝,19碰碰胡,20七小对
+ * 21清一色,22射宝,23天胡,24下雨,25自摸胡,26呲宝,27呲红中,28呲大风,29杠上开花
+ * @type {Array}
+ */
+ShmjMahjongDesk3D.effect = []
+ShmjMahjongDesk3D.effect[1] = { code: 1, sound: "hu_bzb", soundNum: 2 }
+ShmjMahjongDesk3D.effect[2] = { code: 18, sound: "hu_mobao", soundNum: 2 }
+ShmjMahjongDesk3D.effect[3] = { code: 7, sound: "hu_dafeng", soundNum: 2 }
+ShmjMahjongDesk3D.effect[4] = { code: 21, sound: "hu_qys", soundNum: 0 }
+ShmjMahjongDesk3D.effect[5] = { code: 33, sound: "hu_piao", soundNum: 0 }
+ShmjMahjongDesk3D.effect[6] = { code: 20, sound: "hu_qixiaodui", soundNum: 0 }
+ShmjMahjongDesk3D.effect[7] = { code: 16, sound: "hu_loubao", soundNum: 2 }
+ShmjMahjongDesk3D.effect[8] = { code: 31, sound: "hu_dianpao", soundNum: 2 }
+ShmjMahjongDesk3D.effect[9] = { code: 25, sound: "hu_zimo", soundNum: 2 }
+ShmjMahjongDesk3D.effect[10] = { code: 15, sound: "kaipaizha", soundNum: 0 }
+// ShmjMahjongDesk3D.effect[10] = { code: -1, sound: "hu_ping", soundNum: 2 }
+window.MahjongDesk1413D = ShmjMahjongDesk3D

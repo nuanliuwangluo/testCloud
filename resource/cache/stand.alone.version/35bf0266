@@ -1,0 +1,197 @@
+const TogetherData = new class{
+    constructor(){
+        this.list = [];
+        this.size = 10;
+    }
+    
+    getCompoundList(){
+        let keepList = [];
+        for (const index in this.list) {
+            const groups = this.list[index];
+            keepList = keepList.concat(groups);
+        }
+        return keepList;
+    }
+}();
+
+class PlayTogether extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/PlayTogether',
+            "layer": 'icon',
+            "offx": 0,
+            "offy": 0,
+            "centerx": false,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": true
+        })
+
+        this.SHOW = 'SHOW';
+        this.HIDE = 'HIDE';
+
+        this.mouseThrough = true;
+        this.list.vScrollBarSkin = '';
+        this.list.scrollBar.triggerUpDragLimit = this.nextPage.bind(this);
+    }
+
+    onEnable() {
+        this._onRefreshHandler();
+        game.cb.on('start_game', this, this._closeSelf);
+        game.cb.on('update_together_friend', this, this._updateList);
+        Laya.timer.callLater(this, this.checkAuthorize, [this.HIDE]);
+        this.btn_hide.on(Laya.Event.CLICK, this, this._onHideHandler);
+        this.btn_show.on(Laya.Event.CLICK, this, this._onShowHandler);
+        this.btn_refresh.on(Laya.Event.CLICK, this, this._onRefreshHandler);
+    }
+
+    onDisable() {
+        game.cb.off('start_game', this, this._closeSelf);
+        game.cb.off('update_together_friend', this, this._updateList);
+        this.btn_hide.off(Laya.Event.CLICK, this, this._onHideHandler);
+        this.btn_show.off(Laya.Event.CLICK, this, this._onShowHandler);
+        this.btn_refresh.off(Laya.Event.CLICK, this, this._onRefreshHandler);
+    }
+
+    _closeSelf(){
+        game.scene.remove(PlayTogether);
+    }
+
+    get hasNextPage(){
+        if(TogetherData.list[this.page] && TogetherData.list[this.page].length == TogetherData.size){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    nextPage(){
+        if(this.isSearching){ return; }
+        if(!this.hasNextPage){ return; }
+        this.page++;
+        this.request();
+    }
+
+    request(){
+        if(this.isSearching){ return; }
+        this.isSearching = true;
+        game.server.send(14021, this.page, TogetherData.size);
+    }
+
+    _updateList() {
+        this.isSearching = false;
+        trace('同玩数据：', TogetherData.list);
+        this.list.array = TogetherData.getCompoundList();
+    }
+
+    _onRefreshHandler() {
+        this.list.scrollTo(0);
+        this.isSearching = false;
+        this.page = 1;
+        TogetherData.list = [];
+        this.request();
+    }
+
+    checkAuthorize(state) {
+        let auth = true;
+        if (auth) {
+            this.authorize.visible = false;
+            this.btn_set.visible = false;
+
+            this.list.visible = true;
+            this.btn_refresh.visible = true;
+        } else {
+            this.list.visible = false;
+            this.btn_refresh.visible = false;
+
+            this.authorize.visible = true;
+            this.btn_set.visible = true;
+        }
+        this.update(state);
+    }
+
+    _onHideHandler() {
+        this.update(this.HIDE, true);
+    }
+
+    _onShowHandler() {
+        this.update(this.SHOW, true);
+    }
+
+
+    update(state, moveTween) {
+        var w = this.width * game.scale;
+        let x = state == this.HIDE ? Laya.stage.width : Laya.stage.width - w;
+        if (!moveTween) {
+            this.x = x;
+            this.updateBtn(state);
+        } else {
+            Laya.Tween.to(this, { x: x }, 200);// , null, Laya.Handler.create(this, this.updateBtn, [state])
+            this.updateBtn(state);
+        }
+    }
+
+    updateBtn(state) {
+        if (state == this.HIDE) {
+            this.btn_hide.visible = false;
+            this.btn_show.visible = true;;
+        } else {
+            this.btn_hide.visible = true;
+            this.btn_show.visible = false;;
+        }
+    }
+}
+
+class TogetherPlayerItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/TogetherPlayerItem',
+            module: false
+        })
+
+        this.btn_invite.on(Laya.Event.CLICK, this, this._onInvite);
+        // this.btn_subscribe.on(Laya.Event.Click, this, this._onSubscribe);
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+
+    set dataSource(value) {
+        if (value) {
+            this.value = value;
+            this.updateUI();
+        }
+    }
+
+    // 邀请
+    _onInvite() {
+        miniApi.shareRoomMenu(__data.deskData.roomVo.roomID, __data.deskData.roomVo.activityId, __data.deskData.roomVo.getNeedPlayer().length, __data.deskData.roomVo.roomPlayer);
+        miniApi.share({
+            title: `${MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId)} ${__data.deskData.roomVo.roomPlayer}人 ${__data.deskData.roomVo.allGame}局`,
+            imgId: 'friendRoomShareRoom',
+            params: `uid=${__data.uid}&roomPwd=${__data.deskData.roomVo.roomID}&roCityId=${HallPlay.lastCityId}`,
+            isUpdatableMessage: true
+        })
+    }
+
+    // 预约
+    _onSubscribe() {
+
+    }
+
+    updateUI() {
+        // headBorderId     id
+        SkinUtils.setSkin(this.head, this.value.headUrl);
+        this.txt_name.text = this.value.name;
+        // LabelHiddenUtils.getAdapterContent(this.txt_name, this.value.name);
+        // this.txt_state.text = this.value.state ? '在线' : '离线';
+        // this.txt_state.color = this.value.state ? '#eac014' : '#b5bdcc';
+        // this.btn_subscribe.visible = this.value.state ? false : true;
+        // this.btn_invite.visible = this.value.state ? true : false;
+    }
+}
+
+Laya.ClassUtils.regClass('ui.desk_common.TogetherPlayerItemUI', TogetherPlayerItem)

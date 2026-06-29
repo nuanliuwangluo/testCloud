@@ -1,0 +1,721 @@
+class Garden_groud extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_groud',
+            scaleType: 'max'
+        })
+        this.s1 = this.addComponent(S_garden_groud_move)
+        this.s2 = this.addComponent(S_garden_groud_click)
+        this.s3 = this.addComponent(S_garden_groud_change_dress)
+    }
+    onAwake() { }
+    added(mapName, first_show_talk) {
+        __data.callback11005 && __data.callback11005()
+        try {
+            wx.onShow_callback()
+        } catch (error) { }
+        // __data.garden.task.branchTaskId = 117;
+        this.mapName = mapName;
+        this.mapData = game.TiledMap.hash_map[mapName];
+        Garden_groud.create_newClickArea(mapName)
+        // 把任务位置区域添加进入点击区域内
+        Garden_groud.get_originTextureId(mapName)
+        // 还原地图数据
+        game.cb.on('garden_groud_scale', this, this.scaleTo)
+        game.cb.on('garden_groud_change_map_compId', this, this.garden_groud_change_map_compId)
+        game.cb.on('garden_groud_toOtherGarden', this, this.garden_groud_toOtherGarden)
+        game.cb.on('garden_build', this, this.garden_build)
+        game.cb.on('garden_talk_done', this, this.talk_com)
+        game.cb.on('resize', this, this.resize)
+        this.garden_groud_toOtherGarden(__data.uid, __data.garden.hashUsePositionIdCompId)
+        this.resize()
+
+        if (first_show_talk) {
+            if (!__data.serverRecord['isHasLookGardenUplvPanel' + config.gardenVersion]) {
+                if (__data.garden.buildValue > 0)
+                    __showScene.show_garden_update_bombbox(first_show_talk)
+                else {
+                    __data.garden.task.branchTaskId - 1 == 0 && GTU.show(__data.garden.task.branchTaskId - 1);
+                }
+                __data.serverRecord['isHasLookGardenUplvPanel' + config.gardenVersion] = 1;
+                game.server.send(15014)
+            } else {
+                __data.garden.task.branchTaskId - 1 == 0 && GTU.show(__data.garden.task.branchTaskId - 1);
+            }
+        }
+    }
+    onDisable() {
+        game.cb.off('garden_groud_scale', this, this.scaleTo)
+        game.cb.off('garden_groud_change_map_compId', this, this.garden_groud_change_map_compId)
+        game.cb.off('garden_groud_toOtherGarden', this, this.garden_groud_toOtherGarden)
+        game.cb.off('garden_build', this, this.garden_build)
+        game.cb.off('garden_talk_done', this, this.talk_com)
+        game.cb.off('resize', this, this.resize)
+        game.cb.off('tiledmap_dragon_play_com', this, this.tiledmap_dragon_play_com)
+        this.clearAwait && this.clearAwait();
+
+        S_garden_groud_change_dress.positionId = null;
+        S_garden_groud_change_dress.lastDressTextureIdArray = null;
+
+        this.tileMap && this.tileMap.clear()
+    }
+    resize() {
+        // 范围的点
+        // let movePoint = [
+        //     { x: 227, y: 270 },
+        //     { x: 227, y: 221 },
+        //     { x: 288, y: 221 },
+        //     { x: 288, y: 270 },
+        // ]
+        this.movePolygon = [];
+        Garden_groud.movePoint.forEach(e => {
+            let a = this.tileMap.getScreenPositionByTileXY(e.x, e.y);
+            this.movePolygon.push([a.x, a.y])
+        });
+    }
+    restoreMapData() {
+        let o = Garden_groud.get_originTextureId(this.mapName);
+        for (const i1 in o) {
+            let e = o[i1]
+            let d = this.mapData.layer.find((e1) => {
+                return e1.name == e.layerName
+            })
+            if (d) {
+                let nx = e.y * this.mapData.widthNum + e.x
+                d.data[nx] = e.originTextureId
+                if (!e.originTextureId) {
+                    delete d.data[nx]
+                }
+            }
+        }
+    }
+    garden_groud_toOtherGarden(uid, ud) {
+        this.curGardenUid = uid;
+        this.tween_unlock_area_chapterId = 0
+        // 恢复地图
+        this.restoreMapData();
+        // let d = this.mapData.layer.find((e1) => {
+        //     return e1.name == '2ceng'
+        // })
+        // console.log(d.data[246 * this.mapData.widthNum + 263]);
+        Garden_groud.create_mask(this.mapName)
+        // 强制刷新地图
+        this.tileMap = this.tileMap || new game.TiledMap()
+        this.tileMap.clear()
+
+        // 加入 任务标记 未解锁区域遮罩 图层
+        let lineLayer = {
+            name: 'sign',
+            sort: 100,
+            data: [],
+        }
+        let aindex = this.mapData.layer.findIndex((e) => {
+            return e.name == 'sign'
+        })
+        if (aindex >= 0) {
+            this.mapData.layer.splice(aindex, 1)
+        }
+        this.mapData.layer.push(lineLayer)
+
+        this.tileMap.createMap(this, this.mapData,
+            new Laya.Rectangle(0, 0, this.width, this.height), { up: 100, down: 800, left: 850, right: 850 })
+
+        let d132;
+        if (uid == __data.uid) {
+            d132 = __data.excelConfig.hashGardenPositionArea[__data.garden.task.branchTaskId]
+            if (!d132) d132 = __data.excelConfig.hashGardenPositionArea[1]
+        } else {
+            d132 = __data.excelConfig.hashGardenPositionArea[1]
+
+        }
+        this.tileMap.scale = 0.7;
+        // 检测装饰是否有效 修复位置装饰id不匹配问题
+        for (const positionId in ud) {
+            let compId = ud[positionId];
+            let ud1 = __data.excelConfig.hashGardenDress[compId];
+            if (ud1) {
+                if (ud1.positionId != positionId) {
+                    let d2 = __data.excelConfig.hashGardenTaskPositionId_compId[positionId]
+                    if (d2) {
+                        ud[positionId] = d2[0];
+                        if (uid == __data.uid) game.server.send(15004, positionId, d2[0])
+                    }
+                }
+            }
+        }
+        // 添加使用装饰
+        let a = Object.values(ud);
+        for (const compId of a) {
+            this.garden_groud_change_map_compId(compId);
+        }
+
+        let d = this.mapData.layer.find((e1) => {
+            return e1.name == '2ceng'
+        })
+
+        this.tileMap.tileShowCallback = (tile) => {
+            let chapterId = Garden_groud.chapter_unlock_area[tile.gridx + '-' + tile.gridy]
+            if (chapterId) {
+                let f = Garden_groud.chapter_unlock_area[chapterId + '-filter']
+                if (!f) {
+                    var darkFilter = new Laya.ColorFilter([]);
+                    __tool.setBrightness(darkFilter, -0.4);
+                    // darkFilter.color(0, 0, 0, 1);
+                    f = darkFilter;
+                    Garden_groud.chapter_unlock_area[chapterId + '-filter'] = f;
+                }
+
+                let player_chapterId = 0;
+                if (uid == __data.uid) {
+                    player_chapterId = __data.garden.task.curChapterId
+
+                } else {
+                    // 计算解锁区域
+                    let a = Object.keys(ud)
+                    let taskId = a[a.length - 1]
+                    let b = __data.garden.task.getBranchTaskData(taskId)
+                    player_chapterId = b && b.chapterId || 0
+                }
+                if (this.tween_unlock_area_chapterId && chapterId == this.tween_unlock_area_chapterId) {
+                    tile.filters = [f]
+                } else if (Number(chapterId) > Number(player_chapterId)) {
+                    tile.filters = [f]
+                }
+            }
+        }
+
+        // // 添加任务标记
+        if (uid == __data.uid) {
+            this.addTaskSign()
+        }
+
+        this.moveTo(...d132.centerXY.toArray('_'))
+        // setTimeout(async () => {
+        //     await this.unlock_area(3)
+        // }, 2000)
+    }
+    deleteTaskSign() {
+        if (this.lastSignInfo && this.lastSignInfo.length) {
+            this.lastSignInfo.forEach(e => {
+                this.tileMap.setMapTextureId('sign', e.x, e.y, 0)
+                this.tileMap.tileClearTexture('sign', e.x, e.y)
+            });
+            this.lastSignInfo_o_group.gridArray = this.lastSignInfo_o_gridArray
+        }
+    }
+    addTaskSign() {
+        this.deleteTaskSign();
+        if (__data.garden.task.branchTaskId) {
+            let data = __data.excelConfig.hashGardenPositionArea[__data.garden.task.branchTaskId];
+            if (!data) return;
+            let a = data.taskSignPosition.toArray(',')
+            let b = a.map((e) => {
+                let n = e.toArray('_').map(Number)
+                if (__data.garden.star >= __data.garden.task.needStar) {
+                    this.tileMap.tileChangeTexture('sign', n[0], n[1], 'weizhi1-1')
+                } else {
+                    this.tileMap.tileChangeTexture('sign', n[0], n[1], 'weizhi-1')
+                }
+                return {
+                    x: n[0],
+                    y: n[1],
+                }
+            })
+
+            let b_group = this.mapData.group.find((e) => {
+                return e.name == data.groupName
+            })
+            this.lastSignInfo_o_gridArray = b_group.gridArray.slice();
+            this.lastSignInfo_o_group = b_group
+            let a1 = data.taskSignPosition.replaceAll('_', '-').toArray(',')
+            b_group.gridArray.push(...a1)
+
+            this.lastSignInfo = b;
+        }
+    }
+    moveTo(tilex, tiley, isTween = false) {
+        return new Promise(async (resolve, reject) => {
+            let a = this.tileMap.getScreenPositionByTileXY(tilex, tiley)
+            this.moveVO = {
+                x: this.s1.mX,
+                y: this.s1.mY
+            }
+            this.s1.mX = -a.x - this.mapData.tilewidth / 2 + this.width / 2;
+            this.s1.mY = -a.y - this.mapData.tileheight / 2 + this.height / 2;
+            if (isTween) {
+                let time11 = 300
+                let t = __tool.tween(this.moveVO, { x: this.s1.mX, y: this.s1.mY }, time11)
+                __tool.tweenUpdate(t, () => {
+                    this.tileMap.moveViewPort(-this.moveVO.x, -this.moveVO.y)
+                })
+                await __tool.await(time11, this)
+                resolve(1)
+            } else {
+                this.tileMap.moveViewPort(-this.s1.mX, -this.s1.mY)
+                resolve(1)
+            }
+        })
+    }
+    scaleTo(scaleType, isTween) {
+        // scaleType =  min or max
+        // let scaleV = scaleType == 'min' ? 0.5 : 0.7
+        // if (isTween) {
+        //     let a = { v: this.tileMap.scale }
+        //     let t = __tool.tween(a, { v: scaleV }, 200)
+        //     __tool.tweenUpdate(t, () => {
+        //         this.tileMap.scale = a.v;
+        //     })
+        // } else {
+        //     this.tileMap.scale = scaleV;
+        // }
+    }
+    garden_groud_change_map_compId(compId) {
+        let d = __data.excelConfig.hashGardenDress[compId];
+        let positionId = d.positionId;
+
+        let data = __data.excelConfig.hashGardenPositionArea[positionId]
+        if (!data) {
+            return console.error('组件 - ' + compId + ' 区域数据不存在');
+        }
+        let tileXYArray = Garden_groud.get_effective_tileXY_by_positionId(positionId);
+        tileXYArray.forEach(e => {
+            let id1 = d.tileTextureId.toArray(',')[e.textureIdIndex]
+            if (!id1) console.error('tiledmap贴图id不存在 id集合', d.tileTextureId, 'id索引', e.textureIdIndex);
+            this.tileMap.tileChangeTexture(e.layerName, e.x, e.y, id1)
+        });
+    }
+    async garden_build(id) {
+        game.scene.add(GardenBuildMask)
+        this.build_taskid = id;
+        this.uplvAniArray = []
+
+        game.cb.event('garden_groud_remove_filter_ani');
+        game.cb.event('garden_groud_remove_alpha_ani');
+        // 建造哪个任务
+        // 添加动画
+        this.deleteTaskSign()
+        let d123 = __data.excelConfig.hashGardenPositionArea[id]
+        // d123.upLvAni = '253_250|Jianzao.sk-Jianzao3-0-1'
+        game.cb.event('garden_remove_build_ui');
+        if (d123.upLvAni && d123.upLvAni.includes('Jianzao3')) {
+            let compId = __data.garden.hashUsePositionIdCompId[id]
+            if (!compId) {
+                compId = __data.garden.task.dressSelect(id)[0].id
+            }
+            this.garden_groud_change_map_compId(compId)
+            // game.cb.event('garden_groud_add_filter_ani', [id])
+            game.cb.event('garden_groud_add_alpha_ani', [id])
+            __sound.gameSound("appear")
+            game.cb.on('tiledmap_dragon_play_com', this, this.tiledmap_dragon_play_com)
+            d123.upLvAni.toArray(",").forEach((e) => {
+                let a1 = e.toArray('|')
+                let n = a1[0].toArray('_')
+                this.uplvAniArray.push(n)
+                this.tileMap.tileChangeTexture('sign', n[0], n[1], a1[1])
+            })
+        }
+        // 添加建造动画
+        // 253_250|Jianzao.sk-Jianzao-0-1,253_250|Jianzao.sk-Jianzao-0-1
+        else if (d123.upLvAni && !d123.upLvAni.includes('Jianzao3')) {
+            game.cb.on('tiledmap_dragon_play_com', this, this.tiledmap_dragon_play_com)
+            d123.upLvAni.toArray(",").forEach((e) => {
+                let a1 = e.toArray('|')
+                let n = a1[0].toArray('_')
+                this.uplvAniArray.push(n)
+                this.tileMap.tileChangeTexture('sign', n[0], n[1], a1[1])
+            })
+            if (d123.upLvAni.includes('Jianzao3')) { } else __sound.gameSound("build")
+        } else {
+            __sound.gameSound("appear")
+            await __tool.await(2000, this)
+            this.tiledmap_dragon_play_com('Jianzao.sk')
+        }
+    }
+    async talk_com() {
+        let a3 = game.scene.get(GardenMainUI_leftDown);
+        if (a3 && a3.parent) {
+            return
+        }
+        let a = __data.garden.task.getBranchTaskData(this.build_taskid)
+        let b = __data.garden.task.getBranchTaskData(this.build_taskid + 1)
+        let a1 = a && a.chapterId || 0;
+        let b1 = b && b.chapterId || 0;
+        a1 = parseInt(a1)
+        b1 = parseInt(b1)
+        // a1 = '1';
+        // b1 = '2'
+        if (b1 > a1 && a1 != 0 && b1 != 0) {
+            await this.unlock_area(b1)
+        }
+        this.addTaskSign()
+        game.scene.add(GardenMainUI_leftUp_return)
+        game.scene.add(GardenMainUI_leftUp_res)
+        game.scene.add(GardenMainUI_leftDown)
+        game.scene.add(GardenMainUI_rightDown)
+        game.scene.remove(GardenBuildMask)
+        game.cb.event('garden_groud_scale', ['max', true])
+    }
+    tiledmap_dragon_play_com(a) {
+        if (a == 'Jianzao.sk') {
+            game.cb.off('tiledmap_dragon_play_com', this, this.tiledmap_dragon_play_com)
+            // let d123 = __data.excelConfig.hashGardenPositionArea[this.build_taskid]
+            // let n = d123.centerXY.toArray('_')
+            // 动画移除
+            this.uplvAniArray.forEach(n => {
+                this.tileMap.setMapTextureId('sign', n[0], n[1], 0)
+                this.tileMap.tileClearTexture('sign', n[0], n[1])
+            });
+
+            // 更改
+            let compId = __data.garden.hashUsePositionIdCompId[this.build_taskid]
+            if (!compId) {
+                let a = __data.garden.task.dressSelect(this.build_taskid);
+                compId = a[0].id
+            }
+            this.garden_groud_change_map_compId(compId)
+            game.cb.event('garden_groud_remove_filter_ani');
+            game.cb.event('garden_groud_remove_alpha_ani');
+            // 黑雾解锁
+            let a = GTU.show(this.build_taskid)
+            if (!a) {
+                this.talk_com()
+            }
+        }
+    }
+    async unlock_area(chapter) {
+        this.tween_unlock_area_chapterId = chapter;
+        await this.moveTo(Garden_groud.chapter_unlock_area.center[chapter].x, Garden_groud.chapter_unlock_area.center[chapter].y, true)
+        await __tool.await(300)
+
+        let ob = { v: -0.4 }
+        let f = Garden_groud.chapter_unlock_area[chapter + '-filter']
+        __tool.setBrightness(f, -0.4)
+
+        let a = Laya.Tween.to(ob, { v: 0 }, 1000)
+        __tool.tweenUpdate(a, (e) => {
+            __tool.setBrightness(f, ob.v)
+        })
+        await __tool.await(1000)
+        __tool.setBrightness(f, 0)
+        Laya.Tween.clearAll(ob)
+        this.tween_unlock_area_chapterId = 0;
+        return 1;
+    }
+}
+Garden_groud.get_effective_tile_by_positionId = (positionId) => {
+    let g = game.scene.get(Garden_groud)
+    let data = __data.excelConfig.hashGardenPositionArea[positionId]
+    if (!data) {
+        console.error('这个位置没有区域配置', positionId)
+        return []
+    }
+    let tileXYArray = Garden_groud.get_effective_tileXY_by_positionId(positionId)
+    let tileArray = [];
+    tileXYArray.forEach((e) => {
+        let n1 = g.tileMap.getTileByLayerNameAndTileXY(e.layerName, e.x, e.y)
+        if (n1) {
+            tileArray.push(n1)
+        }
+    })
+    return tileArray
+}
+Garden_groud.hash_positionId_effective_tileXY = {};
+Garden_groud.get_effective_tileXY_by_positionId = (positionId) => {
+    let a = Garden_groud.hash_positionId_effective_tileXY[positionId];
+    if (a) return a;
+    let data = __data.excelConfig.hashGardenPositionArea[positionId]
+    if (!data) {
+        return console.error('这个位置没有配置区域', positionId)
+    }
+    let tileXYArray = [];
+    if (data.grid) {
+        let a1 = data.grid.toArray(',')
+        a1.forEach(e => {
+            let n = e.toArray('_')
+            tileXYArray.push({
+                layerName: n[0],
+                x: parseInt(n[1]),
+                y: parseInt(n[2]),
+                textureIdIndex: n[3],
+            })
+        });
+    }
+    if (data.gridGroupName) {
+        data.gridGroupName.toArray(',').forEach((e01) => {
+            let g = game.scene.get(Garden_groud)
+            let e02 = e01.toArray('_')
+            let nx1 = g.mapData.group.find((e) => {
+                return e.name == e02[0]
+            })
+            if (!nx1) {
+                console.error('组不存在', e02[0])
+                return []
+            }
+            nx1.gridArray.forEach(e => {
+                let n = e.toArray('-').map(Number)
+                tileXYArray.push({
+                    layerName: nx1.layerName,
+                    x: n[0],
+                    y: n[1],
+                    textureIdIndex: e02[1],
+                })
+            });
+        })
+    }
+    // else {
+    //     console.error('位置', positionId, '有效区域不存在')
+    // }
+    Garden_groud.hash_positionId_effective_tileXY[positionId] = tileXYArray;
+    return tileXYArray
+}
+Garden_groud.hash_originTextureId = {};
+Garden_groud.get_originTextureId = (mapName) => {
+    let a = Garden_groud.hash_originTextureId[mapName];
+    let mapData = game.TiledMap.hash_map[mapName]
+    if (a) return a;
+    a = [];
+    for (const position in __data.excelConfig.hashGardenPositionArea) {
+        // let d = __data.excelConfig.hashGardenPositionArea[position];
+        let b = Garden_groud.get_effective_tileXY_by_positionId(position)
+
+        for (const iterator of b) {
+            let d = mapData.layer.find((e) => {
+                return e.name == iterator.layerName
+            })
+            if (d) {
+                a.push({
+                    layerName: iterator.layerName,
+                    x: iterator.x,
+                    y: iterator.y,
+                    originTextureId: d.data[iterator.y * mapData.widthNum + iterator.x] || 0,
+                })
+            }
+        }
+    }
+    Garden_groud.hash_originTextureId[mapName] = a;
+    return a
+}
+// 游戏里面 试试增加 复制出一份 因为罗丽丝可能 点击区域和有效区域用一个
+Garden_groud.hash_create_newClickArea = {};
+Garden_groud.create_newClickArea = (mapName) => {
+    if (Garden_groud.hash_create_newClickArea[mapName]) return;
+    Garden_groud.hash_create_newClickArea[mapName] = 1;
+    let mapData = game.TiledMap.hash_map[mapName]
+
+    for (const position in __data.excelConfig.hashGardenPositionArea) {
+        let vo = __data.excelConfig.hashGardenPositionArea[position]
+        let newGroup = {
+            name: 'click-' + vo.positionId,
+            name2: vo.groupName,
+            layerName: '',
+            gridArray: []
+        }
+        vo.groupName.toArray(',').forEach((e) => {
+            let nx1 = mapData.group.find((e1) => {
+                return e1.name == e
+            })
+            if (!nx1) {
+                console.error('vo.positionId:' + vo.positionId, 'groupName:' + e);
+                if (miniApi.clientType == 'web') {
+                    debugger;
+                }
+            }
+            newGroup.gridArray.push(...nx1.gridArray)
+        })
+        mapData.group.push(newGroup)
+        __data.excelConfig.hash_groupName_positionId[newGroup.name] = position;
+        vo.groupName = newGroup.name;
+    }
+}
+Garden_groud.hash_create_mask = {}
+Garden_groud.create_mask = (mapName) => {
+    if (Garden_groud.hash_create_mask[mapName]) return;
+    Garden_groud.hash_create_mask[mapName] = 1
+    let mapData = game.TiledMap.hash_map[mapName]
+    let mask = {
+        name: 'mask',
+        sort: 200,
+        data: {},
+    }
+    // mapData.layer.splice(1, 0, mask)
+
+    // let mask_h = mapData.layer.find((e) => {
+    //     return e.name == 'mask'
+    // })
+    // if (mask_h) { }
+    // else 
+    mapData.layer.push(mask)
+    // 迷雾
+    // for (let x1 = 100, length1 = 250; x1 <= length1; x1++) {
+    //     for (let y2 = 150, length2 = 290; y2 <= length2; y2++) {
+    //         mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+    //     };
+    // };
+    // 左上
+    // for (let x1 = 150, length1 = 239; x1 <= length1; x1++) {
+    //     for (let y2 = 150, length2 = 290; y2 <= length2; y2++) {
+    //         mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+    //     };
+    // };
+    // 右下
+    // for (let x1 = 289, length1 = 310; x1 <= length1; x1++) {
+    //     for (let y2 = 200, length2 = 290; y2 <= length2; y2++) {
+    //         mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+    //     };
+    // };
+    // 坐下
+    // for (let x1 = 220, length1 = 310; x1 <= length1; x1++) {
+    //     for (let y2 = 270, length2 = 290; y2 <= length2; y2++) {
+    //         mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+    //     };
+    // };
+    // 右上
+    // for (let x1 = 220, length1 = 310; x1 <= length1; x1++) {
+    //     for (let y2 = 150, length2 = 218; y2 <= length2; y2++) {
+    //         mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+    //     };
+    // };
+    // 解锁区域
+    let maxx = 0;
+    let minx = 9999;
+    let maxy = 0;
+    let miny = 9999;
+
+    let area = {
+        1: {
+            x: '243-257',
+            y: '241-264'
+        },
+        2: {
+            x: '258-271',
+            y: '241-264'
+        },
+        3: {
+            x: '272-287',
+            y: '241-264'
+        },
+        4: {
+            x: '272-287',
+            y: '223-240'
+        },
+        5: {
+            x: '258-271',
+            y: '223-240'
+        },
+        6: {
+            x: '242-257',
+            y: '221-242'
+        },
+        7: {
+            x: '228-241',
+            y: '223-243'
+        },
+        8: {
+            x: '227-241',
+            y: '243-264'
+        },
+        9: {
+            x: '214-227',
+            y: '243-264'
+        },
+        10: {
+            x: '214-227',
+            y: '223-242'
+        },
+        11: {
+            x: '214-228',
+            y: '205-222'
+        },
+        12: {
+            x: '229-241',
+            y: '205-222'
+        },
+        13: {
+            x: '242-257',
+            y: '205-220'
+        },
+        14: {
+            x: '258-271',
+            y: '205-222'
+        },
+        15: {
+            x: '272-287',
+            y: '205-222'
+        },
+        16: {
+            x: '272-287',
+            y: '189-204'
+        },
+        17: {
+            x: '258-271',
+            y: '189-204'
+        },
+        18: {
+            x: '243-258',
+            y: '189-204'
+        },
+        19: {
+            x: '229-242',
+            y: '189-204'
+        },
+        20: {
+            x: '214-228',
+            y: '189-204'
+        },
+    }
+    for (const areaId in area) {
+        const e = area[areaId];
+        // Garden_groud.chapter_unlock_area[areaId] = []
+        let ax = e.x.toArray('-').map(Number)
+        let ay = e.y.toArray('-').map(Number)
+        // let cx = parseInt((ax[0] + ax[1]) / 2)
+        // let cy = parseInt((ay[0] + ay[1]) / 2)
+        // Garden_groud.chapter_unlock_area.center[areaId] = { x: cx, y: cy };
+        minx = Math.min(minx, ax[0]);
+        maxx = Math.max(maxx, ax[1]);
+        miny = Math.min(miny, ay[0]);
+        maxy = Math.max(maxy, ay[1]);
+    }
+    for (let x1 = minx - 40, length1 = maxx + 40; x1 <= length1; x1++) {
+        for (let y2 = miny - 40, length2 = maxy + 40; y2 <= length2; y2++) {
+            mask.data[y2 * mapData.widthNum + x1] = 'zhezhao-1'
+        };
+    };
+
+    Garden_groud.chapter_unlock_area = { center: {} };
+
+    for (const areaId in area) {
+        const e = area[areaId];
+        Garden_groud.chapter_unlock_area[areaId] = []
+        let ax = e.x.toArray('-').map(Number)
+        let ay = e.y.toArray('-').map(Number)
+        let cx = parseInt((ax[0] + ax[1]) / 2)
+        let cy = parseInt((ay[0] + ay[1]) / 2)
+        Garden_groud.chapter_unlock_area.center[areaId] = { x: cx, y: cy };
+
+        // minx = Math.min(minx, ax[0]);
+        // maxx = Math.max(maxx, ax[1]);
+        // miny = Math.min(miny, ay[0]);
+        // maxy = Math.max(maxy, ay[1]);
+
+        for (let x1 = ax[0], length1 = ax[1]; x1 <= length1; x1++) {
+            for (let y2 = ay[0], length2 = ay[1]; y2 <= length2; y2++) {
+                Garden_groud.chapter_unlock_area[areaId].push({ x: x1, y: y2 })
+                Garden_groud.chapter_unlock_area[x1 + '-' + y2] = areaId
+            };
+        };
+        // 删除迷雾
+        for (let x1 = ax[0] - 5, length1 = ax[1] + 5; x1 <= length1; x1++) {
+            for (let y2 = ay[0] - 5, length2 = ay[1] + 5; y2 <= length2; y2++) {
+                delete mask.data[y2 * mapData.widthNum + x1]
+            };
+        };
+    }
+
+    Garden_groud.movePoint = [
+        { x: minx, y: miny },
+        { x: minx, y: maxy },
+        { x: maxx, y: maxy },
+        { x: maxx, y: miny },
+    ]
+}

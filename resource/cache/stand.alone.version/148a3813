@@ -1,0 +1,117 @@
+let gardenEffect = {
+    async taskStar() {
+        let img = new Laya.Image('bag_icon/img_hyzx.png')
+        game.scene.layer['tips'].c.addChild(img)
+        img.width = 75
+        img.height = 75
+        img.anchorX = 0.5
+        img.anchorY = 0.5
+        img.scaleX = game.scale
+        img.scaleY = game.scale
+
+        let resUI = game.scene.get(GardenMainUI_leftUp_res)
+        let img_star1 = resUI.img_star
+        let a1 = new Laya.Point(img_star1.x + img_star1.width / 2, img_star1.y + img_star1.height / 2)
+        let b1 = img_star1.parent.localToGlobal(a1);
+
+        let img_star2 = game.scene.get(GardenTask).img_star;
+        let a2 = new Laya.Point(img_star2.x + img_star2.width / 2, img_star2.y + img_star2.height / 2)
+        let b2 = img_star2.parent.localToGlobal(a2)
+
+        // 示例使用
+        const P0 = b1;
+        const P1 = { x: b2.x + 100, y: b1.y - 100 };
+        const P2 = b2;
+
+        await gardenEffect.addAEffect(img, P0, P1, P2, 0.05, 2, 0.05)
+        return 1;
+    },
+    buildValueEffect_setAddv: 0,
+    buildValueEffect_x: 0,
+    buildValueEffect_y: 0,
+    async startBuildValueEffect(x, y) {
+        x = this.buildValueEffect_x || game.stage.width / 2
+        y = this.buildValueEffect_y || game.stage.height / 2
+        __data.garden.buildValue += gardenEffect.buildValueEffect_setAddv
+        let img2 = game.scene.get(GardenMainUI_leftUp_res).img_bv;
+
+        let img = new Laya.Image('bag_icon/img_frd2.png')
+        game.scene.layer['tips'].c.addChild(img)
+        img.anchorX = 0.5
+        img.anchorY = 0.5
+        img.scaleX = img2.scaleX * game.scale
+        img.scaleY = img2.scaleY * game.scale
+        img.x = x;
+        img.y = y;
+
+        let b1 = new Laya.Point(x, y)
+
+        let a2 = new Laya.Point(img2.x + img2.scaleX * img2.width / 2, img2.y + img2.scaleY * img2.height / 2)
+        let b2 = img2.parent.localToGlobal(a2)
+
+        // 示例使用
+        const P0 = b1;
+        const P1 = { x: b2.x - 100, y: b1.y + 100 };
+        const P2 = b2;
+
+        await gardenEffect.addAEffect(img, P0, P1, P2, 0.05, 2, 0.02)
+        gardenEffect.buildValueEffect_setAddv = 0;
+        game.cb.event('update_buildValue');
+        return 1;
+    }
+}
+
+gardenEffect.addAEffect = function (img, P0, P1, P2, addPro, addSmallStarFrameDelay, smallStarReduceScaleV) {
+    return new Promise((resolve, reject) => {
+        let t = 0; // 进度
+        let index1x = 0
+        function move() {
+            if (t > 1) t = 1;
+            let pointOnCurve = __tool.quadraticBezier(P0, P1, P2, t);
+            img.x = pointOnCurve.x;
+            img.y = pointOnCurve.y;
+            t = Number(Number(t).toFixed(3))
+            if (t >= 1) {
+                game.utils.remove(img)
+                img.destroy()
+                Laya.timer.clear(this, move)
+                resolve(1)
+                return
+            }
+            if (index1x % addSmallStarFrameDelay == 0) {
+                let img1 = new Laya.Image(img.skin)
+                game.scene.layer['tips'].c.addChild(img1)
+                img1.width = img.width
+                img1.height = img.height
+                img1.anchorX = img.anchorX
+                img1.anchorY = img.anchorY
+                img1.scaleX = img.scaleX
+                img1.scaleY = img.scaleY
+                img1.x = img.x
+                img1.y = img.y
+                img1.addComponent(S_garden_effect_reduce_scale).init(smallStarReduceScaleV)
+            }
+            index1x++;
+            t += addPro
+        }
+        move()
+        if (Laya.stage.frameRate == 'fast') {
+            Laya.timer.loop(40, this, move)//主控制  0.0003自己调整
+        } else {
+            Laya.timer.loop(15, this, move)//主控制  0.0003自己调整
+        }
+    })
+}
+class S_garden_effect_reduce_scale extends Laya.Script {
+    init(smallStarReduceScaleV) {
+        this.smallStarReduceScaleV = smallStarReduceScaleV
+    }
+    onUpdate() {
+        this.owner.scaleX -= this.smallStarReduceScaleV
+        this.owner.scaleY -= this.smallStarReduceScaleV
+        if (this.owner.scaleX < 0) {
+            game.utils.remove(this.owner)
+            this.owner.destroy()
+        }
+    }
+}

@@ -1,0 +1,151 @@
+class TestPlay extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestPlay',
+            module: false
+        })
+        this.addComponent(S_TestPlay);
+        this.label.addComponent(S_tp_right_click)
+        this.view.addComponent(S_TestDrag);
+        this.mouseThrough = true;
+    }
+    onEnable() { }
+}
+class S_TestDrag extends Laya.Script {
+    onAwake() {
+        this.dragRegion = new Laya.Rectangle(0, 0, game.width - this.owner.parent.width, game.height - this.owner.parent.height)
+    }
+
+    onClick(e) {
+        if (this.lastMouseX != game.stage.mouseX || this.lastMouseY != game.stage.mouseY) return;
+    }
+    onMouseDown(e) {
+        this.lastMouseX = game.stage.mouseX
+        this.lastMouseY = game.stage.mouseY
+        this.owner.parent.startDrag(this.dragRegion);
+    }
+}
+class S_tp_right_click extends Laya.Script {
+    onRightClick(e) {
+        let space1 = '	'
+        let content1 = S_TestPlay.v_win + space1 +
+            S_TestPlay.v_lose + space1 +
+            (S_TestPlay.v_win + S_TestPlay.v_lose) + space1 +
+            S_TestPlay.v_1 + space1 +
+            S_TestPlay.v_2 + space1 +
+            S_TestPlay.v_3
+        miniApi.copy(content1)
+    }
+}
+class S_TestPlay extends Laya.Script {
+    onEnable() {
+
+        this.color = '#ff0000';
+        this.owner.x = game.width - this.owner.width;
+        this.owner.y = 50;
+        if (this.owner.x < 0) this.owner.x = 0
+        if (this.owner.y < 0) this.owner.y = 0
+        if (this.owner.x > game.width - this.owner.width) this.owner.x = game.width - this.owner.width
+        if (this.owner.y > game.height - this.owner.height) this.owner.y = game.height - this.owner.height
+
+        this.readLocal();
+        this._updateEventListener();
+        this.owner.btn.on(Laya.Event.CLICK, this, this._onReset);
+        game.cb.on("show_desk_cost_rate_tips", this, this._updateEventListener);
+    }
+
+    onDisable() {
+        game.cb.off("show_desk_cost_rate_tips", this, this._updateEventListener);
+        game.cb.off(__eh + "update_player_result", this, this._updateResult);
+    }
+
+    _updateEventListener() {
+        game.cb.on(__eh + "update_player_result", this, this._updateResult);
+    }
+
+    readLocal() {
+        this.win = miniApi.getItem('testplay_result_win') || 0;
+        this.lose = miniApi.getItem('testplay_result_lose') || 0;
+
+        this.all_gold = miniApi.getItem('testplay_result_all_gold') || 0;
+        this.win_gold = miniApi.getItem('testplay_result_win_gold') || 0;
+        this.lose_gold = miniApi.getItem('testplay_result_lose_gold') || 0;
+        this.bottomScore = miniApi.getItem('testplay_result_last_bottom_score') || 0;
+        this.deskCost = miniApi.getItem('testplay_result_last_desk_cost') || 0;
+
+        this.win = parseInt(this.win);
+        this.lose = parseInt(this.lose);
+        this._updateTxt();
+    }
+
+    _updateResult() {
+        let data = __data.getMatchDataById(__data.prev_match_modelId, __data.gameId.curId, __data.prev_match_lv);
+
+        let result = __data.deskData.roomVo.smallResultData.myResult;
+        let score = __data.deskData.roomVo.smallResultData.myScore;
+        this.bottomScore = __data.deskData.roomVo.bottomScore;
+        this.win_gold = parseInt(this.win_gold);
+        this.lose_gold = parseInt(this.lose_gold);
+        this.all_gold = parseInt(this.all_gold);
+        this.deskCost = parseInt(data.cost);
+        // 赢了
+        if (score > 0) {
+            this.win++;
+            this.win_gold += parseInt(score);
+        }
+        // 输了
+        else {
+            this.lose++;
+            this.lose_gold += parseInt(score);
+        }
+
+        this.all_gold = this.all_gold + parseInt(score) - this.deskCost;
+
+        miniApi.setItem('testplay_result_win', this.win);
+        miniApi.setItem('testplay_result_lose', this.lose);
+
+        miniApi.setItem('testplay_result_all_gold', this.all_gold);
+        miniApi.setItem('testplay_result_win_gold', this.win_gold);
+        miniApi.setItem('testplay_result_lose_gold', this.lose_gold);
+        miniApi.setItem('testplay_result_last_bottom_score', this.bottomScore);
+        miniApi.setItem('testplay_result_last_desk_cost', this.deskCost);
+        this._updateTxt();
+    }
+
+    _onReset() {
+        this.win = this.lose = this.all_gold = this.win_gold = this.lose_gold = this.deskCost = this.bottomScore = 0;
+        miniApi.setItem('testplay_result_win', 0);
+        miniApi.setItem('testplay_result_lose', 0);
+        miniApi.setItem('testplay_result_all_gold', 0);
+        miniApi.setItem('testplay_result_win_gold', 0);
+        miniApi.setItem('testplay_result_lose_gold', 0);
+        miniApi.setItem('testplay_result_last_bottom_score', 0);
+        miniApi.setItem('testplay_result_last_desk_cost', 0);
+        this._updateTxt();
+    }
+
+    _updateTxt() {
+        this.owner.label.text = `胜:${this.win} 败:${this.lose}`;
+        console.log("%c-----------------------start更新对局统计-----------------------", `color:${this.color}`)
+        console.log('%c胜利累计金币：' + this.win_gold, `color:${this.color}`);
+        console.log('%c失败累计金币：' + this.lose_gold, `color:${this.color}`);
+        console.log('%c全部累计金币：' + this.all_gold, `color:${this.color}`);
+        console.log('%c底分：' + this.bottomScore, `color:${this.color}`);
+        console.log('%c桌费：' + this.deskCost, `color:${this.color}`);
+        console.log("%c-----------------------end更新对局统计-----------------------", `color:${this.color}`)
+        let all = (this.all_gold / (this.win + this.lose) / this.deskCost) ? (this.all_gold / (this.win + this.lose) / this.deskCost).toFixed(2) : 0;
+        let win = (this.win_gold / this.win / this.bottomScore) ? (this.win_gold / this.win / this.bottomScore).toFixed(2) : 0;
+        let lose = (this.lose_gold / this.lose / this.bottomScore) ? (this.lose_gold / this.lose / this.bottomScore).toFixed(2) : 0;
+        this.owner.txt_all.text = `场均桌费倍数：${all}`;
+        this.owner.txt_win.text = `场均胜利倍数：${win}`;
+        this.owner.txt_lose.text = `场均失败倍数：${lose}`;
+
+
+        S_TestPlay.v_win = this.win;
+        S_TestPlay.v_lose = this.lose;
+        S_TestPlay.v_1 = all;
+        S_TestPlay.v_2 = win;
+        S_TestPlay.v_3 = lose;
+    }
+}
+

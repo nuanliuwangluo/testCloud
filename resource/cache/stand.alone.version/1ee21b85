@@ -1,0 +1,250 @@
+class S_mm_create_card extends Laya.Script3D {
+    onAwake() {
+        this.cardPreParent = S_3D_mjMatch.scene.getChildByName("cardPre")
+        this.card1 = S_3D_mjMatch.scene.getChildByName("card1")
+        this.card2 = S_3D_mjMatch.scene.getChildByName("card2")
+
+        this.wall = [
+            S_3D_mjMatch.scene.getChildByName("wall1"),
+            S_3D_mjMatch.scene.getChildByName("wall2"),
+            S_3D_mjMatch.scene.getChildByName("wall3"),
+            S_3D_mjMatch.scene.getChildByName("wall4"),
+        ];
+        this.wall.forEach(element => {
+            element.addComponent(S_mm_wall)
+            // let wallRb = element.addComponent(Laya.Rigidbody3D);
+            // wallRb.type = "static"; // 必须设为 static！
+        });
+    }
+    createCardGroup(cardGroupNum1) {
+        if (this.createCardGroupArray && this.createCardGroupArray.length) {
+            this.createCardGroupArray.forEach(e => {
+                e.destroy()
+            });
+        }
+        this.createCardGroupArray = [];
+
+        if (__data.mjSmallGame.level == 1) {
+            this.createCardGroupArray.push(this.create_cardOfOneSon(11))
+            this.createCardGroupArray.push(this.create_cardOfTwoSon(12, 13))
+            this.createCardGroupArray.push(this.create_cardOfOneSon(21))
+            this.createCardGroupArray.push(this.create_cardOfTwoSon(21, 21))
+            this.createCardGroupArray.push(this.create_cardOfTwoSon(41, 41))
+            this.createCardGroupArray.push(this.create_cardOfTwoSon(41, 41))
+            return
+        }
+        // 卡组数量
+        // let cardGroupNum = cardGroupNum1;
+        // 卡组种类
+        let cardGroupTypeNum = __data.mjSmallGame.cardGroupTypeNum;
+        let chiPro = Number(__data.mjSmallGame.chiPro)
+        let pengPro = Number(__data.mjSmallGame.pengPro)
+        let gangPro = Number(__data.mjSmallGame.gangPro)
+
+        let chiTypeNum = Math.ceil((chiPro / (chiPro + pengPro + gangPro)) * cardGroupTypeNum)
+        let pengTypeNum = Math.ceil((pengPro / (chiPro + pengPro + gangPro)) * cardGroupTypeNum)
+        let gangTypeNum = Math.ceil((gangPro / (chiPro + pengPro + gangPro)) * cardGroupTypeNum)
+
+        let cc01 = mm_getCard(chiTypeNum, pengTypeNum, gangTypeNum)
+
+        let b1 = cc01.cc1
+        let b2 = cc01.cc2
+        let b3 = cc01.cc3
+
+        let chiGroupNum = chiPro// * cardGroupNum / 100
+        let pengGroupNum = pengPro// * cardGroupNum / 100
+        let gangGroupNum = gangPro// * cardGroupNum / 100
+
+        let allCardFlower = []
+        for (let index = 0, length = chiGroupNum; index < length; index++) {
+            let rindex = __tool.randomRange(0, b1.length - 1)
+            allCardFlower.push(b1[rindex])
+        };
+        for (let index = 0, length = pengGroupNum; index < length; index++) {
+            let rindex = __tool.randomRange(0, b2.length - 1)
+            allCardFlower.push(b2[rindex])
+        };
+        for (let index = 0, length = gangGroupNum; index < length; index++) {
+            let rindex = __tool.randomRange(0, b3.length - 1)
+            allCardFlower.push(b3[rindex])
+        };
+        let ffx1 = game.utils.randomArr(allCardFlower)
+        for (let index = 0, length = ffx1.length; index < length; index++) {
+            let b1 = ffx1[index].toArray('.');
+            let gameobject1;
+            let gameobject2;
+            if (b1.length == 3) {
+                if (Math.random() < 0.5) {
+                    gameobject1 = this.create_cardOfOneSon(b1[0])
+                    gameobject2 = this.create_cardOfTwoSon(b1[1], b1[2])
+                } else {
+                    gameobject2 = this.create_cardOfOneSon(b1[0])
+                    gameobject1 = this.create_cardOfTwoSon(b1[1], b1[2])
+                }
+            } else if (b1.length == 4) {
+                gameobject1 = this.create_cardOfTwoSon(b1[0], b1[1])
+                gameobject2 = this.create_cardOfTwoSon(b1[2], b1[3])
+            }
+            this.createCardGroupArray.push(gameobject1)
+            this.createCardGroupArray.push(gameobject2)
+        };
+    }
+    sendCardGroup() {
+        s_mm_sendCardGroup(this.createCardGroupArray)
+    }
+    create_cardOfOneSon(card_number) {
+        let instance = Laya.Sprite3D.instantiate(this.card1);
+        instance.card_number = card_number;
+        instance.type = 'card'
+        instance.cardNum = 1
+        instance.cardW = 7.34
+        // 中心点距离左右2遍距离
+        instance.lx = instance.rx = 7.34 / 2
+        instance.removeChildAt(0)
+        let a = this.create_a_son_card(s_mm_card_flower_prefab[card_number])
+        instance.addChild(a)
+        a.transform.localPosition = new Laya.Vector3(0, 0, 0);
+
+        // S_3D_mjMatch.deskCard.push(instance)
+        return instance
+    }
+    create_cardOfTwoSon(card_number1, card_number2) {
+        let instance = Laya.Sprite3D.instantiate(this.card2);
+        instance.card_number = card_number1 + '.' + card_number2;
+        instance.type = 'card'
+        instance.cardNum = 2
+        instance.cardW = 7.34 * 2
+        // 中心点距离左右2遍距离
+        instance.lx = 7.34
+        instance.rx = 7.34
+        instance.removeChildAt(0)
+        instance.removeChildAt(0)
+
+        let a = this.create_a_son_card(s_mm_card_flower_prefab[card_number1])
+        instance.addChild(a)
+        a.transform.localPosition = new Laya.Vector3(7.34 / 2, 0, 0);
+
+        let b = this.create_a_son_card(s_mm_card_flower_prefab[card_number2])
+        instance.addChild(b)
+        b.transform.localPosition = new Laya.Vector3(-7.34 / 2, 0, 0);
+
+        // S_3D_mjMatch.deskCard.push(instance)
+        return instance
+    }
+    create_a_son_card(card_flower) {
+        let prefab = this.cardPreParent.getChildByName(card_flower)
+        let i2 = Laya.Sprite3D.instantiate(prefab);
+        return i2;
+    }
+}
+let s_mm_sendCardGroup = async (cardGroupArray) => {
+    // return;
+    // 随机生成
+    S_3D_mjMatch.sendCarding = true;
+    for (let index = 0, length = cardGroupArray.length; index < length; index++) {
+        const e = cardGroupArray[index];
+        e.parent && e.parent.removeChild(e)
+    };
+    if (__data.mjSmallGame.level != 1)
+        game.utils.randomArr(cardGroupArray)
+
+    S_3D_mjMatch.deskCard = [];
+    let cf1 = async () => {
+
+        let cc_ = {
+            initHeight: 5, // 卡牌生成初始高度
+            heightAdd: 0.5, // 卡牌生成高度增加量
+            gravity: -50, // 全局重力
+            radius_x: 28, // x轴生成半径
+            radius_z: 18, // z轴生成半径
+            rotation_random_x: 20, // x轴随机角度
+            rotation_random_y: 20, // y轴随机角度
+            rotation_random_z: 20, // z轴随机角度
+
+            force_random_x: 16, // x轴随机方向力
+            force_y: -80, // y轴方向力不随机 负值代表向下的发射
+            force_random_z: 16, // z轴随机方向力
+
+            angleAdd: 30, // 卡牌是圆形发牌 每次发牌 下一个发牌位置的角度增加多少
+            createDelay: 38, // 卡牌发牌间隔
+            angularDamping: 0.6, // 卡牌旋转阻力
+        }
+
+        let deg = 0;
+        let height = cc_.initHeight;
+
+        // 3D 物理重力设置（更“沉”）
+        Laya.Physics3D.gravity = new Laya.Vector3(0, cc_.gravity, 0);
+
+        for (let index = 0, length = cardGroupArray.length; index < length; index++) {
+            const e = cardGroupArray[index];
+            let gameobject1 = cardGroupArray[index];
+            if (!gameobject1) {
+                break;
+            }
+            __sound.playGameYx('click_card')
+            __data.mjSmallGame.vibrate()
+
+            let pai = gameobject1
+            S_3D_mjMatch.scene.addChild(pai);
+            S_3D_mjMatch.deskCard.push(pai);
+
+            const rad = (deg * Math.PI) / 180;
+            const c = Math.cos(rad);
+            const s = Math.sin(rad);
+
+            // 设置初始位置（半径为8的圆周上）
+            if (__data.mjSmallGame.level == 1) {
+                let pp = {
+                    0: { x: 35, z: 18 },
+                    1: { x: 20, z: 18 },
+                    2: { x: 15, z: 0 },
+                    3: { x: 0, z: 0 },
+                    4: { x: 0, z: -18 },
+                    5: { x: -20, z: -18 },
+                }
+                pai.transform.position = new Laya.Vector3(pp[index].x, 3, pp[index].z);
+            } else {
+                pai.transform.position = new Laya.Vector3(cc_.radius_x * c, height, cc_.radius_z * s);
+                height += cc_.heightAdd;
+            }
+
+
+            // 生成 -30 到 30 度之间的随机角度
+            let randomX = Math.random() * cc_.rotation_random_x * 2 - cc_.rotation_random_x;  // X轴：-30° 到 30°
+            let randomY = Math.random() * cc_.rotation_random_y * 2 - cc_.rotation_random_y;  // Z轴：-30° 到 30°
+            let randomZ = Math.random() * cc_.rotation_random_z * 2 - cc_.rotation_random_z;  // Z轴：-30° 到 30°
+
+            // 设置旋转角度（单位：度）
+            pai.transform.rotationEuler = new Laya.Vector3(randomX, randomY, randomZ);
+
+            const rb = pai.getComponent(Laya.Rigidbody3D);
+            if (rb && __data.mjSmallGame.level != 1) {
+                // 随机方向（模拟 MathUtil.randmomDeg）
+                const rnd = Math.random() * Math.PI * 2;
+                const vx = cc_.force_random_x * Math.cos(rnd) * 1;
+                const vz = cc_.force_random_z * Math.sin(rnd) * 1;
+                // 设置线速度
+                rb.linearVelocity = new Laya.Vector3(vx, cc_.force_y, vz);
+                // console.log(rb.linearVelocity);
+                // 设置角阻尼（Laya 中叫 angularDamping）
+                rb.angularDamping = cc_.angularDamping;
+                // rb.mass = 10
+                // rb.friction = 1
+            }
+            deg += cc_.angleAdd;
+            await __tool.await(cc_.createDelay, s_mm_sendCardGroup)
+            if (!s_mm_sendCardGroup.clearAwait) {
+                break;
+            }
+        };
+    }
+    await cf1()
+    S_3D_mjMatch.sendCarding = false;
+}
+class S_mm_wall extends Laya.Script3D {
+    onCollisionEnter(e) {
+        if (e.other.owner) {
+        }
+    }
+}

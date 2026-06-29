@@ -1,0 +1,65 @@
+class S_mm_prop_remove extends Laya.Script {
+    onClick(e) {
+        trace('使用移除道具')
+        let a;
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+        // } else {
+        a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+            && __data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone
+        // }
+        if (a) {
+            return __tips('本局道具使用次数已达上限')
+        }
+        if (!MjMatch_ui.isGameing) return
+        if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+        if (S_3D_mjMatch.selectCard.length == 0) {
+            return __tips('当前放置栏中没有牌')
+        }
+        game.scene.add(MM_useProp, ['移出', 'adunit-smallGame_remove', '将放置栏内的牌全部放回牌池', () => {
+            s_mm_remove_select_card()
+        }])
+    }
+}
+let s_mm_remove_select_card = () => {
+    // 计算y获取桌面所有对象最高y
+    let maxy = 0
+    for (let index = 0, length = S_3D_mjMatch.deskCard.length; index < length; index++) {
+        const e = S_3D_mjMatch.deskCard[index];
+        maxy = Math.max(maxy, e.transform.position.y)
+    };
+    // 计算卡牌数量
+    let allCardW = 0;
+    for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+        const e = S_3D_mjMatch.selectCard[index];
+        allCardW += e.cardW;
+    }
+    // 重新计算坐标
+    let startx = 0 + allCardW / 2;
+    for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+        let e = S_3D_mjMatch.selectCard[index];
+        e.transform.position = new Laya.Vector3(startx - e.rx, maxy + 6, 0);
+        e.transform.rotationEuler = new Laya.Vector3(-0, 0, 0);
+        startx -= e.cardW + __data.mjSmallGame.placeCardDis;
+    };
+    __sound.playGameYx('click_card')
+    __data.mjSmallGame.vibrate()
+    for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+        const e = S_3D_mjMatch.selectCard[index];
+        let r1 = e.getComponent(Laya.Rigidbody3D)
+        r1.enabled = true
+        r1.wakeUp()
+        r1.linearVelocity = new Laya.Vector3(Math.random() * 6 - 3, -50, Math.random() * 6 - 3);
+        // 防止激活失败 有时候不好使 绝对是这个物体的刚体 因为位置都变了 不可能错
+        Laya.timer.frameOnce(1, this, () => {
+            r1.enabled = true
+            r1.wakeUp()
+            r1.linearVelocity = new Laya.Vector3(Math.random() * 6 - 3, -50, Math.random() * 6 - 3);
+        })
+    };
+
+    S_3D_mjMatch.deskCard.push(...S_3D_mjMatch.selectCard)
+    S_3D_mjMatch.selectCard = [];
+    game.cb.event('mm_update_prop_use_count')
+}

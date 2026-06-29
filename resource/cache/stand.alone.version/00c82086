@@ -1,0 +1,214 @@
+class Hall_s_rank extends Laya.Script {
+    onAwake() {
+        this.owner.__list_rank.cacheAs = 'bitmap'
+        this.owner.__list_rank.vScrollBarSkin = ''
+        this.owner.__list_rank.renderHandler = new Laya.Handler(this, this.updateItem);
+
+        this.default_selectIndex = 0;
+        this.owner.__tab.selectHandler = new Laya.Handler(this, this.onSelectEvent);
+        this.owner.__tab_app.selectHandler = new Laya.Handler(this, this.onSelectEvent);
+    }
+    onEnable() {
+        game.cb.on('update_rank_by_type', this, this.update_rank_by_type)
+        // game.cb.on('update_chuanqi_data', this, this.update_rank_by_type)
+
+        let nk = miniApi.getItem(__data.uid + ':hall_rank_selectIndex')
+
+        let usetab;
+        let maxIndex;
+        if (miniApi.clientType == 'app') {
+            this.owner.__tab.visible = false;
+            this.owner.__tab_app.visible = true;
+            usetab = this.owner.__tab_app
+            maxIndex = 1
+        } else {
+            this.owner.__tab.visible = true;
+            this.owner.__tab_app.visible = false;
+            usetab = this.owner.__tab
+            maxIndex = 2
+        }
+        usetab.selectedIndex = -1;
+
+        if (__data.Mj_default_show_localRank == 1) {
+            __data.Mj_default_show_localRank = 0;
+            usetab.selectedIndex = 1;
+        }
+        else if (nk >= 0 && nk <= maxIndex) {
+            usetab.selectedIndex = Number(nk)
+        } else {
+            usetab.selectedIndex = 0
+        }
+
+        this.owner.__list_rank.scrollBar.stopScroll()
+        this.owner.__list_rank.scrollTo(0)
+    }
+    onDisable() {
+        game.cb.off('update_rank_by_type', this, this.update_rank_by_type)
+        // game.cb.off('update_chuanqi_data', this, this.update_rank_by_type)
+    }
+    updateItem(cell, index) {
+        if (this.default_selectIndex == 2) {
+            // 地区榜就一页100个 够了
+            return
+        }
+
+        let useData;
+        if (this.default_selectIndex == 0) {
+            useData = __data[`rank_list${1}`]
+        } else if (this.default_selectIndex == 1) {
+            useData = __data[`rankCity${__data.myCityId}`]
+        }
+        let array = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            array.push(...useData[page])
+        }
+        let nextPage = Math.floor(array.length / 10) + 1;
+        if (index == array.length - 2 && nextPage <= 10 && !useData[nextPage]) {
+            if (this.default_selectIndex == 0) {
+                game.server.send(3311, 1, nextPage)
+            } else if (this.default_selectIndex == 1) {
+                game.server.send(2407, __data.myCityId, nextPage)
+            }
+
+        }
+    }
+    onSelectEvent(index) {
+        if (index == 0) {
+            game.server.send(3311, 1, 1)
+        }
+        if (index == 1) {
+            game.server.send(2407, __data.myCityId, 1)
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '主页本地榜排名界面' })
+        }
+        if (index == 2) {
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '好友榜排名界面' })
+        }
+        this.onSelect(index, 1)
+    }
+    onSelect(index, isClick) {
+        miniApi.setItem(__data.uid + ':hall_rank_selectIndex', index)
+        // index = 0 1 2
+        this.default_selectIndex = index
+        this.update_rank_by_type(-1, isClick);
+        this.owner.__list_rank.scrollTo(0, 0)
+    }
+    update_rank_by_type(event_rankType = -1, isClick = 0) {
+        // 1 个人 2 本地 3 好友
+        let nk = this.default_selectIndex
+        // read消息派发的事件参数和默认显示不同 不刷新界面
+        if (event_rankType >= 0 && event_rankType != nk) return;
+
+
+        this.owner.__rankItem_my.visible = false
+        this.owner.txt_tips_rank1.visible = false;
+        this.owner.__list_rank.visible = false
+        this.owner.__wxView.visible = false
+        this.owner.btn_open_set.visible = false
+        this.owner.img_set_tips.visible = false
+
+        if (this.default_selectIndex == 2) {
+            // 如果是好友排行榜
+
+            let t = this.owner;
+            try {
+                if (isClick != 1) {
+                    if (t.isAuthFriend == 1) {
+                        t.__wxView.visible = true;
+                        wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+                    } else if (t.isAuthFriend == 2) {
+                        t.btn_open_set.visible = true;
+                        t.img_set_tips.visible = true;
+                    }
+                } else {
+                    wx.getSetting({
+                        success(res) {
+                            console.log('getSetting', JSON.stringify(res))
+
+                            if ('scope.WxFriendInteraction' in res.authSetting) {
+                                if (res.authSetting['scope.WxFriendInteraction']) {
+                                    t.isAuthFriend = 1
+                                    t.__wxView.visible = true;
+                                    wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+                                } else {
+                                    t.isAuthFriend = 2
+                                    // 拒绝 授权
+                                    t.btn_open_set.visible = true;
+                                    t.img_set_tips.visible = true;
+                                }
+                            } else {
+                                t.isAuthFriend = 1
+                                t.__wxView.visible = true;
+                                wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+
+                            }
+                        }
+                    })
+                }
+            } catch (error) {
+
+            }
+
+            return
+        }
+
+        let useData;
+        if (this.default_selectIndex == 0) {
+            useData = __data[`rank_list${1}`]
+        } else if (this.default_selectIndex == 1) {
+            useData = __data[`rankCity${__data.myCityId}`]
+        }
+        let array = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            array.push(...useData[page])
+        }
+
+        if (array.length) {
+            this.owner.__list_rank.visible = true
+            this.owner.__rankItem_my.visible = true
+            // this.owner.__list_rank.itemRender = HallRankItem
+            useData[`my`].isMy = true;
+            useData[`my`].cityId = __data.myCityId;
+            this.owner.__rankItem_my.dataSource = useData[`my`];
+            if (useData[`my`].score < 60) {
+                this.owner.__rankItem_my.visible = false;
+                this.owner.txt_tips_rank1.visible = true;
+            } else {
+
+            }
+            this.owner.__list_rank.array = array;
+        }
+    }
+}
+
+class S_hall_open_set extends Laya.Script {
+    onClick(e) {
+        let t = game.scene.get(Hall)
+        wx.openSetting({
+            success(settingdata) {
+                if (settingdata.authSetting['scope.WxFriendInteraction']) {
+                    t.btn_open_set.visible = false
+                    t.img_set_tips.visible = false
+                    t.isAuthFriend = 1
+                    t.__wxView.visible = true;
+                    wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+
+                } else {
+                    t.isAuthFriend = 2
+                    // t.btn_open_set.visible = false
+                    // t.img_set_tips.visible = false
+                    // t.__wxView.visible = true;
+                    // wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+                }
+            },
+            fail() {
+                t.isAuthFriend = 2
+                // t.btn_open_set.visible = false
+                // t.img_set_tips.visible = false
+                // t.__wxView.visible = true;
+                // wx.getOpenDataContext().postMessage({ 'type': 'getFriendData' })
+            }
+        });
+    }
+}

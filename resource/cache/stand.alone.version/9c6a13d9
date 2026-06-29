@@ -1,0 +1,14 @@
+var gtool = window.gtool || {};
+window.gtool = gtool;
+gtool.fileWH = {
+    cache: {},
+    getWHById(id) {
+        let key = 'getWHById' + id
+        if (!this.cache[key]) {
+            let w = fileWHConfig[PropIcon.icon[id].skin].width
+            let h = fileWHConfig[PropIcon.icon[id].skin].height
+            this.cache[key] = { w, h }
+        }
+        return this.cache[key];
+    }
+}

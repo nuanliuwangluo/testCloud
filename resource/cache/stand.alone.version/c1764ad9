@@ -1,0 +1,65 @@
+class MM_win extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_win',
+            layer: 'panel'
+        })
+        this.btn_return.addComponent(S_mm_retur_first)
+        this.btn_next.addComponent(S_mm_next_level)
+    }
+    added() {
+        __sound.playGameYx('win')
+        miniApi.trackEvent('Mj_Stages', {
+            Mj_VIP: __data.vip.isVip ? '是' : '否',
+            Mj_StagesType: '消消乐',
+            Mj_StagesNum: __data.mjSmallGame.level,
+            Mj_StagesResult: '成功',
+        })
+        this.txt_rewardNum.text = '×' + __data.mjSmallGame.starRewardNum;
+        this.img_light.rotation = 0;
+        this.addTween()
+        __data.mjSmallGame.level = __data.mjSmallGame.nextLevel;
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.img_light)
+    }
+    clickMask() { }
+    addTween() {
+        this.img_light.rotation = 0
+        Laya.Tween.to(this.img_light, {
+            rotation: 360,
+            complete: new Laya.Handler(this, () => {
+                this.addTween()
+            }),
+            ease: Laya.Ease.linearNone,
+        },
+            4000
+        );
+    }
+}
+class S_mm_retur_first extends Laya.Script {
+    onClick(e) {
+        let img_star2 = this.owner.parent.img_star;
+        let a2 = new Laya.Point(img_star2.x + img_star2.width / 2, img_star2.y + img_star2.height / 2)
+        let b2 = img_star2.parent.localToGlobal(a2)
+        game.scene.get(MjMatch_ui_left).removeTimer()
+        game.scene.removeAll()
+        S_3D_mjMatch.$this.mainScene();
+        game.scene.add(MM_main_scene)
+        game.scene.add(MM_main_scene_return)
+        game.scene.add(MM_main_scene_rank)
+        game.scene.add(MM_main_scene_garden)
+        game.scene.add(MM_ui_res, [b2])
+    }
+}
+class S_mm_next_level extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(MM_win)
+        let img_star2 = this.owner.parent.img_star;
+        let a2 = new Laya.Point(img_star2.x + img_star2.width / 2, img_star2.y + img_star2.height / 2)
+        let b2 = img_star2.parent.localToGlobal(a2)
+        e && e.stopPropagation();
+        // game.scene.removeAll()
+        s_mm_start_game(b2)
+    }
+}

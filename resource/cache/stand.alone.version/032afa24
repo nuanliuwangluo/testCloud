@@ -1,0 +1,427 @@
+
+class HallPlay extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_play',
+        })
+        game.utils.updateLabelY(this.txt_play)
+
+        this.btn_rule.addComponent(S_hall_play_rule);
+        this.match_1.addComponent(S_hall_match).init(1);
+        this.match_2.addComponent(S_hall_match).init(2);
+        this.match_3.addComponent(S_hall_match).init(3);
+        this.match_4.addComponent(S_hall_match).init(4);
+        // this.img_lv_sign.addComponent(S_season_record_rule)
+        this.btn_playCollect.addComponent(S_show_playCollect)
+        this.img_seasonRecord.addComponent(S_click_HallPlay_season)
+        this.img_season.addComponent(S_update_seaon_title)
+
+        this.hashCityIdPlayeNum = {};
+
+        this.s_bar = this.img_bar.addComponent(S_progress_bar)
+
+        this.cur_lv_cur_score = 0;
+        this.cur_lv_max_score = 0;
+        this.cur_lv_width = 0
+        this.btn_outLvInfo.ox = this.btn_outLvInfo.x;
+        this.btn_outLvInfo.oy = this.btn_outLvInfo.y;
+
+        var a = [];
+        for (var i = 0; i < 10; i++) a.push("local/cupNum/cupNum/" + i + ".png")
+        this.txt_cup = new game.NumText(a)
+        this.txt_cup_of.parent.addChild(this.txt_cup)
+        this.txt_cup.x = this.txt_cup_of.x;
+        this.txt_cup.y = this.txt_cup_of.y;
+        game.utils.remove(this.txt_cup_of)
+
+        // this.s_red_queshenRoad = this.img_red_queShenRoad.addComponent(S_look_queShen_red)
+    }
+    added(cityId) {
+        __data.callback11005 && __data.callback11005()
+
+        this.img_hand.visible = false;
+        try {
+            wx.onShow_callback()
+        } catch (error) { }
+        let a = async () => {
+            game.server.send(2230)
+            game.server.send(2202, __data.uid);
+            await game.server.send(2411) // 查询VIP剩余天数
+            AdData.testAdActive()
+        }
+        a()
+        // game.server.send(16013) // 
+
+        // this.s_red_queshenRoad.updateRed()
+        game.cb.on('updatePlayerNum', this, this.updatePlayerNum);
+        game.cb.on('update_hallPlay_ruleItemView', this, this.updateInfo1001)
+
+        this.updateRuleItem(cityId)
+        this.updateRuleIndexDefault()
+        HallPlay.curRuleId
+        // this.updateMathInfo()
+        game.cb.on('updateMathInfo', this, this.updateMathInfo);
+        this.updateLvInfo();
+        game.cb.on('updateLvInfo', this, this.updateLvInfo);
+        game.cb.on('update_chuanqi_data', this, this.updateLvInfo);
+        // this.hall_play_show_hand()
+        game.cb.on('hall_play_show_hand', this, this.hall_play_show_hand)
+        game.cb.on('update_rank_whole_country_page_1', this, this.updateLvInfo)
+    }
+    onDisable() {
+        game.cb.off('update_hallPlay_ruleItemView', this, this.updateInfo1001)
+        game.cb.off('updatePlayerNum', this, this.updatePlayerNum);
+        game.cb.off('updateMathInfo', this, this.updateMathInfo);
+        game.cb.off('hall_play_show_hand', this, this.hall_play_show_hand)
+        this.img_hand.visible = false;
+        this.img_hand.clipStop();
+        game.cb.off('updateLvInfo', this, this.updateLvInfo);
+        game.cb.off('update_chuanqi_data', this, this.updateLvInfo);
+        game.cb.off('update_rank_whole_country_page_1', this, this.updateLvInfo);
+        Laya.timer.clear(this, this.update_txt_scroll)
+        this.clearAwait && this.clearAwait()
+    }
+    async updateLvInfo() {
+        let curCityCup = __data.hashCityLevelCup[HallPlay.lastCityId].cup
+        let d = RankUtils.getRankLvDataByScore(curCityCup, __data.uid, HallPlay.lastCityId)
+        if (!d) return;
+        this.txt_lv_name.text = d.name;
+        // 记录初始位置
+        // this.sp_lv_name.initY = this.sp_lv_name.initY || this.sp_lv_name.y;
+        // this.txt_uplv.initY = this.txt_uplv.initY || this.txt_uplv.y;
+        // this.img_queShenRoad.initY = this.img_queShenRoad.initY || this.img_queShenRoad.y;
+        // d.toNextLevelNeedCup = 0;
+        if (d.toNextLevelNeedCup == 0) {
+            this.txt_lv_num.visible = false
+            this.img_queshen.visible = true
+            this.sp_bar.visible = false;
+            this.img_cup0.visible = true;
+            this.txt_cup.text = curCityCup - d.minCup;
+            __tool.labelParentCenterAndSetXY(this.sp_cup0, this.img_cup0.width / 2, 10)
+            // this.sp_cup0.y = this.sp_cup0.initY + 20;
+            // this.sp_lv_name.y = this.sp_lv_name.initY + 20;
+            // this.img_queShenRoad.y = this.img_queShenRoad.initY - 15;
+        } else {
+            this.txt_lv_num.visible = true
+            this.img_queshen.visible = false
+            this.txt_lv_num.text = d.level;
+
+            this.sp_bar.visible = true;
+            this.img_cup0.visible = false;
+            // this.txt_uplv.visible = true;
+            // this.sp_lv_name.y = this.sp_lv_name.initY;
+            // this.txt_uplv.y = this.txt_uplv.initY;
+            // this.img_queShenRoad.y = this.img_queShenRoad.initY;
+            // let nlv = d.level + 1
+            // let d1 = RankUtils.getRankLvDataByLv(nlv)
+            // this.txt_nextLv_cup.text = d1.minCup - curCityCup;
+            this.txt_cup_uplv.text = `${(curCityCup - d.minCup)}/${d.toNextLevelNeedCup}`;
+            this.s_bar.progress = (curCityCup - d.minCup) / d.toNextLevelNeedCup
+            // __tool.labelParentCenterAndSetXY(this.txt_uplv, this.btn_outLvInfo.width / 2, 10)
+        }
+
+        this.img_lv.skin = `local/lvNameBg/1/rank_${d.iconIndex}.png`;
+        this.img_lv_sign.skin = `cdn/rank_sign/img_rank_sign_${d.iconIndex}.png`;
+    }
+    hall_play_show_hand() {
+        if (__data.matchCount == 0 && __data.myCityId) {
+            let of_item;
+            let arrData = excelUtils.getModelByCityIdRuleId(HallPlay.lastCityId, HallPlay.curRuleId)
+            if (!arrData) return;
+            for (let index = 0; index < arrData.length; index++) {
+                const e = arrData[index];
+                if (e.maxGold != -1) {
+                    if (__bigNumberCal.gte(__data.gold, e.minGold) && __bigNumberCal.lte(__data.gold, e.maxGold)) {
+                        of_item = this['match_' + e.matchModelType]
+                        break;
+                    }
+                } else if (__bigNumberCal.gte(__data.gold, e.minGold)) {
+                    of_item = this['match_' + e.matchModelType]
+                    break;
+                }
+            };
+
+            if (of_item) {
+                this.img_hand.visible = true;
+                this.img_hand.clipPlay()
+                this.img_hand.x = of_item.x - 10 // + of_item.width / 2 + 80
+                // this.img_hand.y = of_item.y - this.img_hand.height / 2
+            }
+        }
+    }
+    complete() { }
+    updatePlayerNum(d) {
+        // let key1 = HallPlay.lastCityId + '-' + HallPlay.curRuleId
+        let key1 = HallPlay.curRuleId
+        this.hashCityIdPlayeNum[key1] = this.hashCityIdPlayeNum[key1] || {
+            playerNumRange1: __tool.randomRange(2000, 2100),
+            playerNumRange2: __tool.randomRange(1100, 1200),
+            playerNumRange3: __tool.randomRange(700, 800),
+            playerNumRange4: __tool.randomRange(400, 500),
+            playerNumRange5: __tool.randomRange(80, 120),
+            playerNumRange6: __tool.randomRange(10, 30),
+        }
+        for (let index = 0, length = d.length; index < length; index++) {
+            const e = d[index];
+            let a = this.hashCityIdPlayeNum[key1][`playerNumRange${e.type}`];
+            this[`match_${e.type}`].updatePeopleNum(e.playerNum + a)
+        };
+    }
+    updateMathInfo(isClick) {
+        let arrData = excelUtils.getModelByCityIdRuleId(HallPlay.lastCityId, HallPlay.curRuleId)
+        if (!arrData) return;
+        Laya.Tween.clearAll(this.match_1)
+        Laya.Tween.clearAll(this.match_2)
+        Laya.Tween.clearAll(this.match_3)
+        Laya.Tween.clearAll(this.match_4)
+
+        for (let index = 0, length = arrData.length; index < length; index++) {
+            let e = arrData[index];
+            // this[`match_${e.matchModelType}`].txt_cupAdd.text = `+${Math.floor(Math.random() * 100)}%`;
+            let a1 = bigNumberToCH(e.bottomScore)
+            let matchItem = this[`match_${e.matchModelType}`]
+            matchItem.txt_bottomScore.text = a1
+            matchItem.txt_cost.text = e.maxGold > 0 ? `${bigNumberToCH(e.minGold)}-${bigNumberToCH(e.maxGold)}` : `${bigNumberToCH(e.minGold)}以上`
+            matchItem.alpha = 1;
+            if (isClick) {
+                matchItem.iy = matchItem.iy || matchItem.y
+                // matchItem.alpha = 0
+                matchItem.y = matchItem.iy + 50;
+                Laya.Tween.to(matchItem, { alpha: 1, y: matchItem.iy }, 200, null, null, 0)
+            }
+        };
+        game.server.send(3329, HallPlay.curRuleId)
+        // 请求人数什么的服务
+        game.server.send(2407, HallPlay.lastCityId, 1)
+    }
+
+    updateRuleItem(cityId) {
+        this.scene_rule1.visible = false
+        this.scene_rule2.visible = false
+        this.scene_rule3.visible = false
+        this.scene_rule4.visible = false
+        let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId);
+
+        for (let index = 0, length = ud.allPlay.length; index < length; index++) {
+            const e23 = ud.allPlay[index];
+
+            let e = this[`scene_rule${index + 1}`]
+            e.visible = true;
+            e._ruleIndex = index;
+            e.clearRuleId();
+            if (ud.offPlayId.includes(e23.playId)) {
+                e.offRuleId = e23.playId
+            } else {
+                e.onRuleId = e23.playId
+            }
+            e.updateLabel(e23.playName, e23.playId)
+            e.updateImgHot(ud.defaultPlayId)
+        };
+    }
+    updateRuleIndexDefault() {
+        // 兼容玩法id算法 如果没有玩法id 就计算 如果有 就pass
+        let getkey1 = __data.uid + `:cityId:${HallPlay.lastCityId}-ruleId`
+        let youLastSelectRuleId = miniApi.getItem(getkey1)
+        let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId);
+        try {
+            if (!Number.isFinite(parseInt(youLastSelectRuleId))) {
+                let getkey = __data.uid + `:cityId:${HallPlay.lastCityId}-ruleIndex`
+                let index = miniApi.getItem(getkey)
+                if (parseInt(index) >= 0) {
+                    // 如果你用上个版本缓存ruleIndex有值 那么重进进行计算获得ruleId;
+                    if (ud.onPlayId[index]) {
+                        // 再开启列表范围内
+                        youLastSelectRuleId = ud.onPlayId[index];
+                    } else {
+                        // 再开启列表范围外 就是大众经济 提示大众竞技关闭 选择改为红中玩法
+                        youLastSelectRuleId = -3;
+                        let g1 = __data.uid + ':showOfflineTips:-2'
+                        let g2 = miniApi.getItem(g1)
+                        if (g2 != 1) {
+                            game.scene.add(HallPlay_offlineTips, [-2])
+                            miniApi.setItem(g1, 1)
+                        }
+                    }
+                } else {
+                    youLastSelectRuleId = ud.defaultPlayId;
+                }
+                miniApi.setItem(getkey1, youLastSelectRuleId);
+            }
+        } catch (error) {
+        }
+
+        // 检测玩法关闭
+        // 讷河 17   104
+        // 芜湖 167  252
+        // 同江 44   129
+        // 汤原 43   21
+        // 抚远 77   162
+        let ahq = {
+            104: 17,
+            252: 167,
+            129: 44,
+            21: 43,
+            162: 77,
+        }
+        let arr1 = Object.keys(ahq)
+        if (arr1.includes(String(HallPlay.lastCityId))) {
+            let rid = ahq[HallPlay.lastCityId]
+            // 检测行为动作通过 没有选区动作 or 新人领取动作
+            let a = miniApi.getItem(__data.uid + ':offline_action_change_city')
+            // let b = miniApi.getItem(__data.uid + ':offline_action_receive_newPlayer_gift')
+            if (a != '1') {
+                let g1 = __data.uid + ':showOfflineTips:' + rid
+                let g2 = miniApi.getItem(g1)
+                if (g2 != 1) {
+                    game.scene.add(HallPlay_offlineTips, [rid])
+                    miniApi.setItem(g1, 1)
+                }
+            }
+            // HallPlay_offlineTips.action_receive_newPlayer_gift = null;
+            // HallPlay_offlineTips.action_change_city = null;
+            // if (youLastSelectRuleId == rid) {
+            //     if (rid == 167) {
+            //         youLastSelectRuleId = -3;
+            //     } else {
+            //         youLastSelectRuleId = -1;
+            //     }
+            // }
+        }
+
+        // 如果选择玩法不在开启列表改成默认玩法
+        if (!ud.onPlayId.includes(String(youLastSelectRuleId))) {
+            youLastSelectRuleId = ud.defaultPlayId;
+            miniApi.setItem(getkey1, youLastSelectRuleId);
+        }
+
+        HallPlay.curRuleId = youLastSelectRuleId;
+        game.cb.event('update_hallPlay_ruleItemView', [null])
+    }
+    updateInfo1001(isClick) {
+        this.txt_play.text = __data.excelConfig.hashPlayIdDes[HallPlay.curRuleId];
+        this.cal_txt_play_scroll()
+        this.updateMathInfo(isClick)
+        this.testShowGuide(isClick)
+    }
+    cal_txt_play_scroll() {
+        this.clearAwait && this.clearAwait()
+        Laya.timer.clear(this, this.update_txt_scroll)
+        this.txt_play.scrollX = 0;
+        if (this.txt_play.textWidth > this.txt_play.width) {
+            Laya.timer.loop(1000 / 60, this, this.update_txt_scroll)
+        }
+    }
+    async update_txt_scroll() {
+        this.txt_play.scrollX += 2
+        if (this.txt_play.scrollX >= this.txt_play.textWidth - this.txt_play.width) {
+            Laya.timer.clear(this, this.update_txt_scroll)
+            await __tool.await(2000, this)
+            this.txt_play.scrollX = 0
+            Laya.timer.loop(1000 / 60, this, this.update_txt_scroll)
+        }
+    }
+    // cal_ruleIndex(e) {
+    // let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId)
+    // let b = ud.allPlay.filter((e) => {
+    //     return ud.onPlayId.includes(e.playId)
+    // })
+    // let c = b.map((e) => {
+    //     return e.playName
+    // })
+    // HallPlay.curRuleIdIndex = e < c.length ? e : 0;
+    // }
+    testShowGuide(isClick) {
+        // if (HallPlay.curRuleId == -2 || HallPlay.curRuleId == -3) {
+        if (HallPlay.curRuleId == -3) {
+            let a = miniApi.getItem(__data.uid + ':show_guideDazhong:' + HallPlay.curRuleId)
+            if (a != 1) {
+                miniApi.setItem(__data.uid + ':show_guideDazhong:' + HallPlay.curRuleId, 1)
+                __showScene.show_guide_rule(isClick)
+                return
+            }
+        }
+        this.hall_play_show_hand()
+    }
+    static get lastCityId() {
+        return this._lastCityId || 0;
+    }
+    static set lastCityId(value) {
+        if (!__data.excelConfig.hashCityIdVO[value]) {
+            try {
+                throw new Error('lastCityId error' + value)
+            } catch (error) {
+                value = -1;
+                miniApi.uploadError(error.stack)
+            }
+        }
+        // @Test 测试用  指定城市
+        value = __tool.getHttpParams('cityId') || value;
+        this._lastCityId = value;
+        __data.gameId.curId = value;
+        window.__eh = MahjongConfig.getName(this.lastCityId, this.curRuleId);
+        game.cb.event('updateLvInfo');
+        miniApi.setItem(__data.uid + '_near_play', value)
+    }
+
+    static get curRuleId() {
+        return this._curRuleId;
+    }
+
+    static set curRuleId(value) {
+        // @Test 测试用  指定玩法
+        value = __tool.getHttpParams('ruleId') || value;
+        this._curRuleId = value;
+        window.__eh = MahjongConfig.getName(this.lastCityId, this.curRuleId);
+    }
+}
+
+class S_hall_play_rule extends Laya.Script {
+    onClick() {
+        __showScene.show_gameMain_rule()
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '玩法规则界面' })
+    }
+}
+class S_show_playCollect extends Laya.Script {
+    onClick() {
+        __showScene.show_playCollect()
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '玩法规则界面' })
+    }
+}
+class S_click_HallPlay_season extends Laya.Script {
+    onClick(e) {
+        __showScene.show_seasonRecord()
+    }
+}
+class S_update_seaon_title extends Laya.Script {
+    onEnable() {
+        this.update_hall_play_season_time()
+        game.cb.on('update_hall_play_season_time', this, this.update_hall_play_season_time)
+    }
+    onDisable() {
+        game.cb.off('update_hall_play_season_time', this, this.update_hall_play_season_time)
+    }
+    update_hall_play_season_time() {
+        this.owner.visible = false
+        for (const key in __data.seasonRecord) {
+            let e = __data.seasonRecord[key];
+            if (e.isIng) {
+                this.owner.visible = true
+
+                let sp = this.owner.getChildByName('sp_season_title')
+                let y1 = e.year.toString()
+                let w = 0
+                for (let index = 0, length = y1.length; index < length; index++) {
+                    let an = y1.charAt(index)
+                    let b = sp.getChildByName('i' + (index + 1))
+                    b.skin = GameMainSeasonStart.fontUrl[an]
+                    b.x = w;
+                    w = b.x + b.width;
+                };
+                sp.getChildByName('i5').skin = GameMainSeasonStart.fontUrl[GameMainSeasonStart.seasonIdToText[e.season]]
+
+                this.owner.getChildByName('txt_time').text = GameMainSeasonRecordItem.getTime(e.startTimeMs, e.endTimeMs)
+                break;
+            }
+        }
+    }
+}

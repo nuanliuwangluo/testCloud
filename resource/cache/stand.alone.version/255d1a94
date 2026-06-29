@@ -1,0 +1,15 @@
+__data.rank = {
+    rank_exceed_queshen_score: 10000,
+    xingyaoQueshen: {
+        name: '星耀雀神',
+        iconIndex: 10,
+        toNextLevelNeedCup: 0,
+        minCup: 0,
+    },
+    chuanqiQueshen: {
+        name: '传奇雀神',
+        iconIndex: 11,
+        toNextLevelNeedCup: 0,
+        minCup: 0,
+    }
+}

@@ -1,0 +1,39 @@
+__data.vip = {
+    isReceiveFreeVip: 0,
+    addUpToLoginDayNum: 0, // 累计登录天数
+
+    vipType: 'no', // no year month new_year season;
+    vip_todayIsHasReceive: 0,
+    dailyGold: 100000,
+    noGoldProtectCount: 0,
+
+    count_jumpAd: 0,//跳过广告
+    count_protectAll: 0,//全额保障
+    count_protectLv: 0,//段位保护
+
+    receiveRecord: [],
+
+    get isRedPoint() {
+        if (__data.isVip) {
+            if (!__data.vip.vip_todayIsHasReceive) {
+                return true
+            }
+        }
+        return false
+    },
+    get isVip() {
+        return __data.vip.vip_overTime > Date.now()
+    },
+    _vip_overTime: 0,
+    set vip_overTime(value) {
+        this._vip_overTime = value;
+        // vip过期了
+        if (__data.vip.vip_overTime <= Date.now()) {
+            // 重置接收礼物设置
+            LocalUtils.gift.value = 0;
+            LocalUtils.save(LocalUtils.gift.key, LocalUtils.gift.value);
+            game.cb.event(__eh + 'save_set_data');
+        }
+    },
+    get vip_overTime() { return this._vip_overTime; }
+}

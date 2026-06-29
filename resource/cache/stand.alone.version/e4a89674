@@ -1,0 +1,168 @@
+class HallPlayDailyTask extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_play_dailyTask',
+            module: false
+        })
+        // this.rect = new Laya.Rectangle()
+        // this.rect.width = this.img_bar_dailyMatch.width;
+        // this.rect.height = this.img_bar_dailyMatch.height;
+        // this.img_bar_dailyMatch.scrollRect = this.rect;
+        // this.s_box = this.btn_box.addComponent(S_click_show_des_set).init(__lang.des_goldBox)
+        // this.btn_vipReceive.addComponent(S_click_dailyMatch_vipReceive)
+        this.s_img_bar = this.img_bar.addComponent(S_progress_bar)
+        this.btn_receive.addComponent(S_click_HallPlay_dailyTask_receive)
+        // this.btn_vipReceive.addComponent(S_click_HallPlay_dailyMatch_receive_vip)
+        this.btn_video.addComponent(S_dailytask_video).init(this)
+        this.btn_stone.addComponent(S_dailytask_stone)
+        this.img_add_task.addComponent(S_add_a_dailyTask)
+
+        game.Clip(this.img_light, [
+            'cdn/queShenRoad_light/tx_txk1.png',
+            'cdn/queShenRoad_light/tx_txk2.png',
+            'cdn/queShenRoad_light/tx_txk3.png',
+            'cdn/queShenRoad_light/tx_txk4.png',
+            'cdn/queShenRoad_light/tx_txk5.png',
+            'cdn/queShenRoad_light/tx_txk6.png',
+            'cdn/queShenRoad_light/tx_txk7.png',
+            'cdn/queShenRoad_light/tx_txk8.png',
+            'cdn/queShenRoad_light/tx_txk9.png',
+        ], 90, true)
+    }
+    onEnable() {
+        // this.update_daliyMatch_data()
+        // game.cb.on('update_daliyMatch_data', this, this.update_daliyMatch_data)
+        this.update_dailyTask_data()
+        game.cb.on('update_dailyTask_data', this, this.update_dailyTask_data)
+    }
+    onDisable() {
+        // game.cb.off('update_daliyMatch_data', this, this.update_daliyMatch_data)
+        game.cb.off('update_dailyTask_data', this, this.update_dailyTask_data)
+        this.img_light.stop()
+    }
+    update_dailyTask_data() {
+        this.visible = false;
+        let data = __data.dailyTask;
+        if (!data.des || data.des.includes('未完成')) {
+            return;
+        }
+
+        game.cb.event('daliyMatch_visible_false')
+        this.visible = true;
+
+        let pro__ = data.pro;
+        let need__ = data.need;
+        if (pro__ > need__) pro__ = need__;
+
+        this.s_img_bar.progress = pro__ / need__
+        this.txt_pro.text = `${pro__}/${need__}`
+        this.txt_tips.text = data.des
+
+        this.btn_video.visible = false;
+        this.btn_stone.visible = false
+        this.btn_receive.visible = false
+        this.sp_info.visible = true;
+        this.img_daily_challenge.skin = `local/matchCount/1/img_rwbox.png`
+
+        this.img_prop.iw = this.img_prop.iw || this.img_prop.width
+        this.img_prop.ih = this.img_prop.ih || this.img_prop.height
+
+        data.reward[0] = data.reward[0] || { id: 5, count: 1 }
+        this.txt_num.text = '×' + data.reward[0].count;
+        let id1 = data.reward[0].id
+        this.img_prop.skin = PropIcon.icon[id1].skin;
+        this.img_prop.width = gtool.fileWH.getWHById(id1).w;
+        this.img_prop.height = gtool.fileWH.getWHById(id1).h;
+        let a = this.img_prop.iw / gtool.fileWH.getWHById(id1).w;
+        let b = this.img_prop.ih / gtool.fileWH.getWHById(id1).h;
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+
+        let curCount = data.today_comNum;
+        let maxCount = data.today_limitNum;
+
+        this.img_red.visible = false
+        this.img_light.visible = false;
+        this.img_an_complete.visible = false;
+        this.img_add_task.visible = false;
+        this.img_light.stop()
+
+        if (curCount < maxCount) {
+            if (pro__ >= need__) {
+                this.btn_receive.visible = true;
+                this.btn_receive.disabled = false;
+                this.img_red.visible = true;
+            } else if (data.refreshStone > 0) {
+                this.btn_stone.visible = true;
+                this.txt_needStone_num.text = __data.dailyTask.refreshStone;
+                __tool.labelParentCenterAndSetXY(this.sp_stone, this.btn_stone.width / 2, 2)
+                // IOS能支付修改
+                // if (miniApi.isIOS) {
+                //     this.btn_stone.visible = false;
+                //     this.btn_receive.visible = true;
+                //     this.btn_receive.disabled = true;
+                // }
+            } else {
+                this.btn_video.visible = true;
+            }
+        }
+        else {
+            this.sp_info.visible = false;
+            // IOS能支付修改
+            // if (miniApi.isIOS) {
+            //     this.img_daily_challenge.skin = `local/matchCount/1/img_rwbox2.png`
+            // } else {
+            this.img_daily_challenge.skin = `local/matchCount/1/img_rwbox23.png`
+            this.img_an_complete.visible = true;
+            this.img_add_task.visible = true;
+            // }
+        }
+
+        if (this.img_red.visible) {
+            this.img_light.visible = true;
+            this.img_light.play(0)
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall_play.hall_play_dailyTaskUI', HallPlayDailyTask);
+class S_click_HallPlay_dailyTask_receive extends Laya.Script {
+    onClick(E) {
+        game.server.send(15002)
+    }
+}
+class S_add_a_dailyTask extends Laya.Script {
+    onClick(e) {
+        // 购买金币
+        let goodsId = 10125
+        if (__data.stone < shopConfig.dailyTask[goodsId].price) {
+            __tips(__lang.stone_no_enough)
+            return
+        }
+        game.server.send(2404, goodsId)
+    }
+}
+class S_dailytask_stone extends Laya.Script {
+    onClick(e) {
+        if (__data.stone < __data.dailyTask.refreshStone) {
+            __tips(__lang.stone_no_enough)
+            return
+        }
+        game.server.send(15007)
+    }
+}
+class S_dailytask_video extends Laya.Script {
+    init(t) {
+        this.dt = t;
+    }
+    async onClick() {
+        let adunitId = 'adunit-58202d8bfcdc9f99'
+        await miniApi.video_ready(adunitId)
+        miniApi.video_show(adunitId, () => {
+            game.server.send(15007)
+        }, () => {
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0);
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ADScene': '日常视频刷新', 'Mj_Participation': n })
+    }
+}

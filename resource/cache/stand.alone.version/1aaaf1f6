@@ -1,0 +1,36 @@
+class FriendRoom_hallPlay_centerDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_hallPlay_centerDown',
+            down: true
+        })
+        this.btn_rule.addComponent(S_hall_play_rule)
+        this.btn_record.addComponent(S_friendRoom_record)
+        this.btn_joinRoom.addComponent(S_friendRoom_joinRoom)
+        this.btn_freeCreate.addComponent(S_friendRoom_createRoom)
+    }
+}
+class S_friendRoom_joinRoom extends Laya.Script {
+    onClick(e) {
+        __showScene.show_friendRoom_inputId()
+    }
+}
+class S_friendRoom_record extends Laya.Script {
+    onClick(e) {
+        __showScene.show_friendRoom_record()
+            // __showScene.show_friendRoom_vipSale()
+    }
+}
+class S_friendRoom_createRoom extends Laya.Script {
+    onClick(e) {
+        let center = game.scene.add(FriendRoom_hallPlay_center);
+        let data = center.ui.getData();
+
+        let gp = center.ui.takeEmptyByList([data.top, data.score, data.plays]).join(',');
+        // game.server.send(14005, center.ui.playId, center.ui.playId, gp, data.player, data.round);
+        let round = game.utils.getWebParams("round");
+        game.server.send(14005, center.ui.playId, center.ui.cityId, gp, data.player, round ? round : data.round);
+        center.ui.save();
+        trace('创建房间数据：', data, gp);
+    }
+}

@@ -1,0 +1,1511 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-12 11:35:02
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-29 18:18:47
+ */
+
+'use strict';
+
+class MahjongDesk_Compass_Scipt extends Laya.Script {
+
+    onEnable() {
+        this.__compass = this.owner.game.getChildByName('compass_box').getChildByName('compass')
+        this.__compassDir = this.owner.game.getChildByName('compass_box').getChildByName('compass_dir')
+
+        game.cb.on(__eh + 'change_compass', this, this.changeCompass)
+        game.cb.on(__eh + 'change_dir', this, this.changeDir)
+    }
+
+    onDisable() {
+        game.cb.on(__eh + 'change_compass', this, this.changeCompass)
+        game.cb.on(__eh + 'change_dir', this, this.changeDir)
+    }
+
+    changeDir() {
+        //获取位置上第一个人的信息  东始终指向位置1的人 
+        let __vo = __data.deskData.roomVo.getPlayer(1);
+        if (!__vo) return
+        if (__vo.seat_tag == 'down') {
+            this.__compass.rotation = 180
+        } else if (__vo.seat_tag == 'right') {
+            this.__compass.rotation = 90
+        } else if (__vo.seat_tag == 'up') {
+            this.__compass.rotation = 0
+        } else if (__vo.seat_tag == 'left') {
+            this.__compass.rotation = 270
+        }
+    }
+
+    //改变操作者  value  操作者的id  或者位置
+    changeCompass(value) {
+        let __vo = __data.deskData.roomVo.getPlayer(value);
+        if (!__vo) return
+        if (__vo.seat_tag == 'down') {
+            this.__compassDir.rotation = 0
+        } else if (__vo.seat_tag == 'right') {
+            this.__compassDir.rotation = 270
+        } else if (__vo.seat_tag == 'up') {
+            this.__compassDir.rotation = 180
+        } else if (__vo.seat_tag == 'left') {
+            this.__compassDir.rotation = 90
+        }
+
+        trace('操作者： ', __vo.seat_tag, this.__compassDir.rotation)
+    }
+}
+
+
+
+
+class MahjongDesk_Compass3D_Scipt extends Laya.Script {
+
+    onAwake() {
+        this.downMaterial = new Laya.UnlitMaterial();
+        this.rightMaterial = new Laya.UnlitMaterial();
+        this.upMaterial = new Laya.UnlitMaterial();
+        this.leftMaterial = new Laya.UnlitMaterial();
+
+        this.downMaterial.renderMode = this.rightMaterial.renderMode = this.upMaterial.renderMode = this.leftMaterial.renderMode = Laya.UnlitMaterial.RENDERMODE_TRANSPARENT
+
+        this.defaultMaterial = new Laya.UnlitMaterial();
+        this.defaultMaterial.renderMode = Laya.UnlitMaterial.RENDERMODE_TRANSPARENT;
+    }
+
+    onEnable() {
+        this.compass = __data.deskData.roomVo.scene.getChildByName('Desk').getChildByName('compass');
+
+        this.createMaterial();
+        this.compass.meshRenderer.material.albedoTexture = this.defaultMaterial.albedoTexture;
+        // this.compass.transform.localPosition = new Laya.Vector3(0, 0.5, 0);
+        game.cb.on(__eh + 'change_compass', this, this.changeCompass)
+        game.cb.on(__eh + 'change_dir', this, this.changeDir)
+        game.cb.on(__eh + 'ready_to_clear', this, this.clearCompass)
+    }
+
+    onDisable() {
+        this.sureDir = false;
+        game.cb.off(__eh + 'change_compass', this, this.changeCompass)
+        game.cb.off(__eh + 'change_dir', this, this.changeDir)
+        game.cb.off(__eh + 'ready_to_clear', this, this.clearCompass)
+    }
+
+    changeDir() {
+
+        //获取位置上第一个人的信息  东始终指向位置1的人 
+        let __vo = __data.deskData.roomVo.getPlayer(1);
+        if (!__vo) return
+        this.sureDir = true;
+        if (__vo.seat_tag == 'down') {
+            this.compass.transform.rotationEuler = new Laya.Vector3(0, 90, 0);
+        } else if (__vo.seat_tag == 'right') {
+            this.compass.transform.rotationEuler = new Laya.Vector3(0, 180, 0)
+        } else if (__vo.seat_tag == 'up') {
+            this.compass.transform.rotationEuler = new Laya.Vector3(0, 270, 0)
+        } else if (__vo.seat_tag == 'left') {
+            this.compass.transform.rotationEuler = new Laya.Vector3(0, 0, 0)
+        }
+
+        this.createMaterial(__vo.seat_tag)
+    }
+
+    createMaterial(type) {
+        this.defaultMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/compress.png')
+        switch (type) {
+            case 'down':
+                this.downMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dong.png')
+                this.rightMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/nan.png')
+                this.upMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/xi.png')
+                this.leftMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bei.png')
+                break;
+            case 'right':
+                this.downMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bei.png')
+                this.rightMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dong.png')
+                this.upMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/nan.png')
+                this.leftMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/xi.png')
+                break;
+            case 'up':
+                this.downMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/xi.png')
+                this.rightMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bei.png')
+                this.upMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dong.png')
+                this.leftMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/nan.png')
+                break;
+            case 'left':
+                this.downMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/nan.png')
+                this.rightMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/xi.png')
+                this.upMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/bei.png')
+                this.leftMaterial.albedoTexture = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Textures/dong.png')
+                break;
+        }
+    }
+
+    //改变操作者  value  操作者的id  或者位置
+    changeCompass(value) {
+        if (!this.sureDir) this.changeDir();
+        let __vo = __data.deskData.roomVo.getPlayer(value);
+        if (!__vo) return
+
+        if (__vo.seat_tag == 'down') {
+            this.compass.meshRenderer.material.albedoTexture = this.downMaterial.albedoTexture;
+        } else if (__vo.seat_tag == 'right') {
+            this.compass.meshRenderer.material.albedoTexture = this.rightMaterial.albedoTexture;
+        } else if (__vo.seat_tag == 'up') {
+            this.compass.meshRenderer.material.albedoTexture = this.upMaterial.albedoTexture;
+        } else if (__vo.seat_tag == 'left') {
+            this.compass.meshRenderer.material.albedoTexture = this.leftMaterial.albedoTexture;
+        }
+        // trace('操作者： ', __vo.seat_tag, this.__compassDir.rotation)
+    }
+
+    clearCompass() {
+        this.compass.meshRenderer.material.albedoTexture = this.defaultMaterial.albedoTexture;
+    }
+}
+
+
+
+
+
+class MahjongDesk_Pop_Scipt extends Laya.Script {
+
+    onAwake() {
+        //清除pop
+        this.owner.ready.getChildByName('popContainer').getChildByName('pop_down').visible = false
+        this.owner.ready.getChildByName('popContainer').getChildByName('pop_right').visible = false
+        this.owner.ready.getChildByName('popContainer').getChildByName('pop_up').visible = false
+        this.owner.ready.getChildByName('popContainer').getChildByName('pop_left').visible = false
+
+        this.owner.game.getChildByName('popContainer').getChildByName('pop_down').visible = false
+        this.owner.game.getChildByName('popContainer').getChildByName('pop_right').visible = false
+        this.owner.game.getChildByName('popContainer').getChildByName('pop_up').visible = false
+        this.owner.game.getChildByName('popContainer').getChildByName('pop_left').visible = false
+    }
+
+    onEnable() {
+        game.cb.on('mahjong_' + "add_chat_content", this, this.chatHandler)
+    }
+
+    onDisable() {
+        game.cb.off('mahjong_' + "add_chat_content", this, this.chatHandler)
+    }
+
+    chatHandler(type, id, chat_id) {
+        let __target = __data.deskData.roomVo.getPlayer(id)
+        //用户不存在
+        if (!__target) return
+        let __name = (__target.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition) ? 'pop_down' : (__target.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 1) ? 'pop_right' : (__target.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 2) ? 'pop_up' : (__target.seat == __data.deskData.roomVo.countSeatBaseValue + __data.deskData.roomVo.seatInitPosition + 3) ? 'pop_left' : ''
+
+        let __phase = __data.deskData.roomVo.phase == 'ready' ? this.owner.ready.getChildByName('popContainer') : this.owner.game.getChildByName('popContainer');
+        trace(__phase.getChildByName(__name))
+        //pop不存在
+        if (!__phase.getChildByName(__name)) return
+        if (type == 'word') {
+            //获取聊天信息
+            let __info = Chat.wordConfig.filter(function (value) {
+                return value.id == chat_id
+            })
+            if (!__info) return
+            __info = __info[0]
+            //显示聊天内容
+            __phase.getChildByName(__name).getChildByName('txt').text = __info ? __info.content : ''
+            //设置文本的宽高 和 泡泡框的宽高
+            __phase.getChildByName(__name).getChildByName('txt').width = 350
+            __phase.getChildByName(__name).getChildByName('frame').width = 400
+            __phase.getChildByName(__name).getChildByName('frame').height = __phase.getChildByName(__name).getChildByName('txt').lines * 80
+
+            // if(__phase.getChildByName(__name).visible)Laya.timer.clear(this, clearPop)
+            //显示聊天泡
+            __phase.getChildByName(__name).visible = true
+            //隐藏表情和显示文本
+            __phase.getChildByName(__name).getChildByName('face').visible = false
+            __phase.getChildByName(__name).getChildByName('txt').visible = true
+
+            __sound.gameSound(`t${Chat.INDEX}` + '/c' + __target.sex + '/chat_' + chat_id)
+
+        } else if (type == 'face') {
+            //确定当前聊天泡的正反方向
+            let __flog = __phase.getChildByName(__name).getChildByName('frame').skin == 'local/chat/1/pop1.png' ? -1 : 1
+
+            //表情皮肤更换
+            __phase.getChildByName(__name).getChildByName('face').skin = 'local/chat/1/imoji' + chat_id.toString() + '.png'
+            //设置泡泡框的宽高
+            __phase.getChildByName(__name).getChildByName('frame').width = __phase.getChildByName(__name).getChildByName('face').width + 70
+            __phase.getChildByName(__name).getChildByName('frame').height = __phase.getChildByName(__name).getChildByName('face').height + 30
+            //根据聊天泡正反  设置表情位置
+            __phase.getChildByName(__name).getChildByName('face').x = __flog == 1 ? 10 + __phase.getChildByName(__name).getChildByName('frame').width / 2 : -5 - __phase.getChildByName(__name).getChildByName('frame').width / 2
+            __phase.getChildByName(__name).getChildByName('face').y = __phase.getChildByName(__name).getChildByName('frame').height / 2 - 5
+
+            // if(__phase.getChildByName(__name).visible)Laya.timer.clear(this, clearPop)
+            // 显示聊天泡
+            __phase.getChildByName(__name).visible = true
+            //显示表情和隐藏文本
+            __phase.getChildByName(__name).getChildByName('face').visible = true
+            __phase.getChildByName(__name).getChildByName('txt').visible = false
+        }
+
+        // function clearPop(){ __phase.getChildByName(__name).visible = false }
+
+        // Laya.timer.once(__data.deskData.roomVo.chatTime, this, clearPop)
+
+        __phase.getChildByName(__name).doPop = __phase.getChildByName(__name).doPop ? __phase.getChildByName(__name).doPop : this.createData(__phase.getChildByName(__name))
+        __phase.getChildByName(__name).doPop.clear();
+        __phase.getChildByName(__name).doPop.start();
+    }
+
+    createData(target) {
+        return {
+            start() {
+                Laya.timer.once(__data.deskData.roomVo.chatTime, this, this.hidePop)
+            },
+
+            clear() {
+                Laya.timer.clear(this, this.clear)
+            },
+
+            hidePop() {
+                Laya.timer.clear(this, this.clear)
+                target.visible = false
+            }
+        }
+    }
+}
+class MahjongMovePosition extends Laya.Script {
+
+    extra(value) { this.value = value; }
+    onClick(e) {
+        if (!__data.vip.isVip) { __showScene.show_friendRoom_vipSale(FriendRoom_vipSale.change_seat); return; }
+        var vo = __data.deskData.roomVo.getPlayer(__data.uid);
+        if (!vo) return;
+        let toPosition = (vo.position + this.value) % 4;
+        toPosition = toPosition == 0 ? 4 : toPosition;
+        game.server.send(14017, toPosition);
+    }
+
+    set value(value) { this._value = value; }
+    get value() { return this._value || 0; }
+}
+class MahjongDesk_Kick_Script extends Laya.Script {
+    onClick(e) {
+        if (e.currentTarget.__targetID) {
+            //保存用户的id
+            this.value = e.currentTarget.__targetID
+            __showScene.show_prompt_select(__tipsName[7014], this.kickPlayer.bind(this));
+            // game.scene.add(MultipleBtnPrompt, [__tipsName[7014], this.kickPlayer, null, this])
+        } else {
+            trace("can't find player's ID  so you can not do this！")
+        }
+    }
+
+    kickPlayer() {
+        if (__data.deskData.roomVo.roomModel == 6 || __data.deskData.roomVo.roomModel == 7)
+            __data.deskData.roomVo.friendId && game.server.send(9205, this.value, __data.deskData.roomVo.friendId);
+        else if (this.value)
+            game.server.send(14010, this.value)
+    }
+}
+class MahjongDesk_info_Script extends Laya.Script {
+    onLateUpdate() {
+        this.owner.sceneInit();
+    }
+}
+class MahjongDesk_Ready_Script extends Laya.Script {
+    async onClick(e) {
+        let r = await ReadyManager.auth();
+        if (r) {
+            this.owner.visible = false;
+            // game.server.send(6001, 87);
+            game.server.send(14011);
+        }
+    }
+}
+class FriendGameGoonScript extends Laya.Script {
+    async onClick(e) {
+        __sound.button();
+        game.cb.event(__eh + "show_phase");
+        game.cb.event(__eh + "ready_to_clear");
+        game.scene.remove(FriendMahjongSmallResult)
+        await game.server.send(14011);
+        Laya.timer.callLater(this, () => {
+            game.cb.event(__eh + "update_player_ready");
+            game.cb.event('update_dailyTask_data');
+        })
+    }
+}
+class FriendGameAllScript extends Laya.Script {
+    errorView(button) {
+        this.button = button;
+    }
+    onClick(e) {
+        if (__data.deskData.roomVo.allRoundResult) {
+            game.scene.remove(FriendMahjongSmallResult);
+            game.scene.add(FriendMahjongAllResult);
+        } else {// 如果结算数据不存在  直接退出房间 返回大厅
+            game.server.send(6001, 111)
+            __reBack_info.backMain = true;
+            __showScene.show_hall();
+            __data.deskData.roomVo.clear();
+            // if (this.button) this.button.visible = true;  3.1.19.2版本弃用
+        }
+    }
+}
+class MahjongDesk_Result_Close_Script extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(DeskResultBG)
+        game.utils.remove(this.owner.parent)
+        game.server.send(6001, 110)
+
+        game.cb.event(__eh + "show_phase");
+        game.cb.event(__eh + "update_player_ready");
+        game.cb.event(__eh + "ready_to_clear");
+    }
+}
+class MahjongDesk_Result_Ready_Script extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(DeskResultBG)
+        game.utils.remove(this.owner.parent)
+        game.cb.event(__eh + "show_phase");
+        game.cb.event(__eh + "ready_to_clear");
+        game.server.send(6001, 110, 87)
+    }
+}
+class MahjongDesk_AllResult_Close_Script extends Laya.Script {
+    onClick(e) {
+        game.server.send(6001, 111)
+        __reBack_info.backMain = true;
+        __showScene.show_hall();
+        __data.deskData.roomVo.clear();
+    }
+}
+
+class MahjongDesk_Cancel_Auto_Script extends Laya.Script {
+    onClick(e) {
+        game.server.send(6001, 106)
+    }
+}
+class Mahjong_Image_Share_Script extends Laya.Script {
+    onClick(e) {
+        let data = JSON.stringify(__data.deskData.roomVo.allRoundResult);
+        trace('结算分享数据：', data);
+        miniApi.share({
+            titleId: '11',
+            imgId: 'friendRoomShareResult',
+            params: `uid=${__data.uid}&resultData=${data}`
+        });
+        // sceneManager.loadShare(function() { game.scene.add(SharePanel, [Interface.shareImageToFriend]) })
+    }
+}
+class Mahjong_Data_Copy_Script extends Laya.Script {
+    onClick(e) {
+        // sceneManager.loadShare(function() { game.scene.add(SharePanel, [Interface.shareImageToFriend]) })
+        miniApi.copy(this.template, () => {
+        })
+    }
+
+    get template() {
+        let content = '17好友麻将' + '\n' +
+            `${game.utils.timeToString(new Date(), ' ')}\n` +
+            `【房间号${__data.deskData.roomVo.allRoundResult.roomPwd}】${MahjongNameUtils.getPrefix(HallPlay.curRuleId)}${MahjongConfig.getName(__data.gameId.curId, HallPlay.curRuleId)}，${__data.deskData.roomVo.roomPlayer}人，${__data.deskData.roomVo.allGame}局\n` +
+            '======玩家战绩======\n' +
+            `${this.getPlayers()}`;
+        return content;
+    }
+
+    getPlayers() {
+        let list = __data.deskData.roomVo.allRoundResult.playerArray;
+        let string = '';
+        for (let i = 0; list && i < list.length; i++) {
+            let name = __data.othersVO[list[i].id] ? __data.othersVO[list[i].id].name : '';
+            let id = list[i].id;
+            let score = list[i].score > 0 ? `+${list[i].score}` : `-${Math.abs(list[i].score)}`;
+            let homeowner = __data.deskData.roomVo.roomOwner == list[i].id ? '(房主)' : '';
+            string += `昵称：${name}${homeowner}\nID：${id}\n积分：${score}\n----------------------\n`;
+        }
+        return string;
+    }
+}
+
+
+
+class Mahjong_Limit_Time_Script extends Laya.Script {
+    constructor() {
+        super();
+
+        this.__mark = new Laya.Sprite();
+        this.__pie = new Laya.Sprite();
+
+        this.__label = new Laya.Label();
+        this.__label.fontSize = 30;
+        this.__label.color = '#ffffff'
+        this.__label.align = 'center'
+        this.__label.valign = 'middle'
+        this.__label.width = this.__label.height = 60;
+
+        //多少毫秒执行一次重绘cd效果
+        this.__time_unit = 100;
+        //半径
+        this.__radius = 0;
+        //起始的角度
+        this.__startAngle = 0;
+        //每次改变的角度
+        this.__eventAngle = 0;
+        //总时间
+        this.__allTime = 0;
+        //回调函数
+        this.__callback = null
+    }
+
+    onEnable() {
+        if (!this.owner) {
+            return
+        }
+        this.__radius = Math.hypot(this.owner.width / 2, this.owner.height / 2)
+        // let __radius = Math.sqrt( (this.owner.width / 2)*(this.owner.width / 2) + (this.owner.height / 2)*(this.owner.height / 2)) / 2
+        this.__mark.graphics.drawRect(0, 0, this.owner.width, this.owner.height, '#000000')
+        //中心点 x，y ，radius，startAngel， endAngel
+        this.__pie.graphics.drawPie(this.owner.width / 2, this.owner.height / 2, this.__radius, 0, 360, '#fff000')
+        this.__mark.alpha = .3
+        // this.owner.addChild(this.__mark)
+        // this.__mark.mask = this.__pie;
+    }
+
+    onDisable() {
+        game.utils.remove(this.__mark)
+        game.utils.remove(this.__label)
+        Laya.timer.clear(this, this.updateLabelHandler)
+        Laya.timer.clear(this, this.updatePieHandler)
+    }
+
+    start(time, showTxt, callback) {
+        this.__startAngle = 0;
+        this.__eventAngle = 360 / ((time * 1000) / this.__time_unit)
+        this.updatePieHandler();
+        Laya.timer.loop(this.__time_unit, this, this.updatePieHandler)
+
+        if (showTxt) {
+            this.owner.addChild(this.__label)
+            this.__label.x = this.owner.width - this.__label.width >> 1
+            this.__label.y = this.owner.height - this.__label.height >> 1
+        } else {
+            game.utils.remove(this.__label)
+        }
+
+        this.__allTime = time
+        this.updateLabelHandler();
+        Laya.timer.loop(1000, this, this.updateLabelHandler)
+
+        this.__callback = callback
+    }
+
+    updatePieHandler() {
+        this.__startAngle += this.__eventAngle
+        this.__pie.graphics.clear();
+        this.__pie.graphics.drawPie(this.owner.width / 2, this.owner.height / 2, this.__radius, this.__startAngle, 360, '#fff000')
+        this.__mark.mask = this.__pie;
+    }
+
+    updateLabelHandler() {
+        this.__allTime -= 1;
+        this.__label.text = this.__allTime.toString();
+        //游戏结束
+        if (this.__allTime < 0) {
+            game.utils.remove(this.__mark)
+            game.utils.remove(this.__label)
+            this.__callback && this.__callback();
+            Laya.timer.clear(this, this.updateLabelHandler)
+            Laya.timer.clear(this, this.updatePieHandler)
+            this.destroy();
+            // this.owner.getComponent(Mahjong_Limit_Time_Script).destroy();
+        }
+    }
+}
+
+
+
+class Mahjong_VoiceAni_Script extends Laya.Script {
+    constructor() {
+        super();
+        this.__ani = new Laya.Image();
+        this.flagName = 'ts';
+    }
+
+    onEnable() {
+        let head = this.owner.getChildByName('head');
+        this.__time = 0
+        this.__ani.skin = 'local/desk_common_ui/1/mica1.png'
+        this.__ani.size(head.width * 0.88, head.height * 0.88)
+        this.__ani.x = head.x + (head.width - this.__ani.width) / 2;
+        this.__ani.y = head.y + (head.height - this.__ani.height) / 2;
+        try {
+            this.owner.addChildAt(this.__ani, this.getIndex());
+        } catch (e) {
+            this.owner.addChild(this.__ani);
+        }
+    }
+
+    onDestroy() {
+        game.utils.remove(this.__ani);
+    }
+
+    getIndex() {
+        let flagView = this.owner.getChildByName(this.flagName);
+        let flagIndex = this.owner.getChildIndex(flagView);
+        return flagIndex + 1;
+    }
+
+    onUpdate(e) {
+        this.__time += (Laya.timer.delta)
+        if (this.__time >= 300) {
+            this.__time = 0;
+            this.__ani.skin = this.__ani.skin == 'local/desk_common_ui/1/mica1.png' ? 'local/desk_common_ui/1/mica2.png' : 'local/desk_common_ui/1/mica1.png'
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+class Hand_Strategy_Script extends Laya.Script {
+
+    onEnable() {
+        game.cb.on(__eh + 'out_card', this, this.destroySelf);
+    }
+    onDisable() {
+        this.clear();
+        game.cb.off(__eh + 'out_card', this, this.destroySelf);
+    }
+
+    destroySelf() {
+        this.destroy();
+    }
+
+    strategy(strategy) {
+        this._strategy = strategy;
+        this.offy = 10;
+        this.createImage();
+        this.calibration();
+        // this.tween();
+    }
+
+    createImage() {
+        this.image = new Laya.Image(this.getSkin());
+        this.image.pivot(this.image.width / 2, this.image.height);
+        this.container.addChild(this.image);
+    }
+
+    getSkin() {
+        // 推荐
+        let inCommon = this._strategy.commonKeys.some(value => value == this.owner.card);
+        if (inCommon) return `cdn/mahjong_ting/img_jian.png`;
+        // 大
+        let inMaxRate = this._strategy.maxRateKeys.some(value => value == this.owner.card);
+        if (inMaxRate) return `cdn/mahjong_ting/img_da.png`;
+        // 多
+        let inMaxNum = this._strategy.maxNumSumKeys.some(value => value == this.owner.card);
+        if (inMaxNum) return `cdn/mahjong_ting/img_duo.png`;
+        return "";
+    }
+
+    onLateUpdate() {
+        this.calibration();
+    }
+
+    calibration() {
+        let point = this.convertLocalToLocal(this.owner, this.container);
+        let isChange = false;
+        if (point.x != this.originalX) { isChange = true; this.originalX = point.x; }
+        if (point.y != this.originalY) { isChange = true; this.originalY = point.y; }
+        if (this.image && this.owner && isChange) {
+            this.image.pos(point.x + this.owner.width / 2, this.originalY - this.offy);
+            // Laya.Tween.clearAll(this.image);
+            // this.tween();
+        }
+        return point;
+    }
+
+    get container() {
+        if (!this._desk) {
+            let uniqueId = MahjongConfig.getUniqueId(__data.gameId.lastId, __data.gameId.lastRuleId);
+            this._desk = game.scene.get(window['MahjongDesk' + uniqueId + '3D']).game.getChildByName('desk');
+        }
+        return this._desk;
+    }
+
+    /**
+     * 将A对象的本地坐标转换到B对象的本地坐标
+     * @param aObj 源对象
+     * @param bObj 目标对象
+     * @returns 目标对象的本地坐标
+     */
+    convertLocalToLocal(aObj, bObj) {
+        // 1. A的本地坐标 -> 全局坐标
+        const globalPos = aObj.localToGlobal(new Laya.Point());
+        // 2. 全局坐标 -> B的本地坐标
+        const bLocalPos = bObj.globalToLocal(globalPos);
+        return bLocalPos;
+    }
+
+    tween() {
+        // 上升：快速 (300ms)
+        Laya.Tween.to(this.image,
+            { y: this.originalY - this.offy - 25 },
+            400,
+            Laya.Ease.circOut,
+            Laya.Handler.create(this, () => {
+                // 下落：慢速 (450ms)
+                Laya.Tween.to(this.image,
+                    { y: this.originalY - this.offy },
+                    400,
+                    Laya.Ease.circIn,
+                    Laya.Handler.create(this, this.tween)
+                );
+            })
+        );
+    }
+
+    clear() {
+        // Laya.Tween.clearAll(this.image);
+        game.utils.remove(this.image);
+        this.image = null;
+    }
+
+    onDestroy() {
+        this.clear();
+    }
+}
+
+
+
+
+
+
+
+
+
+
+class Hand_Drag_Script extends Laya.Script {
+
+    constructor() {
+        super();
+        this.__noEvent = false;
+    }
+
+    onEnable() {
+        this.__choiceOffy = 30
+        this.__vague = { x: 5, y: 5 };
+        this.__value = this.owner
+        this.relocation();
+    }
+
+    onDisable() { }
+
+    onDestroy() {
+        this.__noEvent = false;
+    }
+
+    relocation() {
+        this.__inity = this.owner.y
+    }
+
+    onMouseDown(e) {
+        this.__initx = this.owner.x
+        game.cb.event(__eh + 'show_hu_preview');
+        //不可以操作哦
+        if (this.__noEvent) {
+            return
+        }
+        // 自动打牌状态 如果为true   表示在自动打牌不可以进行操作
+        if (this.autoStatus) { __tips('请先取消自动摸打/胡牌'); return }
+
+        __sound.gameSound('click_card')
+
+        this.value = true
+
+        this.__value.parent.addChild(this.__value)
+
+        let __off_point = this.__value.globalToLocal(new Laya.Point(Laya.stage.mouseX, Laya.stage.mouseY))
+        this.__offx = __off_point.x
+        this.__offy = __off_point.y
+
+        this.update();
+
+        this.__choice = true;
+        game.cb.event(__eh + 'hand_card_choice', [this.__value])
+
+        game.cb.event(__eh + 'show_choice_ot', [this.__value.card])
+    }
+
+    onMouseMove(e) {
+        // if (!this.value) { return }
+        // this.update();
+    }
+
+    onUpdate() {
+        if (this.value) {
+            if (Laya.stage.mouseX >= Laya.stage.width - this.__vague.x || Laya.stage.mouseX <= this.__vague.x) { this.reset(); return; }
+            if (Laya.stage.mouseY >= Laya.stage.height - this.__vague.y || Laya.stage.mouseY <= this.__vague.y) { this.reset(); return; }
+            this.update();
+        }
+    }
+
+    update() {
+        let __aim_point = this.__value.parent.globalToLocal(new Laya.Point(Laya.stage.mouseX, Laya.stage.mouseY))
+
+        this.__value.x = __aim_point.x - this.__offx
+        this.__value.y = __aim_point.y - this.__offy
+    }
+
+
+    onDoubleClick(e) {
+        trace('双击')
+    }
+
+    onStageClick(e) {
+        if (e && e.target != this.owner) {
+            if (this.__choice) {
+                this.cancelChoice();
+                game.cb.event(__eh + 'show_hu_preview');
+                game.cb.event(__eh + 'show_choice_ot');
+            }
+        }
+    }
+
+    onMouseUp(e) {
+        // this.reset();
+    }
+
+    onStageMouseUp(e) {
+        if (!this.value) return
+        this.reset();
+    }
+
+    onMouseOut(e) {
+        // if (this.value) {
+        //     this.reset();
+        // };
+    }
+
+    cancelChoice() {
+        if (!this.__value) return
+        this.__choice = false;
+        this.__value.y = this.__inity
+    }
+
+    reset() {
+        if (!this.__value) return
+
+        this.value = false;
+        if (this.__value.y <= this.__inity - this.__choiceOffy && __data.deskData.isCanPlay) {
+            // let __tempPoint = this.__value.parent.localToGlobal(new Laya.Point(this.__initx + this.__value.width / 2, this.__inity));
+            let __tempPoint = this.__value.parent.localToGlobal(new Laya.Point(this.__value.x + this.__value.width / 2, this.__value.y + this.__value.height / 2));
+            game.cb.event(__eh + 'out_card', [this.owner, __tempPoint])
+            game.cb.event(__eh + 'show_choice_ot')
+            return
+        }
+
+        this.__value.x = this.__initx
+        this.__value.y = this.__inity
+
+        if (this.__choice) {
+            let __tempPoint = this.__value.parent.localToGlobal(new Laya.Point(this.__value.x + this.__value.width / 2, this.__value.y - this.__choiceOffy - 10));
+            game.cb.event(__eh + 'show_hu_preview', [this.__value.card, __tempPoint]);
+            this.__value.y = this.__inity - this.__choiceOffy
+        }
+
+
+    }
+
+    //不可以操作牌
+    unuse(notArr) {
+        if (!notArr) {
+            return;
+        } else if (this.__value && parseInt(this.__value.card) >= 0) {
+            for (let i = 0; i < notArr.length; i++) {
+                if (parseInt(this.__value.card) == parseInt(notArr[i])) {
+                    this.__noEvent = true;
+                }
+            }
+        }
+    }
+
+    get autoStatus() {
+        let myVo = __data.deskData.roomVo.getPlayerBySeat(0);
+        return myVo ? myVo.tingAutoStatus : false;
+    }
+}
+
+
+
+class Mahjong_Lx_Script extends Laya.Script {
+    constructor() {
+        super();
+        this.shelter = new Laya.Image();
+        this.shelter.skin = 'comp/img_blank.png'
+
+        this.__selected = false
+
+        this.__offy = 30
+    }
+
+    onEnable() {
+        this.__canSelect = true
+
+        this.shelter.width = this.owner.width;
+        this.shelter.height = this.owner.height;
+
+        trace('亮喜牌：', this.owner.card)
+    }
+
+    onDisable() {
+        this.owner.y = 0;
+        this.__selected = false;
+        game.utils.remove(this.shelter)
+    }
+
+    filter(collections) {
+        if (!collections) {
+            if (parseInt(this.owner.card) != 8
+                && parseInt(this.owner.card) != 0
+                && parseInt(this.owner.card) != 10
+                && parseInt(this.owner.card) != 18
+                && parseInt(this.owner.card) != 20
+                && parseInt(this.owner.card) != 28
+                && parseInt(this.owner.card) != 40
+                && parseInt(this.owner.card) != 41
+                && parseInt(this.owner.card) != 42) {
+                this.__canSelect = false
+                this.owner.addChild(this.shelter)
+            } else {
+                this.__canSelect = true
+                game.utils.remove(this.shelter)
+            }
+        } else {
+            if (this.__selected) { return }
+            if (collections.includes(parseInt(this.owner.card))) {
+                this.__canSelect = true
+                game.utils.remove(this.shelter)
+            } else {
+                this.__canSelect = false
+                this.owner.addChild(this.shelter)
+            }
+        }
+    }
+
+    onClick(e) {
+        //如果不是可以操作的牌  不许点击
+        if (!this.__canSelect) {
+            return
+        }
+        this.__selected = !this.__selected
+        __sound.gameSound('click_card')
+        if (this.__selected) {
+            this.owner.y = -this.__offy
+        } else {
+            this.owner.y = 0
+        }
+        game.cb.event(__eh + 'show_lx_guide');
+    }
+
+    get selected() {
+        return this.__selected
+    }
+}
+
+
+class Mahjong_GrayLayer_Script extends Laya.Script {
+    constructor() {
+        super();
+    }
+
+    onEnable() {
+        this.shelter = this.shelter || game.utils.RoundRect(this.owner.width, this.owner.height - 5, this.owner.width / 6)
+        this.shelter.alpha = 0.3;
+        this.owner.addChild(this.shelter)
+    }
+
+    onDisable() {
+        game.utils.remove(this.shelter)
+    }
+
+    onDestroy(){
+        game.utils.remove(this.shelter)
+    }
+
+    onClick(e) { }
+}
+
+
+
+//界面缓动消失动画
+class Mahjong_Disappear_Script extends Laya.Script {
+    constructor() {
+        super()
+    }
+
+    onEnable() { }
+
+    onDisable() { }
+
+    start(time, doNext) {
+        this.__time = time ? time : 2000
+        this.doNext = doNext;
+        Laya.timer.once(this.__time, this, this.disappearHandler)
+    }
+
+    disappearHandler() {
+        this.__initPivotX = this.owner.pivotX
+        this.__initPivotY = this.owner.pivotY
+        this.__initPointX = this.owner.pivotX
+        this.__initPointY = this.owner.pivotY
+        this.owner.pivot(this.owner.width / 2, this.owner.height / 2)
+        this.owner.x += this.owner.width * this.owner.scaleX / 2 - this.__initPivotX
+        this.owner.y += this.owner.height * this.owner.scaleY / 2 - this.__initPivotY
+        Laya.Tween.to(this.owner, {
+            scaleX: 0,
+            scaleY: 0
+        }, 300, Laya.Ease.backInOut, new Laya.Handler(this, this.completeHandler))
+    }
+
+    completeHandler() {
+        this.owner.pivot(this.__initPivotX, this.__initPivotY)
+        this.owner.scaleX = this.owner.scaleY = 1
+        game.utils.remove(this.owner);
+        this.doNext && this.doNext();
+        this.destroy();
+    }
+}
+
+
+
+
+//头像胡法标识
+class Mahjong_Head_Ting_Script extends Laya.Script {
+    constructor() {
+        super()
+
+        this.__sign = new Laya.Image();
+    }
+
+    onEnable() { }
+
+    onDisable() { }
+
+    onDestroy() {
+        game.utils.remove(this.__sign);
+        this.__sign.skin = ''
+        this.__sign.scale(1, 1);
+    }
+
+    sign(value) {
+        this.__sign.skin = 'local/mahjong_common/1/' + value + '.png';
+        this.__sign.scale(0.75, 0.75);
+        this.owner.addChild(this.__sign).pos(13, 14);
+    }
+}
+
+
+
+class MahjongTestScript extends Laya.Script {
+    onDoubleClick() {
+        trace('测试开始------------------------------------------------');
+        // this.owner.downlist.createList = '0,0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.leftlist.createList = '0,0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.rightlist.createList = '0,0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.uplist.createList = '0,0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.downoutlist.outlist = '0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.leftoutlist.outlist = '0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.rightoutlist.outlist = '0,0,0,0,0,0,0,0,0,0,0,0,0';
+        // this.owner.upoutlist.outlist = '0,0,0,0,0,0,0,0,0,0,0,0,0';
+        trace('测试结束------------------------------------------------');
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class ResListener extends Laya.Script {
+    constructor() {
+        super();
+    }
+
+    layer(_name) { this._name = _name; return this; }
+    listen(type) { this._resType = type; return this; }
+    start(callback) { this._start_callback = callback; return this; }
+    every(callback) { this._every_callback = callback; return this; }
+    then(callback) { this._end_callback = callback; return this; }
+
+    getTypeIcon() {
+        if (this._resType == 'cup') {
+            return 'cdn/mahjong_result/mahjong_result/img_jb.png';
+        }
+    }
+
+    onEnable() {
+        game.cb.on('RESOURCE_RISE', this, this._riseAnimation);
+    }
+
+    onDisable() {
+        game.cb.off('RESOURCE_RISE', this, this._riseAnimation);
+    }
+
+    /**
+     * 
+     * @param {number|string} type 资源类型
+     * @param {number} number 资源数量
+     * @param {Laya.Point} point 舞台位置
+     * @param {number} vn 出现的数量
+     */
+    _riseAnimation(type, number, point, vn = 5) {
+        this.resArr = [];
+        // 类型匹配
+        if (this._resType == type) {
+            // 将图标的位置换到到舞台坐标
+            let icon = this.owner;
+            let iconPoint = this.getCenterPoint(icon);
+            icon.parent.localToGlobal(iconPoint);
+            // 获取动画播放的层
+            let layer = game.scene.layer[this._name].c;
+            // 坐标转换 到动画层
+            layer.globalToLocal(iconPoint);
+            layer.globalToLocal(point);
+            this._startAnimation(layer, number, point, vn, iconPoint);
+        }
+    }
+
+
+    /**
+     * 
+     * @param {Laya.Box} layer 
+     * @param {number} number 
+     * @param {Laya.Point} point 
+     * @param {number} vn 
+     * @param {Laya.Point} iconPoint 
+     */
+    _startAnimation(layer, number, point, vn, iconPoint) {
+        this.random_edge = 150;
+        for (let i = 0; i < vn; i++) {
+            // let _res = new Laya.Image();
+            let _res = Laya.Pool.getItemByClass(this.SIGN, Laya.Image);
+            SkinUtils.setSkin(_res, this.getTypeIcon());
+            _res.pivot(_res.width / 2, _res.height / 2);
+            _res.pos(point.x, point.y);
+            layer.addChild(_res);
+            this.resArr.push(_res);
+            _res.addComponent(ResFlyScript).start(iconPoint, i, i == vn - 1, this.SIGN, () => {
+                this._start_callback && this._start_callback();
+            }, (number) => {
+                this._every_callback && this._every_callback(number);
+            }, () => {
+                this._end_callback && this._end_callback();
+            });
+        }
+    }
+
+    /**
+     * 获取对象的中心点的真实坐标(切记对象需要能回去到宽高，已经设定锚点的对象会设置宽高，没有的sprite对象可能存在宽高为0的情况)
+     * @param {Laya.Image} icon 
+     */
+    getCenterPoint(view) {
+        let point = this.getAnchorPoint(view);
+        // 没有设定锚点返回view 的中心点
+        return new Laya.Point(view.x + view.width / 2 - point.x, view.y + view.height / 2 - point.y);
+    }
+
+    /**
+     * 获取对象的锚点距离
+     * @param {Laya.Image} view 
+     */
+    getAnchorPoint(view) {
+        // 便宜位置  默认0
+        let anchor = new Laya.Point(0, 0);
+        // 已经设定锚点了
+        if (view.pivotX != 0 || view.pivotY != 0) {
+            anchor.x = view.pivotX || 0;
+            anchor.y = view.pivotY || 0;
+        }
+        // 已经设定锚点了
+        else if (!isNaN(view.anchorX) && !isNaN(view.anchorY)) {
+            anchor.x = view.anchorX * view.width;
+            anchor.y = view.anchorY * view.height;
+        }
+        return anchor;
+    }
+
+    get SIGN() { return "RES_ANIMATION_IMAGE" + this._resType; }
+}
+
+class ResFlyScript extends Laya.Script {
+    start(iconPoint, i, isEnd, sign, firstComplete, everyComplete, complete) {
+        this._iconPoint = iconPoint;
+        this._isEnd = isEnd;
+        this._i = i;
+        this._sign = sign;
+        this._complete = complete;
+        this._everyComplete = everyComplete;
+        this._firstComplete = firstComplete;
+        this._startMove();
+    }
+
+
+    /**
+     * 开始移动
+     */
+    _startMove() {
+        this._clearTween();
+        this.tween = new Laya.Tween().to(this.owner, { x: this._iconPoint.x, y: this._iconPoint.y }, 750, Laya.Ease.expoOut, Laya.Handler.create(this, this._moveComplete, [], false), this._i * 200, false, false);
+    }
+
+    /**
+     * 
+     */
+    _moveComplete() {
+        this.started = false;
+        game.scene.remove(this.owner);
+        Laya.Pool.recover(this._sign, this.owner);
+        (this._i == 0) && this._firstComplete && this._firstComplete();
+        (this._isEnd) && this._complete && this._complete();
+        this._everyComplete && this._everyComplete(this._i + 1);
+        this.destroy();
+    }
+
+
+    _clearTween() {
+        if (this.tween) {
+            this.tween.clear();
+            this.tween = null;
+        }
+    }
+}
+
+
+class Click_Stage_Remove_UI extends Laya.Script {
+
+    constructor() {
+        super();
+
+        /** @prop {name:clickSelfRemove, tips:"点击自己是否也移除", type:Boolean, default:false}*/
+        this.clickSelfRemove = false;
+    }
+
+    setLimit(func) {
+        this._limit = func;
+    }
+
+    self() {
+        this.clickSelfRemove = true;
+    }
+
+    onClick(e) {
+        e && e.stopPropagation();
+        if (this.clickSelfRemove) this.onStageClick();
+    }
+
+    onStageClick() {
+        let r = this._limit ? this._limit() : false;
+        !r && this.owner && (this.owner.visible = false);
+    }
+}
+
+
+
+class BtnOperationTween extends Laya.Script {
+
+    onEnable() { this.init(); }
+
+    onDisable() { this.stop(); }
+
+    init() {
+        this.initx = this.owner.x;
+    }
+
+    start() {
+        Laya.timer.callLater(this, this.addTween);
+    }
+
+    stop() {
+        this.tweening = false;
+        Laya.Tween.clearAll(this.owner);
+    }
+
+    async addTween() {
+        if (this.tweening) return
+        this.tweening = true
+
+        this.owner.x = this.initx;
+
+        await __tool.tweenp(this.owner, { x: this.initx - 10 }, 500)
+        await __tool.tweenp(this.owner, { x: this.initx + 10 }, 1000)
+        await __tool.tweenp(this.owner, { x: this.initx }, 500)
+
+        this.tweening = false;
+        this.addTween();
+    }
+}
+
+
+class MahjongAlarm extends Laya.Script {
+    onAwake() {
+        this.alarmImg = new Laya.Image('local/game_common/1/img_jb.png');
+    }
+
+    onEnable() {
+        game.cb.on('alarm_event', this, this.alarm);
+        game.cb.on('over_alarm_event', this, this.clear);
+    }
+
+    onDisable() {
+        this.clear();
+        game.cb.off('alarm_event', this, this.alarm);
+        game.cb.off('over_alarm_event', this, this.clear);
+    }
+
+    onDestroy() {
+        this.clear();
+        game.cb.off('alarm_event', this, this.alarm);
+        game.cb.off('over_alarm_event', this, this.clear);
+    }
+
+    clear() {
+        ComponentUtils.clearScript(this.alarmImg, RepeatTwinkle);
+        game.utils.remove(this.alarmImg);
+    }
+
+    alarm(position) {
+        if (position == this.position) {
+            this.owner.addChild(this.alarmImg);
+            this.alarmImg.addComponent(RepeatTwinkle).twinkle();
+        }
+    }
+
+    setPosition(value) { this.position = value; }
+}
+
+class RepeatTwinkle extends Laya.Script {
+    onDestroy() {
+        this.clear();
+    }
+
+    onDisable() {
+        this.clear();
+    }
+
+    clear() {
+        this.tween && this.tween.clear();
+    }
+
+    twinkle(time = 1000) {
+        this.time = time;
+        this.handStatus();
+        this.start();
+    }
+
+    handStatus() {
+        if (this.owner.alpha > 0) {
+            this._status = this.ON_SHOW;
+        } else {
+            this._status = this.ON_HIDE;
+        }
+    }
+
+    start() {
+        this.clear();
+        if (this._status == this.ON_SHOW) {
+            this.tween = Laya.Tween.to(this.owner, { alpha: 0 }, this.time, null, Laya.Handler.create(this, this.twinkle, [this.time]));
+        } else {
+            this.tween = Laya.Tween.to(this.owner, { alpha: 1 }, this.time, null, Laya.Handler.create(this, this.twinkle, [this.time]));
+        }
+    }
+
+    get ON_SHOW() { return 'ON_SHOW' }
+    get ON_HIDE() { return 'ON_HIDE' }
+}
+
+
+class WuhuCompassInfo extends Laya.Script {
+
+    onAwake() {
+        this.image = new Laya.Image();
+    }
+
+    onDisable() {
+        this.clear();
+    }
+
+    onDestroy() {
+        this.clear();
+    }
+
+    clear() {
+        game.utils.remove(this.image);
+    }
+
+    bind(position, anotherPostion, type = WuhuCompassInfo.HEAD) {
+        this.position = position;
+        this.anotherPostion = anotherPostion;
+        this.type = type;
+        this.updateUI();
+    }
+
+    updateUI() {
+        this.image.skin = WuhuCompassInfo.getRes(this.position, this.anotherPostion, this.type);
+        if (this.type == WuhuCompassInfo.HEAD) {
+            this.owner.addChild(this.image).pos(8, this.owner.height - this.image.height - 8);
+        } else if (this.type == WuhuCompassInfo.DOOR) {
+            this.owner.addChild(this.image).pos(this.owner.width / 2 - this.image.width / 2, this.owner.height - this.image.height);
+        }
+    }
+
+    static getRes(position, otherPosition, type = WuhuCompassInfo.HEAD) {
+        let name = MahjongPositionUtils.posToInfo(position, otherPosition);
+        if (type == WuhuCompassInfo.HEAD) {
+            if (name == MahjongPositionUtils.BEN) return 'cdn/mahjong_result/mahjong_result/img_abj.png';
+            else if (name == MahjongPositionUtils.XIA) return 'cdn/mahjong_result/mahjong_result/img_axj.png';
+            else if (name == MahjongPositionUtils.DUI) return 'cdn/mahjong_result/mahjong_result/img_adj.png';
+            else if (name == MahjongPositionUtils.SHANG) return 'cdn/mahjong_result/mahjong_result/img_asj.png';
+            else return '';
+        } else if (type == WuhuCompassInfo.DOOR) {
+            if (name == MahjongPositionUtils.BEN) return 'cdn/mahjong_result/mahjong_result/img_bj.png';
+            else if (name == MahjongPositionUtils.XIA) return 'cdn/mahjong_result/mahjong_result/img_xj.png';
+            else if (name == MahjongPositionUtils.DUI) return 'cdn/mahjong_result/mahjong_result/img_dj.png';
+            else if (name == MahjongPositionUtils.SHANG) return 'cdn/mahjong_result/mahjong_result/img_sj.png';
+            else return '';
+        } else {
+            return '';
+        }
+    }
+
+    static get HEAD() { return "HEAD"; }
+    static get DOOR() { return "DOOR"; }
+}
+
+
+class WuhuExtraScore extends Laya.Script {
+    constructor() {
+        super();
+        this.ui = new WuhuExtraScoreTips();
+    }
+
+    local(name) {
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) { this.clear(); return; }
+        this.localName = name;
+        if (name == WuhuExtraScore.UP) {
+            this.owner.addChild(this.ui).pos(this.owner.width / 2 - this.ui.width / 2, -this.ui.height - 15);
+        } else if (name == WuhuExtraScore.DOWN) {
+            this.owner.addChild(this.ui).pos(this.owner.width / 2 - this.ui.width / 2, this.owner.getChildByName('txtScore').y + this.owner.getChildByName('txtScore').height + 10);
+        } else if (name == WuhuExtraScore.LEFT) {
+            this.owner.addChild(this.ui).pos(- this.ui.width, 0);
+        } else if (name == WuhuExtraScore.RIGHT) {
+            this.owner.addChild(this.ui).pos(this.owner.width, 0);
+        }
+    }
+
+    onDisable() {
+        this.clear();
+    }
+
+    onDestroy() {
+        this.clear();
+    }
+
+    clear() {
+        game.utils.remove(this.ui);
+    }
+
+    update(score) {
+        this.local(this.localName);
+        this.ui.text = score;
+    }
+
+    static get UP() { return "UP"; }
+    static get DOWN() { return "DOWN"; }
+    static get LEFT() { return "LEFT"; }
+    static get RIGHT() { return "RIGHT"; }
+}
+class WuhuExtraScoreTips extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/WuhuExtraScoreTips']);
+    }
+
+    set text(value) {
+        this.txt.text = '交分:' + value;
+    }
+}
+
+
+
+
+// 帧动画
+class PlayComponent extends Laya.Script {
+
+    // {startIndex,endIndex,loop,frame,prefix,tail,complete}
+    start(params) {
+        this.params = params;
+        this._play();
+        return this;
+    }
+
+    stop() {
+        Laya.timer.clearAll(this);
+    }
+
+    _play() {
+        this.index = this.params.startIndex;
+        this._updateUI();
+        Laya.timer.frameLoop(this.params.frame, this, this._onFrameLoop);
+    }
+
+    _end() {
+        this.params.complete && this.params.complete();
+        this.destroy();
+    }
+
+    onDestroy() {
+        Laya.timer.clear(this, this._onFrameLoop);
+        Laya.timer.clearAll(this);
+    }
+
+    _onFrameLoop() {
+        this.index++;
+        if (this.index > this.params.endIndex) {
+            if (this.params.loop) {// 需要一直循环
+                this.index = this.params.startIndex;
+                if (this.params.delayFrame) {// 帧延迟执行下一个循环
+                    this.index = this.params.endIndex;
+                    Laya.timer.clear(this, this._onFrameLoop);
+                    Laya.timer.frameOnce(this.params.delayFrame, this, this._play);
+                } else if (this.params.delayTime) {// 时间延迟执行下一个循环
+                    this.index = this.params.endIndex;
+                    Laya.timer.clear(this, this._onFrameLoop);
+                    Laya.timer.once(this.params.delayTime, this, this._play);
+                }
+            } else {// 一轮结束后直接终止
+                this.index = this.params.endIndex;
+                this._end();
+            }
+        }
+        this._updateUI();
+        this.params.update && this.params.update(this.index);
+    }
+
+    _updateUI() {
+        let prefix = this.params.prefix;
+        let tail = this.params.tail;
+        this.owner && SkinUtils.setSkin(this.owner, `${prefix}${this.index}.${tail}`);
+    }
+}

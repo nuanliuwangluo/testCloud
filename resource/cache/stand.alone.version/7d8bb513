@@ -1,0 +1,142 @@
+class MM_pause extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_pause',
+            layer: 'panel1'
+        })
+        this.btn_giveup.addComponent(S_mm_pause_giveup)
+        this.btn_re.addComponent(S_mm_pause_re)
+        this.btn_re.addComponent(S_mm_show_gameCount)
+        this.btn_close.addComponent(S_mm_pause_continue)
+        this.btn_zhendong.addComponent(S_mm_pause_zhendong)
+        this.btn_allMusic.addComponent(S_mm_pause_allMusic)
+    }
+    onAwake() {
+        var whiteTex = new Laya.Texture2D(1, 1);
+        var pixels = new Uint8Array([255, 255, 255, 255]); // RGBA
+        whiteTex.setPixels(pixels);
+        whiteTex.generateMipmap();
+
+        this.white_material = new Laya.BlinnPhongMaterial();
+        this.white_material.albedoTexture = whiteTex; // 先用白色占位
+    }
+    added() {
+        this.updateOnoff()
+
+        let a = [...S_3D_mjMatch.selectCard, ...S_3D_mjMatch.deskCard];
+        a.forEach(e => {
+            let c1 = e.getChildAt(0)
+            let c2 = e.getChildAt(1)
+            c1.origin_material = c1.meshRenderer.material;
+            if (c2) { c2.origin_material = c2.meshRenderer.material; }
+            if (c1) c1.meshRenderer.material = this.white_material
+            if (c2) c2.meshRenderer.material = this.white_material
+        });
+    }
+    updateOnoff() {
+        if (LocalUtils.music.value == 0 || LocalUtils.sound.value == 0) {
+            this.btn_allMusic.skin = 'cdn/mjSmallGame/bt_set_on.png'
+        } else {
+            this.btn_allMusic.skin = 'cdn/mjSmallGame/bt_set_off.png'
+        }
+
+        let a = miniApi.getItem(__data.uid + '-vibrate')
+        if (a == '0') {
+            this.btn_zhendong.skin = 'cdn/mjSmallGame/bt_set_off.png'
+        } else {
+            this.btn_zhendong.skin = 'cdn/mjSmallGame/bt_set_on.png'
+        }
+    }
+    onDisable() {
+        let a = [...S_3D_mjMatch.selectCard, ...S_3D_mjMatch.deskCard];
+        a.forEach(e => {
+            let c1 = e.getChildAt(0)
+            let c2 = e.getChildAt(1)
+            if (c1 && c1.meshRenderer && c1.origin_material) c1.meshRenderer.material = c1.origin_material
+            if (c2 && c2.meshRenderer && c2.origin_material) c2.meshRenderer.material = c2.origin_material
+        });
+    }
+    clickMask() { }
+}
+class S_mm_pause_giveup extends Laya.Script {
+    onClick(e) {
+        // if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+        e && e.stopPropagation();
+        game.scene.get(MjMatch_ui_left).removeTimer()
+        game.scene.removeAll()
+        S_3D_mjMatch.$this.mainScene();
+        game.scene.add(MM_main_scene)
+        game.scene.add(MM_main_scene_return)
+        game.scene.add(MM_main_scene_rank)
+        game.scene.add(MM_main_scene_garden)
+        game.scene.add(MM_ui_res)
+    }
+}
+class S_mm_pause_re extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        // if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+
+        // if (S_3D_mjMatch.sendCarding) return __tips('发牌中...')
+        let fn = () => {
+            game.scene.remove(MM_pause)
+            game.scene.remove(MM_fail)
+
+            game.scene.get(MjMatch_ui_left).removeTimer()
+            // game.scene.removeAll()
+            S_3D_mjMatch.$this.mainScene()
+            s_mm_start_game()
+        }
+        s_mm_gameCount_verify_to_start(fn)
+    }
+}
+class S_mm_pause_continue extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        game.scene.get(MjMatch_ui_left).resumeTimer()
+        game.scene.remove(MM_pause)
+
+        // let a = [...S_3D_mjMatch.selectCard, ...S_3D_mjMatch.deskCard];
+        // a.forEach(e => {
+        //     let c1 = e.getChildAt(0)
+        //     let c2 = e.getChildAt(1)
+        //     if (c1 && c1.meshRenderer && c1.origin_material) c1.meshRenderer.material = c1.origin_material
+        //     if (c2 && c2.meshRenderer && c2.origin_material) c2.meshRenderer.material = c2.origin_material
+        // });
+    }
+}
+class S_mm_pause_zhendong extends Laya.Script {
+    onClick(e) {
+        let a = miniApi.getItem(__data.uid + '-vibrate')
+        if (a == '0') {
+            miniApi.setItem(__data.uid + '-vibrate', 1)
+        } else {
+            miniApi.setItem(__data.uid + '-vibrate', 0)
+        }
+        this.owner.parent.updateOnoff()
+    }
+}
+class S_mm_pause_allMusic extends Laya.Script {
+    onClick(e) {
+        if (LocalUtils.music.value == 0 || LocalUtils.sound.value == 0) {
+            LocalUtils.music.value = 1
+            LocalUtils.sound.value = 1
+            config.isMusic = false
+            config.isSound = false
+            miniApi.setItem('music', 'false')
+            miniApi.setItem('sound', 'false')
+            __sound.stopAllMusic()
+        } else {
+            LocalUtils.music.value = 0
+            LocalUtils.sound.value = 0
+            config.isMusic = true
+            config.isSound = true
+            miniApi.setItem('music', 'true')
+            miniApi.setItem('sound', 'true')
+            __sound.playAllMusic()
+        }
+        LocalUtils.save(LocalUtils.music.key, LocalUtils.music.value)
+        LocalUtils.save(LocalUtils.sound.key, LocalUtils.sound.value)
+        this.owner.parent.updateOnoff()
+    }
+}

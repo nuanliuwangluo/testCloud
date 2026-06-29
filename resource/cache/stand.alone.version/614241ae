@@ -1,0 +1,67 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-01-13 10:48:54
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2022-01-15 14:58:22
+ */
+class DeskPlayerInfo extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskPlayerInfo',
+            "layer": 'panel',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.btn_flower.addComponent(DeskPlayerInfo_Script_sendGift)
+        this.btn_egg.addComponent(DeskPlayerInfo_Script_sendGift)
+        this.btn_bomb.addComponent(DeskPlayerInfo_Script_sendGift)
+        this.btn_beer.addComponent(DeskPlayerInfo_Script_sendGift)
+        this.btn_sliper.addComponent(DeskPlayerInfo_Script_sendGift)
+        this.otherVO;
+    }
+    added(vo) {
+        this.otherVO = vo
+        // 允许使用道具
+        let __allowProp = __data.deskData.roomVo.limit.indexOf('13') > -1 ? true : false;
+        //是否可点击
+        this.btn_flower.disabled = vo.id == __data.uid || !__allowProp ? true : false
+        this.btn_egg.disabled = vo.id == __data.uid || !__allowProp ? true : false
+        this.btn_bomb.disabled = vo.id == __data.uid || !__allowProp ? true : false
+        this.btn_beer.disabled = vo.id == __data.uid || !__allowProp ? true : false
+        this.btn_sliper.disabled = vo.id == __data.uid || !__allowProp ? true : false
+        //头像
+        if ('headUrl' in vo) SkinUtils.load(this.img_head, vo.headUrl)
+        else if ('url' in vo) SkinUtils.load(this.img_head, vo.url)
+        //昵称
+        this.txt_name.text = vo.name
+        //id
+        this.txt_id.text = 'ID：' + vo.id
+        //ip
+        this.txt_ip.text = vo.ipAddress ? 'IP：' + vo.ipAddress : 'IP：未知'
+        //地址
+        this.txt_address.text = vo.address ? '地址：' + vo.address : '地址：未知'
+
+        if (__data.domain.toString() === '17') {
+            this.btn_flower.disabled = true
+            this.btn_egg.disabled = true
+            this.btn_bomb.disabled = true
+            this.btn_beer.disabled = true
+            this.btn_sliper.disabled = true
+        }
+    }
+}
+class DeskPlayerInfo_Script_sendGift extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(this.owner.parent)
+        //麻将 信息
+        if (DeskCommonUI.scene == 1) game.server.send(5003, this.owner.parent.otherVO.id, e.currentTarget.name)
+        //斗地主信息
+        else if (DeskCommonUI.scene == 2) game.server.send(15003, this.owner.parent.otherVO.id, e.currentTarget.name)
+    }
+}

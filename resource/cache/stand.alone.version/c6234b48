@@ -1,0 +1,37 @@
+
+class FriendRoomRedRank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_allPlayerRed_rank',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = ''
+    }
+    added() {
+        this.__list.array = [];
+        this.item_me.visible = false;
+        this.img_noData.visible = false;
+        game.cb.on('update_friendRed_rank_data', this, this.update_rank_data)
+    }
+    onDisable() {
+        game.cb.off('update_friendRed_rank_data', this, this.update_rank_data)
+    }
+    update_rank_data(useData) {
+        // let useData = __data.allPlayerRed.rankData;
+        let data = []
+        for (const page in useData) {
+            if (page == `my`) continue;
+            data.push(...useData[page])
+        }
+        this.__list.array = data;
+        this.img_noData.visible = !data.length
+        if ('isMy' in useData['my']) {
+            this.item_me.visible = true
+            useData[`my`].isMy = true;
+            this.item_me.dataSource = useData[`my`]
+            this.item_me.img_line.visible = false;
+        } else {
+            this.item_me.visible = false;
+        }
+    }
+}

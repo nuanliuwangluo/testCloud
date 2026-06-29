@@ -1,0 +1,53 @@
+class GameMainCollectDressSelect extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collectGardenDressSelect',
+            layer: 'panel',
+        })
+        this.__list.vScrollBarSkin = ''
+    }
+    added(typeId) {
+        let compIdArray = __data.excelConfig.hashClassDress[typeId]
+        let ns = compIdArray.map((e1) => {
+            let e = __data.excelConfig.hashGardenDress[e1]
+            return {
+                typeId: e.typeId,
+                id: e.compId,
+                positionId: parseInt(e.positionId),
+                isUseing: __data.garden.useCompId.includes(parseInt(e.compId)),
+                isLock: __data.garden.isDressLock(e.compId),
+            }
+        })
+        this.__list.array = ns;
+    }
+}
+
+class GameMainCollectDressSelectItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_collectGardenDressSelect_item',
+            module: false
+        })
+        this.vo;
+        this.addComponent(S_gcdsi_item)
+    }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.vo = vo;
+        let d1 = __data.excelConfig.hashGardenDress[vo.id]
+        this.txt_name.text = d1.gardenDressDes;
+        this.img_use.visible = vo.isUseing ? true : false;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_collectGardenDressSelect_itemUI', GameMainCollectDressSelectItem);
+
+class S_gcdsi_item extends Laya.Script {
+    onClick(e) {
+        try {
+            S_click_collect_use_gardenDress.changeDress(this.owner.vo.id)
+        } catch (error) {
+            console.error('S_gcdsi_item', error);
+        }
+    }
+}

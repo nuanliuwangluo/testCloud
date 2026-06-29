@@ -1,0 +1,3169 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-04 17:17:19
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-02-23 15:14:33
+ */
+
+'use strict';
+
+
+class YsmjMahjongDownHandList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.__width = 0;
+        //手牌列表
+        this.data = [];
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+
+        this.ele3DArr = [];
+
+        this.arrowArr = [];
+
+        this.initDoor3D = null
+            // this.initDoor3D = {x : 85, y : 0, z :-82, allWidth:0, width : 8.88, height : 10.2, offx:2, changeOffx:0}
+            // this.scale(game.scale, game.scale)
+
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'hand_card_choice', this, this.cancelChoiceHandler)
+        game.cb.on(__eh + 'out_card', this, this.outCardHandler)
+
+        game.cb.on(__eh + 'playControl', this, this.allowControl)
+        game.cb.on(__eh + 'stopControl', this, this.stopControl)
+
+        game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler)
+
+        // let __point = new Laya.Point( config.gameW - this.x / game.scale, config.gameH - this.y / game.scale )
+        // let __point = new Laya.Point( this.x, this.y )
+        // let __stagePoint = this.localToGlobal(__point)
+        // console.log(__stagePoint)
+        // this.sp = this.sp || new Laya.Sprite();
+        // this.sp.graphics.drawCircle(__stagePoint.x,-__stagePoint.y,10, '#0')
+        // game.utils.remove(this.sp)
+        // Laya.stage.addChild(this.sp)
+        // let ray = new Laya.Ray(new Laya.Vector3(), new Laya.Vector3())
+        // let hitResult = new Laya.HitResult();
+        // // let out;
+        // let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+        // camera.viewportPointToRay( __stagePoint, ray);
+        // __data.deskData.roomVo.scene.physicsSimulation.rayCast(ray, hitResult)
+        // this.initDoor3D.x = game.scene.c.rotation == 180 ? hitResult.point.x: this.initDoor3D.x;
+        // this.initDoor3D.z = game.scene.c.rotation == 180 ? hitResult.point.z : this.initDoor3D.z;
+        // this.initDoor3D.changeOffx = game.scene.c.rotation == 180 && game.scale < 0.725 ? game.scale * -80 : game.scene.c.rotation == 180 && game.scale < 0.725 ? game.scale * -60 : game.scene.c.rotation == 180 && game.scale < 0.805 ? game.scale * -40 : game.scene.c.rotation == 180 && game.scale < 0.925 ? game.scale * -20 : 0
+        this.init3Data()
+
+        // console.log('__point', __point)
+        // console.log('门前牌位置：', hitResult, 'this.initDoor3D.z', this.initDoor3D.z)
+    }
+    onDisable() {
+        game.cb.off(__eh + 'hand_card_choice', this, this.cancelChoiceHandler)
+        game.cb.off(__eh + 'out_card', this, this.outCardHandler)
+
+        game.cb.off(__eh + 'playControl', this, this.allowControl)
+        game.cb.off(__eh + 'stopControl', this, this.stopControl)
+
+        game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+
+    get rightInhibitLine() {
+        try {
+            let point = this.localToGlobal(new Laya.Point(this.list[this.list.length - 1].x + this.list[this.list.length - 1].width, this.list[this.list.length - 1].y));
+            let right = point.x / Laya.stage.width;
+            return { right };
+        } catch (e) {
+            return { right: 0 }
+        }
+    }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            if (value >= 0 && this.ele3DArr[i].name === __data.deskData.roomVo.numberToCard(value) && this.ele3DArr[i].meshRenderer) {
+                this.ele3DArr[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else if (this.ele3DArr[i].meshRenderer)
+                this.ele3DArr[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+
+    init3Data() {
+            this.initDoor3D = { x: 85, y: 0, z: -82, allWidth: 0, width: 7.4, height: 10.2, offx: 2, scale: 1.2, changeOffx: 0 }
+
+            let __point = this.localToGlobal(new Laya.Point(0, 15))
+            let ray = new Laya.Ray(new Laya.Vector3(), new Laya.Vector3())
+            let hitResult = new Laya.HitResult();
+            let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+            camera.viewportPointToRay(__point, ray);
+            __data.deskData.roomVo.scene.physicsSimulation.rayCast(ray, hitResult)
+
+            this.initDoor3D.x = hitResult.succeeded ? hitResult.point.x - this.initDoor3D.width : this.initDoor3D.x
+            this.initDoor3D.z = hitResult.succeeded ? hitResult.point.z - this.initDoor3D.height : this.initDoor3D.z
+
+            __point = this.localToGlobal(new Laya.Point(100, -10))
+            __point.x *= Laya.stage.clientScaleX
+            __point.y *= Laya.stage.clientScaleY
+
+
+            if (!this.tingPoint) {
+                ray = new Laya.Ray(new Laya.Vector3(), new Laya.Vector3())
+                hitResult = new Laya.HitResult();
+                camera.viewportPointToRay(__point, ray);
+                __data.deskData.roomVo.scene.physicsSimulation.rayCast(ray, hitResult)
+                this.tingPoint = hitResult.succeeded ? new Laya.Vector3(0, 0.3, hitResult.point.z) : new Laya.Vector3(0, 0.3, -65)
+            }
+        }
+        //自己的比较特殊  需要比对
+    endPoint(value) {
+        let __end = this.list.filter(function(single) { return parseInt(single.card) == parseInt(value) })
+        __end = __end && __end.length > 0 ? __end[0] : null
+        if (__end) { return this.localToGlobal(new Laya.Point(__end.x, __end.y)) } else {
+            let __start = this.list.length > 0 ? this.list[0] : null
+            __end = this.list.length > 0 ? this.list[this.list.length - 1] : null
+                //抓的牌为最小的牌
+            if (__start && parseInt(__start.card) > parseInt(value)) {
+                if (__end) { return this.localToGlobal(new Laya.Point(__end.x, __end.y)) } else { return this.localToGlobal(new Laya.Point(__start.x, __start.y)) }
+            }
+            //最不济用0,0点为初始点
+            else { return this.localToGlobal(new Laya.Point(0, 0)) }
+        }
+        // return this.list[this.list.length-1].transform;
+    }
+
+    //显示列表啊
+    set createList(value) {
+        let __vo = __data.deskData.roomVo.getPlayer('down')
+        while (this.list.length) { game.utils.remove(this.list.shift()) }
+
+
+        value = value ? value.split(',') : this.data
+
+        value = __compUtils.sort(value, __data.deskData.roomVo.mixedArr)
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+
+        if (this.ele3DArr.length) {
+            this.camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+            this.outPos = new Laya.Vector3()
+            this.endPos = this.prePos.clone();
+            this.endPos.x -= this.initDoor3D.width
+                //转换坐标
+            this.camera.viewport.project(this.endPos, this.camera.projectionViewMatrix, this.outPos);
+            let a = this.globalToLocal(new Laya.Point(this.outPos.x / Laya.stage.clientScaleX, this.outPos.y / Laya.stage.clientScaleY))
+            this.outPos.x = a.x
+        } else { this.outPos = new Laya.Vector3() }
+        if (this.data.length > 14) { miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '手牌多于14-1' }); }
+        this.__width = this.outPos.x
+        for (let i = 0; i < this.data.length; i++) {
+            let __v = Laya.Pool.getItemByClass(__cName.d, YsmjMahjongDownHand3D)
+            __v.skin = this.data[i];
+            __v.x = this.__width + __v.width * i
+            this.addChild(__v)
+            this.list.push(__v)
+        }
+    }
+
+    //抓牌
+    set catch(value) {
+        let __v = Laya.Pool.getItemByClass(__cName.d, YsmjMahjongDownHand3D)
+        let __end = this.list[this.list.length - 1];
+        __v.skin = value;
+        __v.x = __end.x + __end.width + 20;
+        __v.y = __end.y;
+        // __v.y = __end.y - 30;
+        game.utils.remove(__v);
+        this.addChild(__v);
+        this.data.push(value.toString())
+        this.list.push(__v)
+
+        // Laya.Tween.to(__v, {y:__end.y}, 50, null, new Laya.Handler(this, function(){ game.utils.remove(__v);this.addChild(__v) } ))
+    }
+
+
+    //显示门前牌列表
+    set createDoorList(value) {
+        this.init3Data()
+
+        while (this.doorlist.length) { game.utils.remove(this.doorlist.shift()) }
+
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            this.ele3DArr[i].active = false;
+            this.ele3DArr[i].destroy();
+        }
+        for (let i = 0; i < this.arrowArr.length; i++) {
+            this.arrowArr[i].active = false;
+            this.arrowArr[i].destroy();
+        }
+        this.ele3DArr = [];
+        this.arrowArr = [];
+
+        if (typeof value == 'string') { this.doordata = value ? value.split(';') : this.doordata } else { this.doordata = value ? value : this.doordata }
+
+        this.__width = 0
+        this.initDoor3D.allWidth = 0
+        for (let i = 0; i < this.doordata.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.ddoor, YsmjMahjongDownDoor)
+            // __v.group = this.doordata[i]
+
+            // __v.x = this.__width
+            // __v.y = 10
+            // this.__width += __v.width
+            // this.addChildAt(__v, 0)
+            // this.doorlist.push(__v)
+
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            for (let k = 0; k < data.group.length; k++) {
+                let c1
+                if (data.group.length === 4 && data.position < 0 && k != 3)
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'))
+                else
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+                c1.transform.localPosition = new Laya.Vector3(this.initDoor3D.x - this.initDoor3D.allWidth, this.initDoor3D.y, this.initDoor3D.z)
+                c1.transform.localScale = new Laya.Vector3(this.initDoor3D.scale, 1, this.initDoor3D.scale);
+                c1.meshRenderer.material = __data.deskData.roomVo.material
+
+                if (k != 3) { this.prePos = c1.transform.position; }
+
+                if (data.type === 5 && k === 3) {
+                    c1.transform.localPosition = new Laya.Vector3(this.initDoor3D.x - this.initDoor3D.allWidth + this.initDoor3D.width * this.initDoor3D.scale * 2, this.initDoor3D.y + 5, this.initDoor3D.z)
+                } else
+                    this.initDoor3D.allWidth += this.initDoor3D.width * this.initDoor3D.scale
+
+                if (data.seat !== 'down' && data.position > 0 && ((data.group.length <= 3 && k == 1) || (data.group.length == 4 && k == 3))) {
+                    let arrow = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('arrow'), __data.deskData.roomVo.scene.getChildByName('container'));
+                    arrow.transform.localPosition = c1.transform.position;
+                    arrow.transform.localPositionX = c1.transform.localPositionX
+                    arrow.transform.localPositionZ = c1.transform.localPositionZ + 10
+                    arrow.transform.localRotationEuler = new Laya.Vector3(0, data.seat == 'up' ? 180 : data.seat == 'left' ? -90 : data.seat == 'right' ? 90 : 0, 0);
+                    arrow.active = true;
+                    this.arrowArr.push(arrow)
+                }
+
+                this.ele3DArr.push(c1)
+            }
+
+            this.initDoor3D.allWidth += this.initDoor3D.offx;
+        }
+
+
+
+        this.createList = null
+
+        this.listenBug();
+    }
+
+    listenBug() {
+        let player = __data.deskData.roomVo.getPlayer('down');
+        let clen = 0;
+        for (let i = 0; i < this.doordata.length; i++) {
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            if (data.group.length >= 4) { // 杠什么的
+                clen += 3;
+            } else {
+                clen += data.group.length;
+            }
+        }
+        // 有手牌
+        if (player && player.handValue) {
+            let values = player.handValue.split(',');
+            clen += values.length;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'self->' + player.handValue + '<--->' + JSON.stringify(this.doordata) });
+            }
+        } else if (player && player.handNumber > 0) {
+            clen += player.handNumber;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'others->' + player.handNumber + '<--->' + JSON.stringify(this.doordata) });
+            }
+        }
+    }
+
+    //添加一个门前牌列表
+    set addDoor(value) {
+
+        let __valueArr = value.split(',')
+        if (__valueArr[0] == 88) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 5 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        } else if (__valueArr[0] == 89) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 1 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        }
+
+        // let __v = Laya.Pool.getItemByClass(__cName.ddoor, YsmjMahjongDownDoor)
+        // __v.group = value
+        // __v.x = this.__width
+        // __v.y = 10
+        // this.__width += __v.width
+        // this.addChildAt(__v, 0)
+        // this.doorlist.push(__v)
+        // this.doordata.push(value)
+        this.doordata.push(value)
+
+        this.createDoorList = null;
+
+        this.createList = null;
+    }
+
+
+    allowControl(value) {
+        //先取消牌的拖拽功能
+        this.stopControl();
+        if (!value) {
+            //如果为可以操作所有的牌  再次添加拖拽组件
+            for (let i = 0; i < this.list.length; i++) { this.list[i].addComponent(Hand_Drag_Script).unuse(__data.deskData.roomVo.mixedArr) }
+        } else {
+            //按可出牌添加拖拽组件
+            value = value.split(',');
+            for (let i = 0; i < this.list.length; i++) {
+                for (let k = 0; k < value.length; k++) {
+                    if (value[k] == this.list[i].card) {
+                        this.list[i].addComponent(Hand_Drag_Script).unuse(__data.deskData.roomVo.mixedArr);
+                        this.list[i].showTingTips()
+                    }
+                }
+            }
+        }
+
+    }
+
+    stopControl() {
+        for (let i = 0; i < this.list.length; i++) { this.list[i].getComponent(Hand_Drag_Script) && this.list[i].getComponent(Hand_Drag_Script).destroy(); }
+    }
+
+
+    cancelChoiceHandler(value) {
+        let __list = this.list.filter(function(a) { return a != value })
+
+        for (let i = 0; i < __list.length; i++) {
+            __list[i].getComponent(Hand_Drag_Script) && __list[i].getComponent(Hand_Drag_Script).cancelChoice()
+        }
+    }
+
+    //自动出牌
+    autoPlay(value) {
+        //从右开始检测
+        for (let i = this.list.length - 1; i > 0; i--) {
+            if (parseInt(this.list[i].card) == parseInt(value)) {
+                //出牌
+                let __point = this.localToGlobal(new Laya.Point(this.list[i].x, this.list[i].y))
+                game.cb.event(__eh + 'add_out_card', [this.list[i].card, __point])
+                    //
+                let __d_index = this.data.indexOf(this.list[i].card);
+                if (__d_index > -1) { this.data.splice(__d_index, 1) }
+
+                game.utils.remove(this.list[i])
+                this.list.splice(i, 1)
+                break; //return 是为了 只删除一张牌
+            }
+        }
+    }
+
+
+    extract() {
+        let __end = this.list[this.list.length - 1];
+        let __ahead_end = this.list[this.list.length - 2]
+        if (__ahead_end) {
+            __end.x = __ahead_end.x + __ahead_end.width + 20;
+            // game.utils.remove(__end);
+            this.addChild(__end)
+        }
+    }
+
+
+    outCardHandler(value, point) {
+        //打出去的牌对象
+        let __value = value
+
+        //显示上删除
+        let __l_index = this.list.indexOf(value);
+        if (__l_index > -1) {
+            this.list.splice(__l_index, 1)
+        }
+        //数据中删除
+        let __d_index = this.data.indexOf(value.card.toString());
+        if (__d_index > -1) { this.data.splice(__d_index, 1) }
+
+        this.createList = null
+
+        let __point = this.localToGlobal(new Laya.Point(__value.x, __value.y))
+        game.cb.event(__eh + 'add_out_card', [__value.card, point])
+
+
+        game.utils.remove(value)
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            //检测手牌是否有胡牌相同的
+            for (var i = 0; i < this.list.length; i++) { if (this.list[i].card == value[k].view) { value[k].num++ } }
+            //检测门前牌
+            for (var a = 0; a < this.doordata.length; a++) {
+                let __singleArr = this.doordata[a].split(",")
+                    //碰
+                if (__singleArr[0] == 1 && __singleArr[1] == value[k].view) { value[k].num += 3 }
+                //吃
+                else if (__singleArr[0] == 2 && (value[k].view >= parseInt(__singleArr[1]) && value[k].view <= parseInt(__singleArr[1]) + 2)) { value[k].num++ }
+
+                //粘
+                else if (__singleArr[0] == 3 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+
+                //亮掌
+                else if (__singleArr[0] == 81 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+                //亮喜
+                else if (__singleArr[0] == 82) {
+                    if (__singleArr[1] == value[k].view) value[k].num++
+                        if (__singleArr[2] == value[k].view) value[k].num++
+                            if (__singleArr[3] == value[k].view) value[k].num++
+                }
+                //杠
+                else if (__singleArr[0] == 5 && __singleArr[1] == value[k].view) value[k].num += 4
+            }
+        }
+    }
+
+
+    syncData(syncView) {
+        let __vo = __data.deskData.roomVo.getPlayer('down');
+        this.data = __vo && __vo.handValue ? __vo.handValue : ''
+        if (syncView) this.createList = null
+    }
+
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.__width = 0;
+        //手牌列表
+        this.data = [];
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+        // 听牌
+        this.__ting = false;
+    }
+
+    set ting(value) {
+        this.__ting = value;
+    }
+}
+
+
+
+class YsmjMahjongUpHandList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.__width = 600;
+        //手牌列表
+        this.data = [];
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+
+        this.ele3DArr = [];
+
+        this.init3D = { x: -45, y: 2.7, z: 62 / game.scale, width: 7.4, height: 10.2 }
+
+        this.initDoor3D = { x: -52.4, y: 0, z: 62 / game.scale, allWidth: 0, width: 7.4, height: 10.2, offx: 2 }
+            // this.scale(game.scale, game.scale)
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    onDisable() {
+        game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    get rightInhibitLine() {
+        try {
+            let point = this.localToGlobal(new Laya.Point(this.list[this.list.length - 1].x + this.list[this.list.length - 1].width, this.list[this.list.length - 1].y));
+            let right = point.x / Laya.stage.width;
+            return { right };
+        } catch (e) {
+            return { right: 0 }
+        }
+    }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            if (value >= 0 && this.ele3DArr[i].name === __data.deskData.roomVo.numberToCard(value) && this.ele3DArr[i].meshRenderer) {
+                this.ele3DArr[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else if (this.ele3DArr[i].meshRenderer)
+                this.ele3DArr[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+    get endPoint() {
+        // let __end = this.list[this.list.length - 1];
+        // if(__end){ return this.localToGlobal(new Laya.Point(__end.x, __end.y)) }
+        // else return this.localToGlobal(new Laya.Point(0,0))
+        return this.list[this.list.length - 1] ? this.list[this.list.length - 1].transform : new Laya.Vector3(0, 0, 0);
+    }
+
+    //显示列表啊
+    set createList(value) {
+        // while(this.list.length){ game.utils.remove(this.list.shift()) }
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        this.list = []
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+        this.data = __data.deskData.roomVo.isRecordPlaying ? this.data : value ? value : this.data
+
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            let __vo = __data.deskData.roomVo.getPlayer('up');
+            this.data = __vo.handValue.split(',')
+            this.data = __compUtils.sort(this.data, __data.deskData.roomVo.mixedArr)
+        }
+        if (this.data.length > 14) { miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '手牌多于14-2' }); }
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.u, YsmjMahjongUpHand)
+            // __v.skin = (this.data[i] >= 0) ? this.data[i] : '';
+            // __v.x = this.__width - __v.width * (i+1) - 10
+            // this.addChildAt(__v, 0)
+            // this.list.push(__v)
+
+            if (this.data[i] === '') continue
+                // if( parseInt(this.data[i]) >= 0 ){
+            let __v = (this.data[i] >= 0) ? Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container')) : Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'));
+            __v.transform.localPosition = new Laya.Vector3(this.init3D.x + i * this.init3D.width + this.initDoor3D.allWidth, __data.deskData.roomVo.isRecordPlaying ? 0 : (this.data[i] >= 0) ? this.initDoor3D.y : this.init3D.y, this.init3D.z)
+            __v.transform.rotationEuler = (this.data[i] >= 0) ? new Laya.Vector3() : new Laya.Vector3(90, 90, 90)
+            __v.meshRenderer.material = __data.deskData.roomVo.material
+
+            // 听牌手牌需要扣下去
+            if (this.__ting && !__data.deskData.roomVo.isRecordPlaying) {
+                __v.transform.localPosition = new Laya.Vector3(this.init3D.x + i * this.init3D.width + this.initDoor3D.allWidth, __data.deskData.roomVo.isRecordPlaying ? 0 : this.initDoor3D.y, this.init3D.z)
+                __v.transform.rotationEuler = new Laya.Vector3(180, 0, 0);
+            }
+
+            this.list.push(__v);
+            // }
+        }
+    }
+
+    //抓牌
+    set catch(value) {
+        // this.data.push(value)
+        // let __v = Laya.Pool.getItemByClass(__cName.d, YsmjMahjongUpHand)
+        // let __end = this.list[this.list.length - 1];
+        // if(!__end){ return }
+        // __v.skin = value;
+        // __v.x = __end.x - __end.width - 15;
+        // __v.y = __end.y - 20;
+        // this.list.push(__v)
+        // this.addChild(__v);
+        // Laya.Tween.to(__v, {y:__end.y}, 100)
+
+        let __v = (value >= 0) ? Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(value)), __data.deskData.roomVo.scene.getChildByName('container')) : Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'));
+        __v.transform.localPosition = new Laya.Vector3(this.list[this.list.length - 1].transform.localPositionX + this.init3D.width + 1.5, this.init3D.y, this.init3D.z)
+        __v.transform.rotationEuler = (value >= 0) ? new Laya.Vector3() : new Laya.Vector3(90, 90, 90)
+        __v.meshRenderer.material = __data.deskData.roomVo.material
+        this.list.push(__v);
+    }
+
+
+    //显示门前牌列表
+    set createDoorList(value) {
+
+        while (this.doorlist.length) { game.utils.remove(this.doorlist.shift()) }
+
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            this.ele3DArr[i].active = false;
+            this.ele3DArr[i].destroy();
+        }
+        this.ele3DArr = [];
+
+        if (typeof value == 'string') { this.doordata = value ? value.split(';') : this.doordata } else { this.doordata = value ? value : this.doordata }
+        this.__width = 600
+        this.initDoor3D.allWidth = 0
+        for (let i = 0; i < this.doordata.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.udoor, YsmjMahjongUpDoor)
+            // __v.open = __data.deskData.roomVo.openDoor(this.doordata)
+            // __v.group = this.doordata[i]
+            // __v.x = this.__width - __v.width
+            // this.__width -= __v.width
+            // this.addChildAt(__v, 0)
+            // this.doorlist.push(__v)
+
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            let open = __data.deskData.roomVo.openDoor(this.doordata)
+
+            let allIndex = data.group.length >= 3 ? 3 : data.group.length
+            let allWidth = allIndex * this.initDoor3D.width
+            this.initDoor3D.allWidth += allWidth;
+            for (let k = 0; k < data.group.length; k++) {
+                let c1
+                    //没开门的暗杠
+                if (!open && data.group.length == 4 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //暗杠的其它三张
+                else if (open && data.group.length == 4 && k != 3 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //正常显示
+                else
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+
+                // 门前排掀开
+                if (__data.deskData.roomVo.phase == "result") {
+                    c1.active = false;
+                    c1.destroy();
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+                }
+
+                c1.transform.localPosition = new Laya.Vector3(this.initDoor3D.x + this.initDoor3D.allWidth - k * this.initDoor3D.width, this.initDoor3D.y, this.initDoor3D.z)
+                c1.transform.rotationEuler = (c1.name == 'blank') ? new Laya.Vector3(-180, 0, 0) : new Laya.Vector3(0, 0, 0)
+                c1.meshRenderer.material = __data.deskData.roomVo.material
+
+                if (__data.deskData.roomVo.phase == "result") { c1.transform.rotationEuler = new Laya.Vector3(0, 0, 0) }
+
+                if (data.type === 5 && k === 3) {
+                    c1.transform.localPosition = new Laya.Vector3(this.initDoor3D.x + this.initDoor3D.allWidth - this.initDoor3D.width, this.initDoor3D.y + 5, this.initDoor3D.z)
+                } //else this.initDoor3D.allWidth += this.initDoor3D.width
+
+                if (data.seat !== 'up' && data.position > 0 && ((data.group.length <= 3 && k == 1) || (data.group.length == 4 && k == 3))) {
+                    let arrow = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('arrow'), __data.deskData.roomVo.scene.getChildByName('container'));
+                    arrow.transform.localPosition = c1.transform.position;
+                    arrow.transform.localPositionY = c1.transform.localPositionY + 2
+                    arrow.transform.localPositionZ = c1.transform.localPositionZ - 10
+                    arrow.transform.localRotationEuler = new Laya.Vector3(0, data.seat == 'up' ? 180 : data.seat == 'left' ? -90 : data.seat == 'right' ? 90 : 0, 0);
+                    arrow.active = true;
+                    this.ele3DArr.push(arrow)
+                }
+
+                this.ele3DArr.push(c1)
+            }
+
+
+            this.initDoor3D.allWidth += this.initDoor3D.offx;
+        }
+
+        this.createList = null
+
+        this.listenBug();
+    }
+
+    listenBug() {
+        let player = __data.deskData.roomVo.getPlayer('up');
+        let clen = 0;
+        for (let i = 0; i < this.doordata.length; i++) {
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            if (data.group.length >= 4) { // 杠什么的
+                clen += 3;
+            } else {
+                clen += data.group.length;
+            }
+        }
+        // 有手牌
+        if (player && player.handValue) {
+            let values = player.handValue.split(',');
+            clen += values.length;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'self->' + player.handValue + '<--->' + JSON.stringify(this.doordata) });
+            }
+        } else if (player && player.handNumber > 0) {
+            clen += player.handNumber;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'others->' + player.handNumber + '<--->' + JSON.stringify(this.doordata) });
+            }
+        }
+    }
+
+    //添加一个门前牌列表
+    set addDoor(value) {
+        let __valueArr = value.split(',')
+        if (__valueArr[0] == 88) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 5 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        } else if (__valueArr[0] == 89) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 1 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        }
+        this.doordata.push(value)
+        this.createDoorList = null;
+        this.createList = null;
+    }
+
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            //检测手牌是否有胡牌相同的
+            // for(var i = 0;i < this.list.length;i++){ if(this.list[i].card == value[k].view){ value[k].num ++ } }
+
+            let open = __data.deskData.roomVo.openDoor(this.doordata);
+            //检测门前牌
+            for (var a = 0; a < this.doordata.length; a++) {
+                let __singleArr = this.doordata[a].split(",")
+                    //碰
+                if (__singleArr[0] == 1 && __singleArr[1] == value[k].view) { value[k].num += 3 }
+                //吃
+                else if (__singleArr[0] == 2 && (value[k].view >= parseInt(__singleArr[1]) && value[k].view <= parseInt(__singleArr[1]) + 2)) { value[k].num++ }
+
+                //粘
+                else if (__singleArr[0] == 3 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+
+                //亮掌
+                else if (__singleArr[0] == 81 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+                //亮喜
+                else if (__singleArr[0] == 82) {
+                    if (__singleArr[1] == value[k].view) value[k].num++
+                        if (__singleArr[2] == value[k].view) value[k].num++
+                            if (__singleArr[3] == value[k].view) value[k].num++
+                }
+                //杠
+                else if (open && __singleArr[0] == 5 && __singleArr[1] == value[k].view) value[k].num += 4
+            }
+        }
+    }
+
+    syncData(syncView) {
+        let __vo = __data.deskData.roomVo.getPlayer('up');
+        this.data = __vo && __vo.handNumber ? new Array(__vo.handNumber) : ''
+        if (syncView) this.createList = null
+    }
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.__width = 600;
+        //手牌列表
+        this.data = [];
+
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+        // 听牌
+        this.__ting = false;
+    }
+
+    set ting(value) {
+        this.__ting = value;
+    }
+}
+
+
+class YsmjMahjongLeftHandList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.__height = 0;
+        //手牌列表
+        this.data = [];
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+
+        this.ele3DArr = [];
+
+        this.init3D = { x: MahjongConfig.lorp, y: 2.7, z: 55, width: 7.4, height: 10.2 }
+
+        this.initDoor3D = { x: MahjongConfig.lorp, y: 0, z: 55, allWidth: 0, width: 7.4, height: 10.2, offx: 2 }
+            // this.scale(game.scale, game.scale)
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    onDisable() {
+        game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    get rightInhibitLine() {
+        try {
+            let point = this.localToGlobal(new Laya.Point(this.list[this.list.length - 1].x + this.list[this.list.length - 1].width, this.list[this.list.length - 1].y));
+            let right = point.x / Laya.stage.width;
+            return { right };
+        } catch (e) {
+            return { right: 0 }
+        }
+    }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            if (value >= 0 && this.ele3DArr[i].name === __data.deskData.roomVo.numberToCard(value) && this.ele3DArr[i].meshRenderer) {
+                this.ele3DArr[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else if (this.ele3DArr[i].meshRenderer)
+                this.ele3DArr[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+    get endPoint() {
+        // let __end = this.list[this.list.length - 1];
+        // if(__end){ return this.localToGlobal(new Laya.Point(__end.x, __end.y)) }
+        // else return this.localToGlobal(new Laya.Point(0,0))
+        return this.list[this.list.length - 1] ? this.list[this.list.length - 1].transform : new Laya.Vector3(0, 0, 0);
+    }
+
+    //显示列表啊
+    set createList(value) {
+        // while(this.list.length){ game.utils.remove(this.list.shift()) }
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        this.list = []
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            let __vo = __data.deskData.roomVo.getPlayer('left');
+            this.data = __vo && __vo.handValue ? __vo.handValue.split(',') : []
+            this.data = __compUtils.sort(this.data, __data.deskData.roomVo.mixedArr)
+        }
+
+        let off_len = 13 - this.data.length <= 0 ? 0 : 13 - this.data.length
+        if (this.data.length > 14) { miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '手牌多于14-3' }); }
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.u, YsmjMahjongLeftHand)
+            // __v.skin = (this.data[i] >= 0) ? this.data[i] : '';
+            // __v.y = this.__height + __v.height * i
+            // this.addChild(__v)
+            // this.list.push(__v)
+
+            if (this.data[i] === '') continue
+                // if( parseInt(this.data[i]) >= 0 ){
+            let __v = (this.data[i] >= 0) ? Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container')) : Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'));
+            __v.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : (this.data[i] >= 0) ? this.initDoor3D.x - this.initDoor3D.width / 2 : this.init3D.x, __data.deskData.roomVo.isRecordPlaying ? 0 : (this.data[i] >= 0) ? this.initDoor3D.y : this.init3D.y, this.init3D.z - this.initDoor3D.allWidth - i * this.init3D.width)
+            __v.transform.rotationEuler = (this.data[i] >= 0) ? new Laya.Vector3(0, -90, 0) : new Laya.Vector3(90, 90, 0)
+            __v.meshRenderer.material = __data.deskData.roomVo.material
+
+            // 听牌手牌需要扣下去
+            if (this.__ting && !__data.deskData.roomVo.isRecordPlaying) {
+                __v.transform.localPosition = new Laya.Vector3(this.initDoor3D.x - this.initDoor3D.width / 2, __data.deskData.roomVo.isRecordPlaying ? 0 : this.initDoor3D.y, this.init3D.z - this.initDoor3D.allWidth - i * this.init3D.width)
+                __v.transform.rotationEuler = new Laya.Vector3(180, 90, 0);
+            }
+
+            this.list.push(__v);
+            // }
+        }
+    }
+
+    //抓牌
+    set catch(value) {
+        // this.data.push(value)
+        // let __v = Laya.Pool.getItemByClass(__cName.d, YsmjMahjongLeftHand)
+        // let __end = this.list[this.list.length - 1];
+        // if(!__end){ return }
+        // __v.skin = value;
+        // __v.y = __end.y + __end.height - 15;
+        // this.list.push(__v)
+        // this.addChild(__v);
+        // Laya.Tween.to(__v, {y:__end.y + __end.height + 15}, 100)
+
+        this.data.push(value);
+        this.createList = null;
+        let __v = this.list[this.list.length - 1];
+        __v.transform.localPosition = new Laya.Vector3(this.init3D.x, this.init3D.y, this.list[this.list.length - 2].transform.localPositionZ - this.init3D.width - 1.5)
+        __v.transform.rotationEuler = (value >= 0) ? new Laya.Vector3(0, -90, 0) : new Laya.Vector3(90, 90, 0)
+        __v.meshRenderer.material = __data.deskData.roomVo.material
+    }
+
+
+    //显示门前牌列表
+    set createDoorList(value) {
+
+        while (this.doorlist.length) { game.utils.remove(this.doorlist.shift()) }
+
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            this.ele3DArr[i].active = false;
+            this.ele3DArr[i].destroy();
+        }
+        this.ele3DArr = [];
+
+        if (typeof value == 'string') { this.doordata = value ? value.split(';') : this.doordata } else { this.doordata = value ? value : this.doordata }
+
+        this.__height = 0
+        this.initDoor3D.allWidth = 0
+        for (let i = 0; i < this.doordata.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.ldoor, YsmjMahjongLeftDoor)
+            // __v.open = __data.deskData.roomVo.openDoor(this.doordata)
+            // __v.group = this.doordata[i]
+            // __v.y = this.__height
+            // this.__height += __v.height
+            // this.addChild(__v)
+            // this.doorlist.push(__v)
+
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            let open = __data.deskData.roomVo.openDoor(this.doordata)
+            for (let k = 0; k < data.group.length; k++) {
+                let c1
+                    //没开门的暗杠
+                if (!open && data.group.length == 4 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //暗杠的其它三张
+                else if (open && data.group.length == 4 && k != 3 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //正常显示
+                else
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+
+                // 门前排掀开
+                if (__data.deskData.roomVo.phase == "result") {
+                    c1.active = false;
+                    c1.destroy();
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+                }
+
+                c1.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : this.initDoor3D.x - this.initDoor3D.width / 2, this.initDoor3D.y, this.initDoor3D.z - this.initDoor3D.allWidth)
+                c1.transform.rotationEuler = (c1.name == 'blank') ? new Laya.Vector3(-180, -90, 0) : new Laya.Vector3(0, -90, 0)
+                c1.meshRenderer.material = __data.deskData.roomVo.material
+
+                if (__data.deskData.roomVo.phase == "result") { c1.transform.rotationEuler = new Laya.Vector3(0, -90, 0) }
+
+                if (data.type === 5 && k === 3) {
+                    c1.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : this.initDoor3D.x - this.initDoor3D.width / 2, this.initDoor3D.y + 5, this.initDoor3D.z - this.initDoor3D.allWidth + this.initDoor3D.width * 2)
+                } else this.initDoor3D.allWidth += this.initDoor3D.width
+
+                if (data.seat !== 'left' && data.position > 0 && ((data.group.length <= 3 && k == 1) || (data.group.length == 4 && k == 3))) {
+                    let arrow = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('arrow'), __data.deskData.roomVo.scene.getChildByName('container'));
+                    arrow.transform.localPosition = c1.transform.position;
+                    arrow.transform.localPositionX = c1.transform.localPositionX - 8
+                    arrow.transform.localRotationEuler = new Laya.Vector3(0, data.seat == 'up' ? 180 : data.seat == 'left' ? -90 : data.seat == 'right' ? 90 : 0, 0);
+                    arrow.active = true;
+                    this.ele3DArr.push(arrow)
+                }
+
+                this.ele3DArr.push(c1)
+            }
+
+            this.initDoor3D.allWidth += this.initDoor3D.offx;
+
+        }
+
+        this.createList = null
+
+        this.listenBug();
+    }
+
+    listenBug() {
+        let player = __data.deskData.roomVo.getPlayer('left');
+        let clen = 0;
+        for (let i = 0; i < this.doordata.length; i++) {
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            if (data.group.length >= 4) { // 杠什么的
+                clen += 3;
+            } else {
+                clen += data.group.length;
+            }
+        }
+        // 有手牌
+        if (player && player.handValue) {
+            let values = player.handValue.split(',');
+            clen += values.length;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'self->' + player.handValue + '<--->' + JSON.stringify(this.doordata) });
+            }
+        } else if (player && player.handNumber > 0) {
+            clen += player.handNumber;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'others->' + player.handNumber + '<--->' + JSON.stringify(this.doordata) });
+            }
+        }
+    }
+
+    //添加一个门前牌列表
+    set addDoor(value) {
+        let __valueArr = value.split(',')
+        if (__valueArr[0] == 88) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 5 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        } else if (__valueArr[0] == 89) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 1 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        }
+        this.doordata.push(value)
+        this.createDoorList = null;
+        this.createList = null;
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            //检测手牌是否有胡牌相同的
+            // for(var i = 0;i < this.list.length;i++){ if(this.list[i].card == value[k].view){ value[k].num ++ } }
+            let open = __data.deskData.roomVo.openDoor(this.doordata);
+            //检测门前牌
+            for (var a = 0; a < this.doordata.length; a++) {
+                let __singleArr = this.doordata[a].split(",")
+                    //碰
+                if (__singleArr[0] == 1 && __singleArr[1] == value[k].view) { value[k].num += 3 }
+                //吃
+                else if (__singleArr[0] == 2 && (value[k].view >= parseInt(__singleArr[1]) && value[k].view <= parseInt(__singleArr[1]) + 2)) { value[k].num++ }
+
+                //粘
+                else if (__singleArr[0] == 3 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+
+                //亮掌
+                else if (__singleArr[0] == 81 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+                //亮喜
+                else if (__singleArr[0] == 82) {
+                    if (__singleArr[1] == value[k].view) value[k].num++
+                        if (__singleArr[2] == value[k].view) value[k].num++
+                            if (__singleArr[3] == value[k].view) value[k].num++
+                }
+                //杠
+                else if (open && __singleArr[0] == 5 && __singleArr[1] == value[k].view) value[k].num += 4
+            }
+        }
+    }
+
+    syncData(syncView) {
+        let __vo = __data.deskData.roomVo.getPlayer('left');
+        this.data = __vo && __vo.handNumber ? new Array(__vo.handNumber) : ''
+        if (syncView) this.createList = null
+    }
+
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.__height = 0;
+        //手牌列表
+        this.data = [];
+
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+        // 听牌
+        this.__ting = false;
+    }
+
+    set ting(value) {
+        this.__ting = value;
+    }
+}
+
+class YsmjMahjongRightHandList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.__maxHeight = 470;
+
+        this.__height = 0;
+        //手牌列表
+        this.data = [];
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+
+        this.ele3DArr = [];
+
+        this.init3D = { x: -MahjongConfig.lorp, y: 2.7, z: -50, width: 7.4, height: 10.2 }
+
+        this.initDoor3D = { x: -MahjongConfig.lorp, y: 0, z: -50, allWidth: 0, width: 7.4, height: 10.2, offx: 2 }
+
+        // this.scale(game.scale, game.scale)
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    onDisable() {
+        game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler)
+    }
+    get rightInhibitLine() {
+        try {
+            let point = this.localToGlobal(new Laya.Point(this.list[this.list.length - 1].x + this.list[this.list.length - 1].width, this.list[this.list.length - 1].y));
+            let right = point.x / Laya.stage.width;
+            return { right };
+        } catch (e) {
+            return { right: 0 }
+        }
+    }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            if (value >= 0 && this.ele3DArr[i].name === __data.deskData.roomVo.numberToCard(value) && this.ele3DArr[i].meshRenderer) {
+                this.ele3DArr[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else if (this.ele3DArr[i].meshRenderer)
+                this.ele3DArr[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+    get endPoint() {
+        // let __end = this.list[this.list.length - 1];
+        // if(__end){ return this.localToGlobal(new Laya.Point(__end.x, __end.y)) }
+        // else return this.localToGlobal(new Laya.Point(0,0))
+        return this.list[this.list.length - 1] ? this.list[this.list.length - 1].transform : new Laya.Vector3(0, 0, 0);
+    }
+
+    //显示列表啊
+    set createList(value) {
+        // while(this.list.length){ game.utils.remove(this.list.shift()) }
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        this.list = []
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+        if (__data.deskData.roomVo.isRecordPlaying) {
+            let __vo = __data.deskData.roomVo.getPlayer('right');
+            this.data = __vo && __vo.handValue ? __vo.handValue.split(',') : []
+            this.data = __compUtils.sort(this.data, __data.deskData.roomVo.mixedArr)
+        }
+
+        let __end = this.doorlist[this.doorlist.length - 1] ? this.doorlist[this.doorlist.length - 1] : { y: this.__maxHeight, height: 50 };
+        if (this.data.length > 14) { miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '手牌多于14-4' }); }
+        for (let i = this.data.length - 1; i >= 0; i--) {
+            // let __v = Laya.Pool.getItemByClass(__cName.u, FjmjMahjongRightHand)
+            // __v.skin = (this.data[i] >= 0) ? this.data[i] : '';
+            // __v.x = __data.deskData.roomVo.isRecordPlaying ? 0 : 20
+            // __v.y = __end.y - __v.height * (i + 2)
+            // this.addChildAt(__v, 0)
+            // this.list.push(__v)
+
+            if (this.data[i] === '') continue
+                // if( parseInt(this.data[i]) >= 0 ){
+            let __v = (this.data[i] >= 0) ? Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container')) : Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container'));
+            __v.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : (this.data[i] >= 0) ? this.initDoor3D.x + this.initDoor3D.width / 2 : this.init3D.x, __data.deskData.roomVo.isRecordPlaying ? 0 : (this.data[i] >= 0) ? this.initDoor3D.y : this.init3D.y, this.init3D.z + this.initDoor3D.allWidth + i * this.init3D.width)
+                // __v.transform.localPosition = new Laya.Vector3(this.init3D.x, this.init3D.y, this.init3D.z + this.initDoor3D.allWidth + i * this.init3D.width)
+            __v.transform.rotationEuler = (this.data[i] >= 0) ? new Laya.Vector3(0, 90, 0) : new Laya.Vector3(-90, 90, 0)
+            __v.meshRenderer.material = __data.deskData.roomVo.material
+                // 听牌手牌需要扣下去
+            if (this.__ting && !__data.deskData.roomVo.isRecordPlaying) {
+                __v.transform.localPosition = new Laya.Vector3(this.initDoor3D.x + this.initDoor3D.width / 2, __data.deskData.roomVo.isRecordPlaying ? 0 : this.initDoor3D.y, this.init3D.z + this.initDoor3D.allWidth + i * this.init3D.width)
+                __v.transform.rotationEuler = new Laya.Vector3(180, 90, 0);
+            }
+            this.list.unshift(__v);
+            // }
+        }
+    }
+
+    //抓牌
+    set catch(value) {
+        // this.data.push(value)
+        // let __v = Laya.Pool.getItemByClass(__cName.d, YsmjMahjongRightHand)
+        // let __end = this.list[this.list.length - 1];
+        // if(!__end){ return }
+        // __v.skin = value;
+        // __v.x = __data.deskData.roomVo.isRecordPlaying ? 0 : 20
+        // __v.y = __end.y - __v.height - 45;
+        // this.list.push(__v)
+        // this.addChildAt(__v, 0);
+        // Laya.Tween.to(__v, {y:__end.y - __v.height - 15}, 100)
+
+        if (this.list[this.list.length - 1]) {
+            this.data.push(value);
+            this.createList = null;
+            let __v = this.list[this.list.length - 1];
+            __v.transform.localPosition = new Laya.Vector3(this.init3D.x, this.init3D.y, this.list[this.list.length - 2].transform.localPositionZ + this.init3D.width + 1.5)
+            __v.transform.rotationEuler = (value >= 0) ? new Laya.Vector3(0, -90, 0) : new Laya.Vector3(-90, 90, 0);
+            __v.meshRenderer.material = __data.deskData.roomVo.material
+        }
+    }
+
+
+
+    //显示门前牌列表
+    set createDoorList(value) {
+
+        while (this.doorlist.length) { game.utils.remove(this.doorlist.shift()) }
+
+        for (let i = 0; i < this.ele3DArr.length; i++) {
+            this.ele3DArr[i].removeSelf();
+            this.ele3DArr[i].active = false;
+            this.ele3DArr[i].destroy();
+        }
+        this.ele3DArr = [];
+
+        if (typeof value == 'string') { this.doordata = value ? value.split(';') : this.doordata } else { this.doordata = value ? value : this.doordata }
+
+        this.__height = 0
+        this.initDoor3D.allWidth = 0
+        for (let i = 0; i < this.doordata.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.rdoor, YsmjMahjongRightDoor)
+            // __v.open = __data.deskData.roomVo.openDoor(this.doordata)
+            // __v.group = this.doordata[i]
+            // __v.y = this.__maxHeight - this.__height - __v.height
+            // this.__height += __v.height
+            // this.addChildAt(__v, 0)
+            // this.doorlist.push(__v)
+
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            let open = __data.deskData.roomVo.openDoor(this.doordata)
+            for (let k = 0; k < data.group.length; k++) {
+                let c1
+                    //没开门的暗杠
+                if (!open && data.group.length == 4 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //暗杠的其它三张
+                else if (open && data.group.length == 4 && k != 3 && data.position < 0) { c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName('blank'), __data.deskData.roomVo.scene.getChildByName('container')) }
+                //正常显示
+                else
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+
+                // 门前排掀开
+                if (__data.deskData.roomVo.phase == "result") {
+                    c1.active = false;
+                    c1.destroy();
+                    c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(data.group[k])), __data.deskData.roomVo.scene.getChildByName('container'));
+                }
+
+                c1.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : this.initDoor3D.x + this.initDoor3D.width / 2, __data.deskData.roomVo.isRecordPlaying ? 0 : this.initDoor3D.y, this.initDoor3D.z + this.initDoor3D.allWidth)
+                c1.transform.rotationEuler = (c1.name == 'blank') ? new Laya.Vector3(-180, 90, 0) : new Laya.Vector3(0, 90, 0)
+                c1.meshRenderer.material = __data.deskData.roomVo.material
+
+                if (__data.deskData.roomVo.phase == "result") { c1.transform.rotationEuler = new Laya.Vector3(0, 90, 0) }
+
+                if (data.type === 5 && k === 3) {
+                    c1.transform.localPosition = new Laya.Vector3(__data.deskData.roomVo.isRecordPlaying ? this.initDoor3D.x : this.initDoor3D.x + this.initDoor3D.width / 2, this.initDoor3D.y + 5, this.initDoor3D.z + this.initDoor3D.allWidth - this.initDoor3D.width * 2)
+                } else this.initDoor3D.allWidth += this.initDoor3D.width
+
+                if (data.seat !== 'right' && data.position > 0 && ((data.group.length <= 3 && k == 1) || (data.group.length == 4 && k == 3))) {
+                    let arrow = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('arrow'), __data.deskData.roomVo.scene.getChildByName('container'));
+                    arrow.transform.localPosition = c1.transform.position;
+                    arrow.transform.localPositionX = c1.transform.localPositionX + 8
+                    arrow.transform.localRotationEuler = new Laya.Vector3(0, data.seat == 'up' ? 180 : data.seat == 'left' ? -90 : data.seat == 'right' ? 90 : 0, 0);
+                    arrow.active = true;
+                    this.ele3DArr.push(arrow)
+                }
+
+                this.ele3DArr.push(c1)
+            }
+
+            this.initDoor3D.allWidth += this.initDoor3D.offx;
+        }
+
+        this.createList = null
+
+        this.listenBug();
+    }
+
+    listenBug() {
+        let player = __data.deskData.roomVo.getPlayer('right');
+        let clen = 0;
+        for (let i = 0; i < this.doordata.length; i++) {
+            let data = __compUtils.getAnalysis(this.doordata[i]);
+            if (data.group.length >= 4) { // 杠什么的
+                clen += 3;
+            } else {
+                clen += data.group.length;
+            }
+        }
+        // 有手牌
+        if (player && player.handValue) {
+            let values = player.handValue.split(',');
+            clen += values.length;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'self->' + player.handValue + '<--->' + JSON.stringify(this.doordata) });
+            }
+        } else if (player && player.handNumber > 0) {
+            clen += player.handNumber;
+            if (clen > 14) {
+                miniApi.trackEvent('Mj_Error', { 'Mj_ErrorType': '门前牌多于14', 'Mj_ErrorInfo': 'others->' + player.handNumber + '<--->' + JSON.stringify(this.doordata) });
+            }
+        }
+    }
+
+    //添加一个门前牌列表
+    set addDoor(value) {
+        let __valueArr = value.split(',')
+        if (__valueArr[0] == 88) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 5 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        } else if (__valueArr[0] == 89) {
+            for (let i = 0; i < this.doordata.length; i++) {
+                let singleArr = this.doordata[i].split(',');
+                if (singleArr[1] == __valueArr[1]) { singleArr[0] = 1 }
+                this.doordata[i] = singleArr.toString()
+            }
+            this.createDoorList = null
+            return
+        }
+        this.doordata.push(value)
+        this.createDoorList = null;
+        this.createList = null;
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            //检测手牌是否有胡牌相同的
+            // for(var i = 0;i < this.list.length;i++){ if(this.list[i].card == value[k].view){ value[k].num ++ } }
+            let open = __data.deskData.roomVo.openDoor(this.doordata);
+            //检测门前牌
+            for (var a = 0; a < this.doordata.length; a++) {
+                let __singleArr = this.doordata[a].split(",")
+                    //碰
+                if (__singleArr[0] == 1 && __singleArr[1] == value[k].view) { value[k].num += 3 }
+                //吃
+                else if (__singleArr[0] == 2 && (value[k].view >= parseInt(__singleArr[1]) && value[k].view <= parseInt(__singleArr[1]) + 2)) { value[k].num++ }
+
+                //粘
+                else if (__singleArr[0] == 3 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+
+                //亮掌
+                else if (__singleArr[0] == 81 && __singleArr[1] == value[k].view) { value[k].num += 2 }
+                //亮喜
+                else if (__singleArr[0] == 82) {
+                    if (__singleArr[1] == value[k].view) value[k].num++
+                        if (__singleArr[2] == value[k].view) value[k].num++
+                            if (__singleArr[3] == value[k].view) value[k].num++
+                }
+                //杠
+                else if (open && __singleArr[0] == 5 && __singleArr[1] == value[k].view) value[k].num += 4
+            }
+        }
+    }
+
+    syncData(syncView) {
+        let __vo = __data.deskData.roomVo.getPlayer('right');
+        this.data = __vo && __vo.handNumber ? new Array(__vo.handNumber) : ''
+        if (syncView) this.createList = null
+    }
+
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.__height = 0;
+        //手牌列表
+        this.data = [];
+
+        for (let i = 0; i < this.list.length; i++) {
+            this.list[i].removeSelf();
+            this.list[i].active = false;
+            this.list[i].destroy();
+        }
+        //手牌列表
+        this.list = [];
+
+        this.doordata = [];
+        //门前牌列表
+        this.doorlist = [];
+        // 听牌
+        this.__ting = false;
+    }
+
+    set ting(value) {
+        this.__ting = value;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class YsmjMahjongDownOutList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.row = 8
+            //42为 downout的宽度
+        this.width = 42 * this.row
+
+        this.stepAdd = 8
+
+        this.list = [];
+
+        this.data = [];
+
+        this.cSteps = false
+
+        this.pArr = []
+
+        for (let i = 0; i < 10; i++) {
+            let __end = this.pArr.length > 0 ? this.pArr[this.pArr.length - 1] : 0
+            this.pArr.push(__end + this.row + this.stepAdd * i)
+        }
+
+        this.init3D_4P = { x: 18.1, y: 0, z: -23, width: 7.4, height: 10.2, scale: 1 }
+
+        this.init3D_2P = { x: 40.3, y: 0, z: -23, width: 7.4, height: 10.2, scale: 1 }
+
+        this.__sign = new Laya.Image('local/mahjong_common/1/arrow.png')
+    }
+
+    onEnable() { game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    onDisable() { game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.list.length; i++) {
+            if (value && this.list[i].name === __data.deskData.roomVo.numberToCard(value)) {
+                this.list[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else
+                this.list[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+
+    set sign(value) { this.signValue = value; if (!value) { if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/ } }
+
+
+    set steps(value) {
+        this.cSteps = value
+        this.outlist = null
+    }
+
+    get steps() { return this.cSteps }
+
+    set outlist(value) {
+        while (this.list.length) { game.utils.remove(this.list.shift()) }
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+
+
+
+        let __init = __data.deskData.roomVo.roomPlayer === 2 ? this.init3D_2P : this.init3D_4P
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.do, YsmjMahjongDownOut)
+            // __v.skin = this.data[i];
+
+
+            // //阶梯式布局
+            // if(this.cSteps){
+            //     let __xp = 0,__yp = 0
+            //     for(let k = 0; k < this.pArr.length;k++){
+            //         if(this.pArr[k] > i && k == 0){ __xp = i;__yp = k }
+            //         if(this.pArr[k] <= i && this.pArr[k+1] && this.pArr[k+1] > i){ __xp = (this.row-(this.pArr[k+1]-this.pArr[k]))/2+i-this.pArr[k];__yp = k + 1 }
+            //     }
+            //     __v.x = __xp * __v.width
+            //     __v.y = __yp * __v.height
+            // }else{
+            //     __v.x = (i % this.row) * __v.width
+            //     __v.y = Math.floor(i / this.row) * __v.height
+            // }
+            // this.addChild(__v)
+            // this.list.push(__v)
+
+
+
+
+            let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container'));
+            c1.transform.localPosition = new Laya.Vector3(__init.x - (i % __dp) * __init.width * __init.scale, __init.y, __init.z - Math.floor(i / __dp) * __init.height * __init.scale);
+            c1.transform.localScale = new Laya.Vector3(__init.scale, 1, __init.scale);
+            c1.meshRenderer.material = __data.deskData.roomVo.material
+            this.list.push(c1)
+        }
+
+    }
+
+
+    set addOut(value) {
+        // let __v = Laya.Pool.getItemByClass(__cName.do, YsmjMahjongDownOut)
+        // let __c = value.shift()
+        // __v.skin = __c;
+        // let __point = this.globalToLocal( value.pop() )
+        // __v.x = __point.x
+        // __v.y = __point.y
+        // this.list.push(__v)
+        // this.data.push(__c)
+
+
+        // //阶梯式布局
+        // if(this.cSteps){
+        //     let __xp = 0,__yp = 0   
+        //     for(let k = 0; k < this.pArr.length;k++){
+        //         if(this.pArr[k] > (this.list.length - 1) && k == 0){ __xp = (this.list.length - 1);__yp = k }
+        //         if(this.pArr[k] <= (this.list.length - 1) && this.pArr[k+1] && this.pArr[k+1] > (this.list.length - 1)){ __xp = (this.row-(this.pArr[k+1]-this.pArr[k]))/2+(this.list.length - 1)-this.pArr[k];__yp = k + 1 }
+        //     }
+        //     Laya.Tween.to(__v, {x:__xp * __v.width, y:__yp * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+        // }else{
+        //     Laya.Tween.to(__v, {x:((this.list.length - 1) % this.row) * __v.width, y:Math.floor((this.list.length - 1) / this.row) * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+        // }
+        // this.addChild(__v)
+
+        let __c = value.shift();
+        let __point = value.pop();
+        __point = new Laya.Vector2(__point.x, __point.y)
+        let ray = new Laya.Ray(new Laya.Vector3(), new Laya.Vector3())
+        let hitResult = new Laya.HitResult();
+        let out;
+        let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+        camera.viewportPointToRay(__point, ray);
+        __data.deskData.roomVo.scene.physicsSimulation.rayCast(ray, hitResult)
+
+        let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(__c)), __data.deskData.roomVo.scene.getChildByName('container'));
+        c1.transform.localPosition = hitResult.point;
+        c1.transform.localPositionY += 3;
+        c1.meshRenderer.material = __data.deskData.roomVo.material
+
+        let __init = __data.deskData.roomVo.roomPlayer === 2 ? this.init3D_2P : this.init3D_4P
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        c1.transform.localScale = new Laya.Vector3(__init.scale, 1, __init.scale);
+        // Laya.Tween.to(c1.transform, {localPositionX:__init.x - (this.list.length % __dp) * __init.width, localPositionY:__init.y, localPositionZ:__init.z-Math.floor(this.list.length / __dp) * __init.height }, __data.mahjong_set.speedIndex == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, Laya.Handler.create(this, this.outComplete))
+        Laya.Tween.to(c1.transform, { localPositionX: __init.x - (this.list.length % __dp) * __init.width * __init.scale, localPositionY: __init.y, localPositionZ: __init.z - Math.floor(this.list.length / __dp) * __init.height * __init.scale }, __data.mahjong_set.speedIndex == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, Laya.Ease.strongOut, Laya.Handler.create(this, this.outComplete))
+
+        this.list.push(c1)
+        this.data.push(__c)
+    }
+
+    set deleateOut(value) {
+        let __end = this.list[this.list.length - 1];
+        if (__end && __end.name == value) {
+            __end.active = false;
+            __end.destroy();
+            game.utils.remove(__end);
+            this.list.pop();
+            this.data.pop();
+        }
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            for (var i = 0; i < this.data.length; i++) {
+                //检测手牌是否有胡牌相同的
+                if (this.data[i] == value[k].view) { value[k].num++ }
+            }
+        }
+    }
+
+    outComplete() {
+        __sound.gameSound('out_card')
+        this.signTween();
+    }
+
+    signTween() {
+        if (this.signValue) {
+            let __end = this.list[this.list.length - 1];
+            if (__end) {
+                // this.__sign.x = __end.x + (__end.width - this.__sign.width) / 2
+                // this.__sign.y = __end.y - this.__sign.height;
+
+                // this.__timeline = this.__timeline || new Laya.TimeLine()
+                // this.__timeline.reset();
+                // this.__timeline.addLabel("turnDown", 0).to( this.__sign,{ y: __end.y+__end.height / 2 - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                //                .addLabel("turnUp", 0).to( this.__sign, { y : __end.y - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                // this.__timeline.play(0, true);
+                // this.addChild(this.__sign)
+
+                this.signModel = this.signModel || Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('Sign'), __data.deskData.roomVo.scene.getChildByName('container'));
+                this.signModel.transform.position = __end.transform.position
+                this.signModel.transform.localPositionY = __end.transform.localPositionY + 5
+                this.signModel.active = true;
+
+                this.timeLine = this.timeLine || new Laya.TimeLine();
+                this.timeLine.reset();
+                this.timeLine.addLabel("turnUp", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 8 }, 750, Laya.Ease.sineIn)
+                    .addLabel("turnDown", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 5 }, 750, Laya.Ease.sineIn)
+                this.timeLine.play(0, true);
+            }
+        } else if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null }; //game.utils.remove(this.__sign)
+    }
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.list = [];
+
+        this.data = [];
+
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null };
+    }
+}
+
+class YsmjMahjongUpOutList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.row = 8
+            //42为 downout的宽度
+        this.width = 42 * this.row
+
+        this.stepAdd = 8
+
+        this.list = [];
+
+        this.data = [];
+
+        this.cSteps = false
+
+        this.pArr = []
+
+        for (let i = 0; i < 10; i++) {
+            let __end = this.pArr.length > 0 ? this.pArr[this.pArr.length - 1] : 0
+            this.pArr.push(__end + this.row + this.stepAdd * i)
+        }
+
+        this.init3D_4P = { x: -18.1, y: 0, z: 21, width: 7.4, height: 10.2, scale: 1 }
+
+        this.init3D_2P = { x: -40.3, y: 0, z: 21, width: 7.4, height: 10.2, scale: 1 }
+
+        this.__sign = new Laya.Image('local/mahjong_common/1/arrow.png')
+    }
+
+    onEnable() { game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    onDisable() { game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.list.length; i++) {
+            if (value && this.list[i].name === __data.deskData.roomVo.numberToCard(value)) {
+                this.list[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else
+                this.list[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+
+    set sign(value) { this.signValue = value; if (!value) { if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/ } }
+
+
+    set steps(value) {
+        this.cSteps = value
+        this.outlist = null
+    }
+
+    get steps() { return this.cSteps }
+
+    set outlist(value) {
+        while (this.list.length) { game.utils.remove(this.list.shift()) }
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+
+        let __init = __data.deskData.roomVo.roomPlayer === 2 ? this.init3D_2P : this.init3D_4P
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.uo, YsmjMahjongUpOut)
+            // __v.skin = this.data[i];
+
+
+            // //阶梯式布局
+            // if(this.cSteps){
+            //     let __xp = 0,__yp = 0
+            //     for(let k = 0; k < this.pArr.length;k++){
+            //         if(this.pArr[k] > i && k == 0){ __xp = i;__yp = k }
+            //         if(this.pArr[k] <= i && this.pArr[k+1] && this.pArr[k+1] > i){ __xp = (this.row-(this.pArr[k+1]-this.pArr[k]))/2+i-this.pArr[k];__yp = k + 1 }
+            //     }
+            //     __v.x = -__xp * __v.width
+            //     __v.y = __yp * __v.height
+
+            //     this.addChildAt( __v, this.pArr[__yp-1] ? this.pArr[__yp-1] : 0 )
+            // }else{
+            //     __v.x = -(i % this.row) * __v.width
+            //     __v.y = Math.floor(i / this.row) * __v.height
+            //     this.addChildAt( __v, Math.floor(i / this.row) * this.row )
+            // }
+
+            // this.list.push(__v)
+
+            let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container'));
+            c1.transform.localPosition = new Laya.Vector3(__init.x + (i % __dp) * __init.width * __init.scale, __init.y, __init.z + Math.floor(i / __dp) * __init.height * __init.scale);
+            c1.transform.rotationEuler = new Laya.Vector3(0, 0, 0)
+            c1.transform.localScale = new Laya.Vector3(__init.scale, 1, __init.scale);
+            c1.meshRenderer.material = __data.deskData.roomVo.material
+            this.list.push(c1)
+        }
+
+    }
+
+
+    set addOut(value) {
+        // let __v = Laya.Pool.getItemByClass(__cName.uo, YsmjMahjongUpOut)
+        // let __c = value.shift()
+        // __v.skin = __c;
+        // let __point = this.globalToLocal( value.pop() )
+        // __v.x = __point.x
+        // __v.y = __point.y
+        // this.list.push(__v)
+        // this.data.push(__c)
+
+        // //阶梯式布局
+        // if(this.cSteps){
+        //     let __xp = 0,__yp = 0   
+        //     for(let k = 0; k < this.pArr.length;k++){
+        //         if(this.pArr[k] > (this.list.length - 1) && k == 0){ __xp = (this.list.length - 1);__yp = k }
+        //         if(this.pArr[k] <= (this.list.length - 1) && this.pArr[k+1] && this.pArr[k+1] > (this.list.length - 1)){ __xp = (this.row-(this.pArr[k+1]-this.pArr[k]))/2+(this.list.length - 1)-this.pArr[k];__yp = k + 1 }
+        //     }
+        //     Laya.Tween.to(__v, {x:-__xp * __v.width, y:__yp * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+        //     this.addChildAt( __v, this.pArr[__yp-1] ? this.pArr[__yp-1] : 0 )
+        // }else{
+        //     Laya.Tween.to(__v, {x:-((this.list.length - 1) % this.row) * __v.width, y:Math.floor((this.list.length - 1) / this.row) * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+        //     this.addChildAt( __v, Math.floor((this.list.length - 1) / this.row) * this.row )
+        // }
+
+
+
+
+        let __c = value.shift();
+        let __transform = value.pop();
+
+        let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(__c)), __data.deskData.roomVo.scene.getChildByName('container'));
+        c1.transform.position = __transform.position;
+        c1.transform.rotation = __transform.rotation;
+        c1.transform.rotationEuler = new Laya.Vector3(0, 0, 0)
+        c1.meshRenderer.material = __data.deskData.roomVo.material
+
+        let __init = __data.deskData.roomVo.roomPlayer === 2 ? this.init3D_2P : this.init3D_4P
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        c1.transform.localScale = new Laya.Vector3(__init.scale, 1, __init.scale);
+        Laya.Tween.to(c1.transform, { localPositionX: __init.x + (this.list.length % __dp) * __init.width * __init.scale, localPositionY: __init.y, localPositionZ: __init.z + Math.floor(this.list.length / __dp) * __init.height * __init.scale }, __data.mahjong_set.speedIndex == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, Laya.Ease.strongOut, Laya.Handler.create(this, this.outComplete))
+        this.list.push(c1)
+        this.data.push(__c)
+    }
+
+    set deleateOut(value) {
+        let __end = this.list[this.list.length - 1];
+        if (__end && __end.name == value) {
+            __end.active = false;
+            __end.destroy();
+            this.list.pop();
+            this.data.pop();
+        }
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            for (var i = 0; i < this.data.length; i++) {
+                //检测手牌是否有胡牌相同的
+                if (this.data[i] == value[k].view) { value[k].num++ }
+            }
+        }
+    }
+
+    outComplete() {
+        __sound.gameSound('out_card')
+        this.signTween();
+    }
+
+    signTween() {
+        if (this.signValue) {
+            let __end = this.list[this.list.length - 1];
+            if (__end) {
+                // this.__sign.x = __end.x + (__end.width - this.__sign.width) / 2
+                // this.__sign.y = __end.y - this.__sign.height;
+
+                // this.__timeline = this.__timeline || new Laya.TimeLine()
+                // this.__timeline.reset();
+                // this.__timeline.addLabel("turnDown", 0).to( this.__sign,{ y: __end.y+__end.height / 2 - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                //                .addLabel("turnUp", 0).to( this.__sign, { y : __end.y - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                // this.__timeline.play(0, true);
+                // this.addChild(this.__sign)
+
+                this.signModel = this.signModel || Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('Sign'), __data.deskData.roomVo.scene.getChildByName('container'));
+                this.signModel.transform.position = __end.transform.position
+
+                this.signModel.transform.localPositionY = __end.transform.localPositionY + 5
+                this.signModel.active = true;
+
+                this.timeLine = this.timeLine || new Laya.TimeLine();
+                this.timeLine.reset();
+                this.timeLine.addLabel("turnUp", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 8 }, 750, Laya.Ease.sineIn)
+                    .addLabel("turnDown", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 5 }, 750, Laya.Ease.sineIn)
+                this.timeLine.play(0, true);
+            }
+        } else if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null }; //game.utils.remove(this.__sign)
+    }
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.list = [];
+
+        this.data = [];
+
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null };
+    }
+
+}
+
+
+class YsmjMahjongLeftOutList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.row = 8
+            //42为 downout的宽度
+        this.height = 35 * this.row
+
+        this.list = [];
+
+        this.data = [];
+
+        this.init3D = { x: 31, y: 0, z: 16, width: 7.4, height: 10.2, scale: 1 }
+
+        this.__sign = new Laya.Image('local/mahjong_common/1/arrow.png')
+    }
+
+    onEnable() { game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    onDisable() { game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.list.length; i++) {
+            if (value && this.list[i].name === __data.deskData.roomVo.numberToCard(value)) {
+                this.list[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else
+                this.list[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+    set sign(value) { this.signValue = value; if (!value) { if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/ } }
+
+    set outlist(value) {
+        while (this.list.length) { game.utils.remove(this.list.shift()) }
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.lo, YsmjMahjongLeftOut)
+            // __v.skin = this.data[i];
+
+            // __v.x = -Math.floor(i / this.row) * __v.width
+            // __v.y = (i % this.row) * __v.height
+
+            // this.addChildAt(__v, i % this.row)
+            // this.list.push(__v)
+            let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+            let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container'));
+            c1.transform.localPosition = new Laya.Vector3(this.init3D.x + Math.floor(i / __dp) * this.init3D.height * this.init3D.scale, this.init3D.y, this.init3D.z - (i % __dp) * this.init3D.width * this.init3D.scale);
+            c1.transform.rotationEuler = new Laya.Vector3(0, -90, 0)
+            c1.transform.localScale = new Laya.Vector3(this.init3D.scale, 1, this.init3D.scale);
+            c1.meshRenderer.material = __data.deskData.roomVo.material
+            this.list.push(c1)
+        }
+
+    }
+
+
+    set addOut(value) {
+        // let __v = Laya.Pool.getItemByClass(__cName.lo, YsmjMahjongLeftOut)
+        // let __c = value.shift()
+        // __v.skin = __c;
+        // let __point = this.globalToLocal( value.pop() )
+        // __v.x = __point.x
+        // __v.y = __point.y
+        // this.list.push(__v)
+        // this.data.push(__c)
+
+        // Laya.Tween.to(__v, {x:-Math.floor((this.list.length - 1) / this.row) * __v.width, y:((this.list.length - 1) % this.row) * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+
+        // this.addChildAt(__v, (this.list.length - 1) % this.row)
+        let __c = value.shift();
+        let __transform = value.pop();
+
+        let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(__c)), __data.deskData.roomVo.scene.getChildByName('container'));
+        c1.transform.position = __transform.position;
+        c1.transform.rotation = __transform.rotation;
+        c1.transform.localScale = new Laya.Vector3(this.init3D.scale, 1, this.init3D.scale);
+        c1.transform.rotationEuler = new Laya.Vector3(0, -90, 0)
+        c1.meshRenderer.material = __data.deskData.roomVo.material
+
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        Laya.Tween.to(c1.transform, { localPositionX: this.init3D.x + Math.floor(this.list.length / __dp) * this.init3D.height * this.init3D.scale, localPositionY: this.init3D.y, localPositionZ: this.init3D.z - (this.list.length % __dp) * this.init3D.width * this.init3D.scale }, __data.mahjong_set.speedIndex == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, Laya.Ease.strongOut, Laya.Handler.create(this, this.outComplete))
+        this.list.push(c1)
+        this.data.push(__c)
+    }
+
+    set deleateOut(value) {
+        let __end = this.list[this.list.length - 1];
+        if (__end && __end.name == value) {
+            __end.active = false;
+            __end.destroy();
+            this.list.pop();
+            this.data.pop();
+        }
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            for (var i = 0; i < this.data.length; i++) {
+                //检测手牌是否有胡牌相同的
+                if (this.data[i] == value[k].view) { value[k].num++ }
+            }
+        }
+    }
+
+    outComplete() {
+        __sound.gameSound('out_card')
+        this.signTween();
+    }
+
+    signTween() {
+        if (this.signValue) {
+            let __end = this.list[this.list.length - 1];
+            if (__end) {
+                // this.__sign.x = __end.x + (__end.width - this.__sign.width) / 2
+                // this.__sign.y = __end.y - this.__sign.height;
+
+                // this.__timeline = this.__timeline || new Laya.TimeLine()
+                // this.__timeline.reset();
+                // this.__timeline.addLabel("turnDown", 0).to( this.__sign,{ y: __end.y+__end.height / 2 - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                //                .addLabel("turnUp", 0).to( this.__sign, { y : __end.y - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                // this.__timeline.play(0, true);
+                // this.addChild(this.__sign)
+
+                this.signModel = this.signModel || Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('Sign'), __data.deskData.roomVo.scene.getChildByName('container'));
+                this.signModel.transform.position = __end.transform.position
+
+                this.signModel.transform.localPositionY = __end.transform.localPositionY + 5
+                this.signModel.active = true;
+
+                this.timeLine = this.timeLine || new Laya.TimeLine();
+                this.timeLine.reset();
+                this.timeLine.addLabel("turnUp", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 8 }, 750, Laya.Ease.sineIn)
+                    .addLabel("turnDown", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 5 }, 750, Laya.Ease.sineIn)
+                this.timeLine.play(0, true);
+            }
+        } else if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null }; //game.utils.remove(this.__sign)
+    }
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.list = [];
+
+        this.data = [];
+
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null };
+    }
+}
+
+class YsmjMahjongRightOutList3D extends Laya.Sprite {
+    constructor() {
+        super()
+
+        this.row = 8
+            //42为 downout的宽度
+        this.height = 35 * this.row
+
+        this.list = [];
+
+        this.data = [];
+
+        this.init3D = { x: -30.4, y: 0, z: -22, width: 7.4, height: 10.2, scale: 1 }
+
+        this.__sign = new Laya.Image('local/mahjong_common/1/arrow.png')
+    }
+
+    onEnable() { game.cb.on(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    onDisable() { game.cb.off(__eh + 'show_choice_ot', this, this.deOtHandler) }
+
+    deOtHandler(value) {
+        for (let i = 0; i < this.list.length; i++) {
+            if (value && this.list[i].name === __data.deskData.roomVo.numberToCard(value)) {
+                this.list[i].meshRenderer.material = Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile03.lmat')
+            } else
+                this.list[i].meshRenderer.material = __data.deskData.roomVo.material
+                /**this.list[i].ot(value)*/
+        }
+    }
+
+
+    set sign(value) { this.signValue = value; if (!value) { if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/ } }
+
+    set outlist(value) {
+        while (this.list.length) { game.utils.remove(this.list.shift()) }
+
+        if (typeof value == 'string') { this.data = value ? value.split(',') : this.data } else { this.data = value ? value : this.data }
+
+        for (let i = 0; i < this.data.length; i++) {
+            // let __v = Laya.Pool.getItemByClass(__cName.ro, YsmjMahjongRightOut)
+            // __v.skin = this.data[i];
+
+            // __v.x = Math.floor(i / this.row) * __v.width
+            // __v.y = (this.row - i%this.row - 1) * __v.height
+
+            // this.addChildAt(__v, Math.floor(i / this.row) * this.row)
+            // this.list.push(__v)
+
+            let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(this.data[i])), __data.deskData.roomVo.scene.getChildByName('container'));
+            c1.transform.localPosition = new Laya.Vector3(this.init3D.x - Math.floor(i / 6) * this.init3D.height * this.init3D.scale, this.init3D.y, this.init3D.z + (i % 6) * this.init3D.width * this.init3D.scale);
+            c1.transform.rotationEuler = new Laya.Vector3(0, 90, 0)
+            c1.transform.localScale = new Laya.Vector3(this.init3D.scale, 1, this.init3D.scale)
+            c1.meshRenderer.material = __data.deskData.roomVo.material
+            this.list.push(c1)
+        }
+
+    }
+
+
+    set addOut(value) {
+        // let __v = Laya.Pool.getItemByClass(__cName.ro, YsmjMahjongRightOut)
+        // let __c = value.shift()
+        // __v.skin = __c;
+        // let __point = this.globalToLocal( value.pop() )
+        // __v.x = __point.x
+        // __v.y = __point.y
+        // this.list.push(__v)
+        // this.data.push(__c)
+
+        // Laya.Tween.to(__v, {x:Math.floor((this.list.length - 1) / this.row) * __v.width, y:(this.row - (this.list.length - 1)%this.row - 1) * __v.height}, __data.setData.data.desk_speed == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, null, new Laya.Handler(this, this.outComplete) )
+
+        // this.addChildAt(__v, Math.floor((this.list.length - 1) / this.row) * this.row)
+        let __c = value.shift();
+        let __transform = value.pop();
+
+        let c1 = Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('tiles').getChildByName(__data.deskData.roomVo.numberToCard(__c)), __data.deskData.roomVo.scene.getChildByName('container'));
+        c1.transform.position = __transform.position;
+        c1.transform.rotation = __transform.rotation;
+        c1.transform.localScale = new Laya.Vector3(this.init3D.scale, 1, this.init3D.scale)
+        c1.transform.rotationEuler = new Laya.Vector3(0, 90, 0)
+        c1.meshRenderer.material = __data.deskData.roomVo.material
+
+        let __dp = __data.deskData.roomVo.roomPlayer === 2 ? 12 : 6
+
+        Laya.Tween.to(c1.transform, { localPositionX: this.init3D.x - Math.floor(this.list.length / __dp) * this.init3D.height * this.init3D.scale, localPositionY: this.init3D.y, localPositionZ: this.init3D.z + (this.list.length % __dp) * this.init3D.width * this.init3D.scale }, __data.mahjong_set.speedIndex == 0 ? __data.deskData.roomVo.com_time : __data.deskData.roomVo.fast_time, Laya.Ease.strongOut, Laya.Handler.create(this, this.outComplete))
+        this.list.push(c1)
+        this.data.push(__c)
+    }
+
+    set deleateOut(value) {
+        let __end = this.list[this.list.length - 1];
+        if (__end && __end.name == value) {
+            __end.active = false;
+            __end.destroy();
+            this.list.pop();
+            this.data.pop();
+        }
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null } /**game.utils.remove(this.__sign)*/
+    }
+
+    huCardSurps(value) {
+        for (var k = 0; k < value.length; k++) {
+            for (var i = 0; i < this.data.length; i++) {
+                //检测手牌是否有胡牌相同的
+                if (this.data[i] == value[k].view) { value[k].num++ }
+            }
+        }
+    }
+
+    outComplete() {
+        __sound.gameSound('out_card')
+        this.signTween();
+    }
+
+    signTween() {
+        if (this.signValue) {
+            let __end = this.list[this.list.length - 1];
+            if (__end) {
+                // this.__sign.x = __end.x + (__end.width - this.__sign.width) / 2
+                // this.__sign.y = __end.y - this.__sign.height;
+
+                // this.__timeline = this.__timeline || new Laya.TimeLine()
+                // this.__timeline.reset();
+                // this.__timeline.addLabel("turnDown", 0).to( this.__sign,{ y: __end.y+__end.height / 2 - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                //                .addLabel("turnUp", 0).to( this.__sign, { y : __end.y - this.__sign.height }, __data.deskData.roomVo.sign_time )
+                // this.__timeline.play(0, true);
+                // this.addChild(this.__sign)
+
+                this.signModel = this.signModel || Laya.Sprite3D.instantiate(__data.deskData.roomVo.scene.getChildByName('Sign'), __data.deskData.roomVo.scene.getChildByName('container'));
+                this.signModel.transform.position = __end.transform.position
+
+                this.signModel.transform.localPositionY = __end.transform.localPositionY + 5
+                this.signModel.active = true;
+
+                this.timeLine = this.timeLine || new Laya.TimeLine();
+                this.timeLine.reset();
+                this.timeLine.addLabel("turnUp", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 8 }, 750, Laya.Ease.sineIn)
+                    .addLabel("turnDown", 0).to(this.signModel.transform, { localPositionY: __end.transform.localPositionY + 5 }, 750, Laya.Ease.sineIn)
+                this.timeLine.play(0, true);
+            }
+        } else if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null }; //game.utils.remove(this.__sign)
+    }
+
+    clear() {
+        while (this.numChildren) this.removeChildAt(0)
+
+        this.list = [];
+
+        this.data = [];
+
+        if(this.signModel){ this.signModel.active = false; this.signModel.destroy(); this.signModel = null };
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class YsmjMahjongDownDoor3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongDownDoor']);
+    }
+
+    set group(value) {
+        value = value.split(',');
+        this.__value = value.shift(); //提取数组中的第一个元素  判断吃碰杠啥的
+        this.__group = []; //门前牌集合
+        this.__position = 0;
+        switch (parseInt(this.__value)) {
+            case 2: //吃  例如 2,21,22,2   2 value 21 打头的牌  22  吃的牌    2  吃的谁的牌
+                //如果头牌和吃的一样后一位在前
+                if (value[0] == value[1]) {
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的少一位  顺子形式 
+                else if (parseInt(value[0]) + 1 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的一样后一位在前
+                else if (parseInt(value[0]) + 2 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                break;
+            case 1: //碰  例如  1,6,1    1 value   6 碰的牌    1  碰的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 3: //粘   例如  1,6,1    1 value   6 粘的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 5: //杠   例如  5,0,5  5,1,2    5 value   0 杠的牌    5  杠的谁的牌  5 为自己   即为暗杠
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 81: //亮掌   例如  1,6,1    1 value   6 亮掌的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                break;
+            case 82: //亮喜   例如  82,40,40,40
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[1]));
+                this.__group.push(parseInt(value[2]));
+                break;
+        }
+        this.showView();
+    }
+
+
+    showView() {
+        let __width = this.__group.length == 2 ? 175 : 250
+        this.size(__width, this.height)
+            //全部移除掉
+        game.utils.remove(this.door_1, this.door_2, this.door_3, this.door_4)
+        let __len = 4
+        for (let i = 0; i < __len; i++) {
+            if (this.__group[i] >= 0) {
+                //把应该显示的显示出来
+                this.addChild(this['door_' + (i + 1)])
+
+                //暗杠特殊处理一下
+                if (this.__position == 5 && i != 3) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_ag.png' } else {
+                    this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/own_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                }
+
+                //指向标志 改变方向
+                let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                if (__vo) {
+                    this.dir.visible = true
+                    if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                }
+
+                if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                //指向标志 改变位置
+                this.dir.y = parseInt(this.__value) == 5 ? this.door_4.y - this.dir.height / 2 : this.door_2.y - this.dir.height / 2
+                    //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                if (this.__position == 5) game.utils.remove(this.dir)
+                else { this.addChild(this.dir) }
+            }
+        }
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+}
+class YsmjMahjongUpDoor3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongUpDoor']);
+    }
+
+    set open(value) { this.__open = value }
+
+    set group(value) {
+        value = value.split(',');
+        this.__value = value.shift(); //提取数组中的第一个元素  判断吃碰杠啥的
+        this.__group = []; //门前牌集合
+        this.__position = 0;
+        switch (parseInt(this.__value)) {
+            case 2: //吃  例如 2,21,22,2   2 value 21 打头的牌  22  吃的牌    2  吃的谁的牌
+                //如果头牌和吃的一样后一位在前
+                if (value[0] == value[1]) {
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的少一位  顺子形式 
+                else if (parseInt(value[0]) + 1 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的一样后一位在前
+                else if (parseInt(value[0]) + 2 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                break;
+            case 1: //碰  例如  1,6,1    1 value   6 碰的牌    1  碰的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 3: //粘   例如  1,6,1    1 value   6 粘的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 5: //杠   例如  5,0,5  5,1,2    5 value   0 杠的牌    5  杠的谁的牌  5 为自己   即为暗杠
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 81: //亮掌   例如  1,6,1    1 value   6 亮掌的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                break;
+            case 82: //亮喜   例如  82,40,40,40
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[1]));
+                this.__group.push(parseInt(value[2]));
+                break;
+        }
+        this.showView();
+    }
+
+
+    showView() {
+        let __width = this.__group.length == 2 ? 90 : 132
+        this.size(__width, this.height)
+            //全部移除掉
+        game.utils.remove(this.door_1, this.door_2, this.door_3, this.door_4)
+        let __len = 4
+        for (let i = 0; i < __len; i++) {
+            if (this.__group[i] >= 0) {
+                //把应该显示的显示出来
+                this.addChild(this['door_' + (i + 1)])
+
+                //暗杠特殊处理一下
+                if (this.__position == 5 && this.__open && i == 3) {
+                    this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/ud_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_uag.png' } else {
+                    this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/ud_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                }
+                //指向标志 改变方向
+                let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                if (__vo) {
+                    this.dir.visible = true
+                    if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                }
+
+                if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                //指向标志 改变位置
+                this.dir.y = parseInt(this.__value) == 5 ? this.door_4.y + this.door_4.height - this.dir.height / 2 : this.door_2.y + this.door_2.height - this.dir.height / 2
+
+                //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                if (this.__position == 5) game.utils.remove(this.dir)
+                else { this.addChild(this.dir) }
+            }
+        }
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+}
+class YsmjMahjongLeftDoor3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongLeftDoor']);
+    }
+
+    set open(value) { this.__open = value }
+
+    set group(value) {
+        value = value.split(',');
+        this.__value = value.shift(); //提取数组中的第一个元素  判断吃碰杠啥的
+        this.__group = []; //门前牌集合
+        this.__position = 0;
+        switch (parseInt(this.__value)) {
+            case 2: //吃  例如 2,21,22,2   2 value 21 打头的牌  22  吃的牌    2  吃的谁的牌
+                //如果头牌和吃的一样后一位在前
+                if (value[0] == value[1]) {
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的少一位  顺子形式 
+                else if (parseInt(value[0]) + 1 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的一样后一位在前
+                else if (parseInt(value[0]) + 2 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                break;
+            case 1: //碰  例如  1,6,1    1 value   6 碰的牌    1  碰的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 3: //粘   例如  1,6,1    1 value   6 粘的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 5: //杠   例如  5,0,5  5,1,2    5 value   0 杠的牌    5  杠的谁的牌  5 为自己   即为暗杠
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 81: //亮掌   例如  1,6,1    1 value   6 亮掌的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                break;
+            case 82: //亮喜   例如  82,40,40,40
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[1]));
+                this.__group.push(parseInt(value[2]));
+                break;
+        }
+        this.showView();
+    }
+
+
+    showView() {
+        let __height = this.__group.length == 2 ? 75 : 105
+        this.size(this.width, __height)
+            //全部移除掉
+        game.utils.remove(this.door_1, this.door_2, this.door_3, this.door_4)
+        let __len = 4
+        if (this.__group.length == 2) {
+            for (let i = 1; i < 3; i++) {
+
+                if (this.__group[i - 1] >= 0) {
+                    //把应该显示的显示出来
+                    this.addChildAt(this['door_' + (i + 1)], 0)
+
+                    //暗杠特殊处理一下
+                    if (this.__position == 5 && this.__open && i == 3) {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/left_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_lrag.png' } else {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/left_' + __data.deskData.roomVo.numberToCard(this.__group[i - 1]) + '.png'
+                    }
+                    //指向标志 改变方向
+                    let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                    if (__vo) {
+                        this.dir.visible = true
+                        if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                    }
+
+                    if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                    //指向标志 改变位置
+                    this.dir.y = parseInt(this.__value) == 5 ? 42 : 50
+
+                    //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                    if (this.__position == 5) game.utils.remove(this.dir)
+                    else { this.addChild(this.dir) }
+                }
+            }
+        } else {
+            for (let i = 0; i < __len; i++) {
+                if (this.__group[i] >= 0) {
+                    //把应该显示的显示出来
+                    if (i < 3) this.addChildAt(this['door_' + (i + 1)], 0)
+                    else { this.addChild(this['door_' + (i + 1)]) }
+
+                    //暗杠特殊处理一下
+                    if (this.__position == 5 && this.__open && i == 3) {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/left_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_lrag.png' } else {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/left_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    }
+                    //指向标志 改变方向
+                    let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                    if (__vo) {
+                        this.dir.visible = true
+                        if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                    }
+
+                    if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                    //指向标志 改变位置
+                    this.dir.y = parseInt(this.__value) == 5 ? 42 : 50
+
+                    //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                    if (this.__position == 5) game.utils.remove(this.dir)
+                    else { this.addChild(this.dir) }
+                }
+            }
+        }
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+}
+
+
+
+class YsmjMahjongRightDoor3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongRightDoor']);
+    }
+
+    set open(value) { this.__open = value }
+
+    set group(value) {
+        value = value.split(',');
+        this.__value = value.shift(); //提取数组中的第一个元素  判断吃碰杠啥的
+        this.__group = []; //门前牌集合
+        this.__position = 0;
+        switch (parseInt(this.__value)) {
+            case 2: //吃  例如 2,21,22,2   2 value 21 打头的牌  22  吃的牌    2  吃的谁的牌
+                //如果头牌和吃的一样后一位在前
+                if (value[0] == value[1]) {
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的少一位  顺子形式 
+                else if (parseInt(value[0]) + 1 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的一样后一位在前
+                else if (parseInt(value[0]) + 2 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                break;
+            case 1: //碰  例如  1,6,1    1 value   6 碰的牌    1  碰的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 3: //粘   例如  1,6,1    1 value   6 粘的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 5: //杠   例如  5,0,5  5,1,2    5 value   0 杠的牌    5  杠的谁的牌  5 为自己   即为暗杠
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 81: //亮掌   例如  1,6,1    1 value   6 亮掌的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                break;
+            case 82: //亮喜   例如  82,40,40,40
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[1]));
+                this.__group.push(parseInt(value[2]));
+                break;
+        }
+        this.showView();
+    }
+
+
+    showView() {
+        let __height = this.__group.length == 2 ? 75 : 105
+        this.size(this.width, __height)
+            //全部移除掉
+        game.utils.remove(this.door_1, this.door_2, this.door_3, this.door_4)
+        let __len = 4
+
+        if (this.__group.length == 2) {
+            for (let i = 1; i < 3; i++) {
+
+                if (this.__group[i - 1] >= 0) {
+                    //把应该显示的显示出来
+                    this.addChildAt(this['door_' + (i + 1)], 0)
+
+                    //暗杠特殊处理一下
+                    if (this.__position == 5 && this.__open && i == 3) {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/right_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_lrag.png' } else {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/right_' + __data.deskData.roomVo.numberToCard(this.__group[i - 1]) + '.png'
+                    }
+                    //指向标志 改变方向
+                    let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                    if (__vo) {
+                        this.dir.visible = true
+                        if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                    }
+
+                    if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                    //指向标志 改变位置
+                    this.dir.y = parseInt(this.__value) == 5 ? 42 : 50
+
+                    //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                    if (this.__position == 5) game.utils.remove(this.dir)
+                    else { this.addChild(this.dir) }
+                }
+            }
+        } else {
+            for (let i = 0; i < __len; i++) {
+                if (this.__group[i] >= 0) {
+                    //把应该显示的显示出来
+                    if (i < 3) this.addChildAt(this['door_' + (i + 1)], 0)
+                    else { this.addChild(this['door_' + (i + 1)]) }
+
+                    //暗杠特殊处理一下
+                    if (this.__position == 5 && this.__open && i == 3) {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/right_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_lrag.png' } else {
+                        this['door_' + (i + 1)].texture = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + (__data.mahjong_set.cardIndex + 2).toString() + '_card/right_' + __data.deskData.roomVo.numberToCard(this.__group[i]) + '.png'
+                    }
+                    //指向标志 改变方向
+                    let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                    if (__vo) {
+                        this.dir.visible = true
+                        if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                    }
+
+                    if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                    //指向标志 改变位置
+                    this.dir.y = parseInt(this.__value) == 5 ? 42 : 50
+
+                    //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                    if (this.__position == 5) game.utils.remove(this.dir)
+                    else { this.addChild(this.dir) }
+                }
+            }
+        }
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class YsmjMahjongDownHand3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongDownHand']);
+    }
+
+    set skin(value) {
+        this.card = value
+
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('ownH', value)
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('ownH', value)
+    }
+
+    showTingTips() { this.imgT.visible = true; }
+
+    onEnable() {
+        let __c = this.card;
+        let __r = __data.deskData.roomVo.mixedArr.some(function(value) { return parseInt(value) == parseInt(__c) })
+        if (__r && !this.view.getComponent(Mahjong_GrayLayer_Script)) this.view.addComponent(Mahjong_GrayLayer_Script)
+        else if (!__r) this.view.getComponent(Mahjong_GrayLayer_Script) && this.view.getComponent(Mahjong_GrayLayer_Script).destroy();
+    }
+
+    onDisable() {
+        this.imgT.visible = false;
+        game.utils.remove(this.sign)
+    }
+}
+class YsmjMahjongUpHand3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongUpHand']);
+
+        this.sign = this.sign || new Laya.Image();
+        this.sign.skin = 'local/mahjong_common/1/hun.png';
+        this.sign.x = 26;
+        this.sign.y = 5;
+        this.sign.scaleX = this.sign.scaleY = 0.7;
+    }
+
+    onEnable() {
+
+        if (__data.deskData.roomVo.isRecordPlaying) return
+        if ('texture' in this.view) this.view.texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_up.png'
+        else if ('skin' in this.view) this.view.skin = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_up.png'
+    }
+
+    onDisable() { game.utils.remove(this.sign) }
+
+    //结算特殊处理
+    set skin(value) {
+        if (parseInt(value) >= 0) {
+            let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/ud_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+            if ('texture' in this.view) this.view.texture = __skin
+            else if ('skin' in this.view) this.view.skin = __skin
+        }
+
+        this.card = value
+        let __c = this.card;
+        let __r = __data.deskData.roomVo.mixedArr.some(function(value) { return parseInt(value) == parseInt(__c) })
+        if (__r) this.addChild(this.sign)
+        else game.utils.remove(this.sign)
+    }
+}
+class YsmjMahjongLeftHand3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongLeftHand']);
+
+        this.sign = this.sign || new Laya.Image();
+        this.sign.skin = 'local/mahjong_common/1/hun.png';
+        this.sign.anchorX = this.sign.anchorY = 0.5
+        this.sign.scaleX = this.sign.scaleY = 0.7;
+        this.sign.x = 38;
+        this.sign.y = 24;
+        this.sign.rotation = 90;
+    }
+
+    set skin(value) {
+        if (parseInt(value) >= 0) {
+            let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/left_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+            if ('texture' in this.view) this.view.texture = __skin
+            else if ('skin' in this.view) this.view.skin = __skin
+        }
+
+        this.card = value
+        let __c = this.card;
+        let __r = __data.deskData.roomVo.mixedArr.some(function(value) { return parseInt(value) == parseInt(__c) })
+        if (__r) this.addChild(this.sign)
+        else game.utils.remove(this.sign)
+    }
+
+    onEnable() {
+        if (__data.deskData.roomVo.isRecordPlaying) return
+        if ('texture' in this.view) this.view.texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_left.png'
+        else if ('skin' in this.view) this.view.skin = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_left.png'
+    }
+
+    onDisable() {}
+}
+class YsmjMahjongRightHand3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongRightHand']);
+
+        this.sign = this.sign || new Laya.Image();
+        this.sign.skin = 'local/mahjong_common/1/hun.png';
+        this.sign.anchorX = this.sign.anchorY = 0.5
+        this.sign.scaleX = this.sign.scaleY = 0.7;
+        this.sign.x = 15;
+        this.sign.y = 8;
+        this.sign.rotation = 270;
+    }
+
+    set skin(value) {
+        if (parseInt(value) >= 0) {
+            let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/right_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+            if ('texture' in this.view) this.view.texture = __skin
+            else if ('skin' in this.view) this.view.skin = __skin
+        }
+
+        this.card = value
+        let __c = this.card;
+        let __r = __data.deskData.roomVo.mixedArr.some(function(value) { return parseInt(value) == parseInt(__c) })
+        if (__r) this.addChild(this.sign)
+        else game.utils.remove(this.sign)
+    }
+
+    onEnable() {
+        if (__data.deskData.roomVo.isRecordPlaying) return
+        if ('texture' in this.view) this.view.texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_right.png'
+        else if ('skin' in this.view) this.view.skin = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_right.png'
+    }
+
+    onDisable() {}
+}
+
+class YsmjMahjongDownOut3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongDownOut']);
+    }
+
+    set skin(value) {
+        this.card = value
+
+        let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/ud_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+        if ('texture' in this.view) this.view.texture = __skin
+        else if ('skin' in this.view) this.view.skin = __skin
+    }
+
+    ot(value) {
+        if (this.card == value) this.addChild(this.img_ot)
+        else { game.utils.remove(this.img_ot) }
+    }
+
+    onEnable() { game.utils.remove(this.img_ot) }
+}
+class YsmjMahjongUpOut3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongUpOut']);
+    }
+
+    set skin(value) {
+        this.card = value
+
+        let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/ud_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+        if ('texture' in this.view) this.view.texture = __skin
+        else if ('skin' in this.view) this.view.skin = __skin
+    }
+
+    ot(value) {
+        if (this.card == value) this.addChild(this.img_ot)
+        else { game.utils.remove(this.img_ot) }
+    }
+
+    onEnable() { game.utils.remove(this.img_ot) }
+}
+class YsmjMahjongLeftOut3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongLeftOut']);
+    }
+
+    set skin(value) {
+        this.card = value
+
+        let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/left_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+        if ('texture' in this.view) this.view.texture = __skin
+        else if ('skin' in this.view) this.view.skin = __skin
+    }
+
+    ot(value) {
+        if (this.card == value) this.addChild(this.img_ot)
+        else { game.utils.remove(this.img_ot) }
+    }
+
+    onEnable() { game.utils.remove(this.img_ot) }
+}
+
+class YsmjMahjongRightOut3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongRightOut']);
+    }
+
+    set skin(value) {
+        this.card = value
+
+        let __skin = 'mahjong_' + (__data.mahjong_set.modelIndex + 2) + 'D_' + __data.mahjong_set.cardIndex + '_card/right_' + __data.deskData.roomVo.numberToCard(value) + '.png'
+        if ('texture' in this.view) this.view.texture = __skin
+        else if ('skin' in this.view) this.view.skin = __skin
+    }
+
+    ot(value) {
+        if (this.card == value) this.addChild(this.img_ot)
+        else { game.utils.remove(this.img_ot) }
+    }
+
+    onEnable() { game.utils.remove(this.img_ot) }
+}
+
+
+
+
+
+class YsmjMahjongHuCard3D extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuCard']);
+
+        // this.scale(game.scale, game.scale)
+
+        this.__offx = 300 * game.scale;
+        this.__offy = 270 * game.scale;
+    }
+
+    create(value, seat) {
+        this.seat = seat;
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('own', value)
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('own', value)
+
+        if (seat == 'down') {
+            this.x = config.gameW - this.width * game.scale >> 1
+            this.y = __compUtils.getDeskDy() - 220 - 50 - this.height; //config.gameH - this.height * game.scale - this.__offy
+        } else if (seat == 'up') {
+            this.x = config.gameW - this.width * game.scale >> 1
+            this.y = __compUtils.getDeskUy() + 220 + 50; // this.__offy
+        } else if (seat == 'left') {
+            this.x = __compUtils.getDeskLx() + 150;
+            this.y = (config.gameH - this.height) / 2 - this.height / 1.4 // config.gameH - this.height * game.scale >> 1
+        } else if (seat == 'right') {
+            this.x = __compUtils.getDeskRx() - 150; // config.gameW - this.width * game.scale - this.__offx
+            this.y = (config.gameH - this.height) / 2 - this.height / 1.4 // config.gameH - this.height * game.scale >> 1
+        }
+        if (seat != 'up') ELD.push(this);
+    }
+
+
+    onEnable() {}
+
+    onDisable() { ELD.remove(this); }
+}

@@ -1,0 +1,99 @@
+class GameMainFirstPay extends game.ModuleBase {
+    static get clearRes() {
+        this._clearRes = this._clearRes ||
+            ['cdn.firstPay'];
+        return this._clearRes
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_firstPay',
+            layer: 'panel'
+        })
+        this.btn_buy.addComponent(S_firstPay_buy)
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.btn_close.addComponent(S_firstPay_close)
+    }
+    added(type, matchModelType) {
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene':'首充福利', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        this.matchModelType = matchModelType;
+        this.type = type
+        this.img_title.skin = type == 1 ? 'cdn/firstPay/img_schlb.png' : 'cdn/firstPay/img_jbbz.png'
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_firstPay', 1)
+        if (type == 1) {
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '首充豪礼界面' });
+        } else if (type == 2) {
+            game.server.send(13001)
+            miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '金币不足首充版' })
+        }
+        showActivityPanel('firstPay')
+    }
+    async onDisable() {
+        if (this.type == 1) {
+            hallTestShowPanel()
+        }
+        ResUtils.clearTextureRes(GameMainFirstPay.clearRes)
+    }
+    clickMask() { }
+}
+
+class S_firstPay_close extends Laya.Script {
+    async onClick(e) {
+        if (this.owner.parent.type == 2) {
+            if (this.owner.parent.matchModelType == 1 && AdData.isActive && AdData.time > 0) {
+                let a = await miniApi.video_ready('adunit-24f34675f1830a6c')
+                if (a.pullVideo)
+                    __showScene.show_gameMain_ad()
+            }
+            else if (__data.garden.task.isRedPoint) {
+                __showScene.show_garden_mainScene_bombbox()
+            } else {
+                __showScene.show_mjSmallGame_guide_bombbox()
+            }
+            // __data.d_match.goldNoEnoughPanelClose()
+        }
+        game.scene.remove(GameMainFirstPay)
+    }
+}
+
+class S_firstPay_buy extends Laya.Script {
+    async onClick(e) {
+        await game.server.send(16020);
+        if (__data.onoff_pay != 1) return __tips(__lang.nocan_pay)
+        if (this.owner.parent.type == 1) {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': `常规首充购买` })
+        } else {
+            miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': `金币不足首充购买` })
+        }
+        if (__data.pay_curValue + shopConfig.firstPay['10010'].price > __data.pay_maxValue) {
+            __tips(__lang.pay_over_max);
+            return;
+        }
+        // '18元'
+        if (window['wx'] || window.IOSPay || (window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP)) {
+            // 获取订单信息
+            // IOS能支付修改
+            // if (miniApi.isIOS) return 1;
+            miniApi.pay({
+                goodsId: 10010,
+                successCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                },
+                failCallback: () => {
+                    game.scene.remove(LoadingSmall)
+                }
+            })
+            if (__data.isSupportUser != 1) {
+                miniApi.trackEvent('Mj_Pay', {
+                    Mj_ADPreference: miniApi.adUserValueLevel,
+                    'Mj_PayName': '首充豪礼',
+                    'Mj_PayPrice': shopConfig.firstPay['10010'].price,
+                    'Mj_Paytype': '点击',
+                    'Mj_UserID': String(__data.uid),
+                })
+            }
+        } else {
+            console.error('没有购买首充服务')
+            game.server.send(2221)
+        }
+    }
+}

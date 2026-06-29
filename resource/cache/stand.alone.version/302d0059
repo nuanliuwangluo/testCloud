@@ -1,0 +1,23 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-01-13 09:50:57
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2020-02-17 17:10:55
+ */
+class DeskResultBG extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskResultBG',
+            "layer": 'middle',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.container.alpha = 0.8;
+    }
+}

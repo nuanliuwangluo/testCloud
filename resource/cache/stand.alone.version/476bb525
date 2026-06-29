@@ -1,0 +1,29 @@
+var gtool = window.gtool || {};
+window.gtool = gtool;
+gtool.server = {}
+gtool.query = async (serverParams, haveDataSendTest, dateTest) => {
+    let serverId = serverParams.join('-');
+    if (haveDataSendTest) {
+        let isHaveData = gtool.server[serverId] && gtool.server[serverId].isHaveData || 0
+        if (isHaveData) {
+            if (dateTest) {
+                // 每天请求一次
+                let lastNow = gtool.server[serverId] && gtool.server[serverId].lastNow || 0;
+                let d1 = __tool.getDayCount(Date.now())
+                let d2 = __tool.getDayCount(lastNow)
+                if (d1 == d2) {
+                    return 1;
+                }
+            } else {
+                return 1
+            }
+        }
+    }
+    if (game.server)
+        await game.server.send(...serverParams)
+    gtool.server[serverId] = {
+        lastNow: Date.now(),
+        isHaveData: true,
+    }
+    return 1
+}

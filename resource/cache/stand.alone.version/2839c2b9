@@ -1,0 +1,217 @@
+class GardenBuildMask extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_build_mask',
+            layer: 'middle',
+        })
+    }
+}
+class GardenBuild extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_build',
+            layer: 'middle',
+            down: true,
+        })
+        this.btn_sure.addComponent(S_garden_build_sure)
+        this.btn_cancel.addComponent(S_garden_build_cancel)
+    }
+    added(exeTaskId = __data.garden.task.branchTaskId, openType = 'task') {
+        this.img_unlock.visible = false
+
+        this.toy = this.toy || this.y;
+        this.y += this.height;
+        Laya.Tween.to(this, { y: this.toy }, 200)
+
+        this.exeTaskId = exeTaskId;
+        this.openType = openType; // task collect
+
+        if (exeTaskId == __data.garden.task.branchTaskId)
+            game.scene.get(Garden_groud).deleteTaskSign()
+
+        let a = __data.garden.task.dressSelect(this.exeTaskId);
+        let p1 = __data.excelConfig.hashGardenTaskBranch[this.exeTaskId].positionId
+        let useCompId = __data.garden.hashUsePositionIdCompId[p1]
+        if (!useCompId) {
+            S_build_dress_item.selectVO = a[0];
+        } else {
+            let c1 = a.find((e) => {
+                return e.id == useCompId
+            })
+            S_build_dress_item.selectVO = c1
+        }
+
+        // 因为 任务id 和位置id 一样 所以随便用
+        let filterTileArray = Garden_groud.get_effective_tile_by_positionId(exeTaskId);
+        S_garden_groud_change_dress.positionId = exeTaskId;
+        S_garden_groud_change_dress.lastDressTextureIdArray = filterTileArray.map((e) => {
+            return e && e.tileTextureSet && e.tileTextureSet.textureId || 0;
+        })
+
+        this.scene_dress1.visible = false;
+        this.scene_dress2.visible = false;
+        this.scene_dress3.visible = false;
+        this.scene_dress4.visible = false;
+        this.scene_dress5.visible = false;
+        for (let index = 0, length = a.length; index < length; index++) {
+            const element = a[index];
+            let ex = this[`scene_dress${index + 1}`]
+            if (!ex) {
+                console.error('这个任务装饰选择超过4个了 taskid:', this.exeTaskId)
+                continue
+            };
+            ex.visible = true;
+            ex.dataSource = a[index]
+            this.sp_dress.width = ex.x + ex.width;
+        };
+        this.sp_dress.x = this.width / 2 - this.sp_dress.width / 2;
+        game.cb.on('garden_remove_build_ui', this, this.garden_remove_build_ui)
+        game.cb.event('garden_update_status_build_right_btn', [false])
+    }
+    onDisable() {
+        game.cb.off('garden_remove_build_ui', this, this.garden_remove_build_ui)
+    }
+    async garden_remove_build_ui() {
+        await __tool.tweenp(this, { y: this.y + this.height }, 200)
+        game.scene.remove(this)
+    }
+}
+
+class S_garden_build_sure extends Laya.Script {
+    onClick(e) {
+        if (!S_build_dress_item.selectVO) return;
+        let a = game.scene.get(GardenBuild);
+        let compId = S_build_dress_item.selectVO.id;
+        if (a.openType == 'task') {
+            game.server.send(15005, __data.garden.task.branchTaskId, compId)
+            game.cb.event('garden_build_cancel_select_comp')
+
+        } else if (a.openType == 'collect') {
+            game.server.send(15004, __data.excelConfig.hashGardenDress[compId].positionId, compId)
+            game.scene.add(GardenMainUI_leftUp_return)
+            game.scene.add(GardenMainUI_leftUp_res)
+            game.scene.add(GardenMainUI_leftDown)
+            game.scene.add(GardenMainUI_rightDown)
+            game.scene.remove(GardenBuildMask)
+            game.cb.event('garden_groud_scale', ['max', true])
+        }
+        game.cb.event('garden_remove_build_ui')
+        // game.cb.event('garden_build_cancel_select_comp')
+        game.cb.event('garden_groud_remove_filter_ani')
+        S_garden_task_exe.needStar = 0
+    }
+    onEnable() {
+        game.cb.on('garden_update_status_build_right_btn', this, this.garden_update_status_build_right_btn)
+    }
+    onDisable() {
+        game.cb.off('garden_update_status_build_right_btn', this, this.garden_update_status_build_right_btn)
+    }
+    garden_update_status_build_right_btn(status) {
+        this.owner.disabled = status
+    }
+}
+class S_garden_build_cancel extends Laya.Script {
+    onClick(e) {
+        game.cb.event('garden_remove_build_ui')
+        game.cb.event('garden_build_cancel')
+        game.cb.event('garden_build_cancel_select_comp')
+        game.cb.event('garden_groud_remove_filter_ani')
+        game.cb.event('garden_groud_scale', ['max', true])
+        game.scene.remove(GardenBuildMask);
+        game.scene.add(GardenMainUI_leftUp_return)
+        game.scene.add(GardenMainUI_leftUp_res)
+        game.scene.add(GardenMainUI_leftDown)
+        game.scene.add(GardenMainUI_rightDown)
+        if (S_garden_task_exe.needStar) {
+            __data.addMoney(5, parseInt(S_garden_task_exe.needStar))
+        }
+        S_garden_task_exe.needStar = 0;
+        if (this.owner.parent.exeTaskId == __data.garden.task.branchTaskId)
+            game.scene.get(Garden_groud).addTaskSign()
+    }
+}
+
+class GardenBuildDressItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_build_dressItem',
+            module: false
+        })
+        this.addComponent(S_build_dress_item);
+        this.sp_c.width = this.width;
+        this.sp_c.height = this.height;
+    }
+    onEnable() {
+        game.cb.on('garde_build_remove_select', this, this.unSelect)
+    }
+    onDisable() {
+        game.cb.off('garde_build_remove_select', this, this.unSelect)
+        // this.s_box && this.s_box.destroy()
+        // this.s_box = null
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        let d1 = __data.excelConfig.hashGardenDress[vo.id]
+        let propId = d1.gardenDressId
+        this.img_dress.skin = ''
+        this.img_dress.skin = `cdn/collect_gardenDress/${propId}.png`;
+        // this.txt_buildValue.text = d1.buildValue;
+        this.img_lock.visible = __data.garden.isDressLock(vo.id);
+        // if (__data.garden.isDressLock(vo.id)) {
+        //     if (!this.s_box) {
+        //         this.s_box = this.addComponent(S_click_show_des_set).init(d1.lockDes, 20)
+        //     }
+        //     this.s_box.init(d1.lockDes, 20)
+        // }
+        // else {
+        //     //  如果在onDisable里面 破坏 会因为owner不显示 而不移除各种鼠标事件 报错
+        //     this.s_box && this.s_box.destroy()
+        //     this.s_box = null
+        // }
+        this.unSelect()
+        if (S_build_dress_item.selectVO && this.__vo.id == S_build_dress_item.selectVO.id) {
+            this.select()
+        }
+    }
+    select() {
+        this.img_bg.skin = `cdn/garden_ui/img_djbox1.png`
+        this.img_dress.scaleX = this.img_dress.scaleY = 0.8
+        this.img_dress.y = 88
+        S_build_dress_item.selectVO = this.__vo;
+        game.cb.event('garden_build_select_comp', [this.__vo.id])
+    }
+    unSelect() {
+        this.img_bg.skin = `cdn/garden_ui/img_djbox2.png`
+        this.img_dress.scaleX = this.img_dress.scaleY = 0.7
+        this.img_dress.y = 99
+    }
+}
+Laya.ClassUtils.regClass('ui.garden.Garden_build_dressItemUI', GardenBuildDressItem);
+
+class S_build_dress_item extends Laya.Script {
+    onClick(e) {
+        let a = game.scene.get(GardenBuild)
+        if (__data.garden.isDressLock(this.owner.__vo.id)) {
+            game.cb.event('garden_update_status_build_right_btn', [true])
+            let d1 = __data.excelConfig.hashGardenDress[this.owner.__vo.id]
+            a.txt_unlock_des.text = d1.lockDes
+            a.txt_buildValue.text = `+${d1.buildValue}`
+            let w = a.txt_unlock_des.textField.textWidth + 10 * 2;
+            if (w < 250) w = 250;
+            a.txt_unlock_des.width = a.txt_unlock_des.textField.textWidth
+            a.txt_unlock_des.centerX = 0;
+            a.img_unlock.width = w;
+            __tool.labelParentCenterAndSetXY(a.sp_buildValue, w / 2, 5)
+            a.img_unlock.visible = true;
+            a.img_unlock.x = this.owner.x + this.owner.width / 2 - w / 2;
+        } else {
+            game.cb.event('garden_update_status_build_right_btn', [false])
+            a.img_unlock.visible = false
+        };
+        game.cb.event('garde_build_remove_select')
+        this.owner.select()
+
+
+    }
+}

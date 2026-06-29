@@ -1,0 +1,451 @@
+/* 
+ * @Author: Lingma
+ * @Date:   2026-03-17
+ * @Description: 基于 LayaAir HttpRequest 的 HTTP 请求工具库 (调试版)
+ */
+
+(function(global) {
+    'use strict';
+
+    /**
+     * HTTP 请求工具类
+     */
+    class HttpClient {
+        constructor() {
+            this.defaultTimeout = 60000; // 默认超时时间 60 秒
+            this.defaultHeaders = {
+                'Content-Type': 'application/json'
+            };
+            this.debug = true; // 默认开启调试模式
+        }
+
+        /**
+         * 日志输出
+         */
+        log(prefix, ...args) {
+            if (this.debug) {
+                console.log('[Lajax ' + prefix + ']', ...args);
+            }
+        }
+
+        /**
+         * 发送 HTTP 请求
+         * @param {Object} config - 请求配置对象
+         */
+        request(config) {
+            const self = this;
+            const url = config.url || '';
+            const method = (config.method || 'get').toLowerCase().trim();
+            const timeout = config.timeout || self.defaultTimeout;
+            const responseType = config.responseType || 'json';
+            const headers = config.headers || {};
+            const data = config.data;
+            const params = config.params || config.query;
+            
+            let timer = null;
+            let isCompleted = false;
+            const startTime = new Date();
+
+            // 输出请求信息
+            self.log('➡️', '开始请求:', url);
+            self.log('📝', '方法:', method.toUpperCase());
+            self.log('⏱️', '超时:', timeout + 'ms');
+
+            return new Promise((resolve, reject) => {
+                if (!url) {
+                    self.log('❌', '错误:URL 为空');
+                    return reject({
+                        status: 0,
+                        statusText: 'URL is required',
+                        data: null,
+                        message: 'URL is required'
+                    });
+                }
+
+                try {
+                    const http = new Laya.HttpRequest();
+
+                    // 设置超时
+                    timer = setTimeout(() => {
+                        if (!isCompleted) {
+                            isCompleted = true;
+                            self.log('⏰', '❌ 请求超时 (' + timeout + 'ms)');
+                            self.log('📍', 'URL:', url);
+                            reject({
+                                status: 0,
+                                statusText: 'Timeout',
+                                data: null,
+                                message: '请求超时，服务器未在 ' + timeout + 'ms 内响应',
+                                config: config,
+                                timeUsed: Date.now() - startTime
+                            });
+                        }
+                    }, timeout);
+
+                    // 请求完成回调
+                    http.once(Laya.Event.COMPLETE, self, (responseData) => {
+                        if (!isCompleted) {
+                            isCompleted = true;
+                            clearTimeout(timer);
+                            
+                            const timeUsed = Date.now() - startTime;
+                            self.log('✅', '收到响应 (' + timeUsed + 'ms)');
+
+                            // 自动解析 JSON
+                            if (responseType === 'text' || responseType === 'json') {
+                                if (typeof responseData === 'string') {
+                                    try {
+                                        responseData = JSON.parse(responseData);
+                                    } catch (e) {
+                                        self.log('⚠️', 'JSON 解析失败:', e);
+                                    }
+                                }
+                            }
+
+                            self.log('📦', '响应数据:', responseData);
+                            resolve({
+                                data: responseData,
+                                status: 200,
+                                statusText: 'OK',
+                                headers: null,
+                                config: config,
+                                timeUsed: timeUsed
+                            });
+                        } else {
+                            self.log('⚠️', '响应被忽略（已超时）');
+                        }
+                    });
+
+                    // 请求失败回调
+                    http.once(Laya.Event.ERROR, self, (error) => {
+                        if (!isCompleted) {
+                            isCompleted = true;
+                            clearTimeout(timer);
+                            
+                            const status = http.http ? http.http.status : 0;
+                            const statusText = http.http ? (http.http.statusText || error) : error;
+                            const timeUsed = Date.now() - startTime;
+                            
+                            self.log('❌', '请求失败 (' + timeUsed + 'ms)');
+                            self.log('🔢', '状态码:', status);
+                            self.log('📝', '错误信息:', statusText);
+                            self.log('📍', 'URL:', url);
+
+                            reject({
+                                status: status,
+                                statusText: statusText,
+                                data: null,
+                                message: statusText,
+                                config: config,
+                                timeUsed: timeUsed
+                            });
+                        }
+                    });
+
+                    // 处理 URL 参数（GET/DELETE 请求）
+                    let finalUrl = url;
+                    if (method === 'get' || method === 'delete') {
+                        if (params) {
+                            finalUrl = self._buildUrlWithParams(url, params);
+                        }
+                    }
+
+                    // 处理请求数据
+                    let requestData = data;
+                    if (method !== 'get' && method !== 'delete' && data) {
+                        requestData = self._processData(data, method, headers);
+                    }
+
+                    // 输出详细信息
+                    self.log('🚀', '发送请求到:', finalUrl);
+                    self.log('📤', '请求数据:', requestData);
+                    self.log('🏷️', '请求头:', headers);
+
+                    // 发送请求
+                    http.send(finalUrl, requestData, method, responseType, self._formatHeaders(headers));
+                    
+                    self.log('⏳', '等待响应...');
+
+                    // iOS 常见问题提示
+                    setTimeout(() => {
+                        if (!isCompleted) {
+                            const tips = '检测到问题常见原因:\n' +
+                                '1️⃣ iOS ATS 限制：必须使用 HTTPS\n' +
+                                '2️⃣ CORS 跨域：服务器未配置允许跨域\n' +
+                                '3️⃣ 网络权限：App 无网络访问权限\n' +
+                                '4️⃣ 防火墙：服务器拦截了 iOS 请求\n' +
+                                '5️⃣ User-Agent：异常的 UA 被服务器拒绝\n' +
+                                '\n建议检查:\n' +
+                                '✅ URL 是否使用 https://\n' +
+                                '✅ 服务器是否支持 CORS\n' +
+                                '✅ 查看服务器日志是否有请求记录\n' +
+                                '✅ 尝试在 Safari 中直接访问 API';
+                            self.log('💡', tips);
+                        }
+                    }, 3000);
+
+                } catch (e) {
+                    isCompleted = true;
+                    if (timer) clearTimeout(timer);
+                    
+                    self.log('💥', '异常:', e);
+                    reject({
+                        status: 0,
+                        statusText: e.message || 'Exception',
+                        data: null,
+                        message: e.message,
+                        config: config,
+                        timeUsed: Date.now() - startTime
+                    });
+                }
+            });
+        }
+
+        /**
+         * GET 请求
+         */
+        get(url, params, config) {
+            return this.request(Object.assign({}, config, {
+                url: url,
+                params: params,
+                method: 'get'
+            }));
+        }
+
+        /**
+         * POST 请求
+         */
+        post(url, data, config) {
+            return this.request(Object.assign({}, config, {
+                url: url,
+                data: data,
+                method: 'post'
+            }));
+        }
+
+        /**
+         * PUT 请求
+         */
+        put(url, data, config) {
+            return this.request(Object.assign({}, config, {
+                url: url,
+                data: data,
+                method: 'put'
+            }));
+        }
+
+        /**
+         * DELETE 请求
+         */
+        delete(url, params, config) {
+            return this.request(Object.assign({}, config, {
+                url: url,
+                params: params,
+                method: 'delete'
+            }));
+        }
+
+        /**
+         * 合并默认头和自定义头
+         */
+        _mergeHeaders(customHeaders) {
+            return Object.assign({}, this.defaultHeaders, customHeaders);
+        }
+
+        /**
+         * 格式化请求头数组
+         */
+        _formatHeaders(headers) {
+            if (!headers) return null;
+            const arr = [];
+            for (let key in headers) {
+                if (headers.hasOwnProperty(key)) {
+                    arr.push(key, headers[key]);
+                }
+            }
+            return arr.length > 0 ? arr : null;
+        }
+
+        /**
+         * 处理请求数据
+         */
+        _processData(data, method, headers) {
+            if (!data) return null;
+
+            // GET 和 DELETE 请求不需要 body 数据
+            if (method === 'get' || method === 'delete') {
+                return null;
+            }
+
+            // 如果是对象或数组，转换为 JSON 字符串
+            if (typeof data === 'object') {
+                headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+                return JSON.stringify(data);
+            }
+
+            return data;
+        }
+
+        /**
+         * 构建带参数的 URL
+         */
+        _buildUrlWithParams(url, params) {
+            if (!params) return url;
+
+            const queryString = [];
+            for (let key in params) {
+                if (params.hasOwnProperty(key) && params[key] !== undefined) {
+                    queryString.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+                }
+            }
+
+            if (queryString.length > 0) {
+                const separator = url.indexOf('?') === -1 ? '?' : '&';
+                url += separator + queryString.join('&');
+            }
+
+            return url;
+        }
+
+        /**
+         * 设置默认请求头
+         */
+        setDefaultHeaders(headers) {
+            Object.assign(this.defaultHeaders, headers);
+        }
+
+        /**
+         * 清除默认请求头中的某个字段
+         */
+        removeDefaultHeader(key) {
+            delete this.defaultHeaders[key];
+        }
+
+        /**
+         * 清除所有默认请求头
+         */
+        clearDefaultHeaders() {
+            this.defaultHeaders = {};
+        }
+
+        /**
+         * 设置全局选项
+         */
+        setCommonOptions(options) {
+            if (options) {
+                if (options.timeout) {
+                    this.defaultTimeout = options.timeout;
+                }
+                if (options.headers) {
+                    this.setDefaultHeaders(options.headers);
+                }
+            }
+        }
+
+        /**
+         * 启用/禁用调试模式
+         */
+        enableDebug(enable) {
+            this.debug = !!enable;
+            this.log('ℹ️', '调试模式已' + (this.debug ? '开启' : '关闭'));
+        }
+
+        /**
+         * 测试网络连接
+         */
+        testConnection() {
+            const self = this;
+            self.log('🔍', '开始测试网络连接...');
+            
+            return new Promise((resolve, reject) => {
+                const http = new Laya.HttpRequest();
+                let isCompleted = false;
+
+                const timer = setTimeout(() => {
+                    if (!isCompleted) {
+                        isCompleted = true;
+                        self.log('❌', '连接测试超时');
+                        reject({ success: false, error: 'timeout' });
+                    }
+                }, 5000);
+
+                http.once(Laya.Event.COMPLETE, self, () => {
+                    if (!isCompleted) {
+                        isCompleted = true;
+                        clearTimeout(timer);
+                        const time = Date.now();
+                        self.log('✅', '网络连接正常');
+                        self.log('📊', '测试地址:https://www.baidu.com');
+                        self.log('⏱️', '响应时间:' + time + 'ms');
+                        resolve({ success: true, time: time });
+                    }
+                });
+
+                http.once(Laya.Event.ERROR, self, (error) => {
+                    if (!isCompleted) {
+                        isCompleted = true;
+                        clearTimeout(timer);
+                        const status = http.http ? http.http.status : 0;
+                        self.log('❌', '网络连接失败');
+                        self.log('🔢', '状态码:', status);
+                        reject({ success: false, error: 'network_error', status: status });
+                    }
+                });
+
+                http.send('https://www.baidu.com', null, 'get', 'text', null);
+                self.log('📡', '正在 ping https://www.baidu.com ...');
+            });
+        }
+    }
+
+    // 创建单例实例
+    const httpClient = new HttpClient();
+
+    // 导出 API
+    global.LayaHttpClient = {
+        request: function(config) {
+            return httpClient.request(config);
+        },
+        get: function(url, params, config) {
+            return httpClient.get(url, params, config);
+        },
+        post: function(url, data, config) {
+            return httpClient.post(url, data, config);
+        },
+        put: function(url, data, config) {
+            return httpClient.put(url, data, config);
+        },
+        delete: function(url, params, config) {
+            return httpClient.delete(url, params, config);
+        },
+        setDefaultHeaders: function(headers) {
+            httpClient.setDefaultHeaders(headers);
+        },
+        getInstance: function() {
+            return httpClient;
+        },
+        setCommonOptions: function(options) {
+            httpClient.setCommonOptions(options);
+        },
+        enableDebug: function(enable) {
+            httpClient.enableDebug(enable);
+        },
+        testConnection: function() {
+            return httpClient.testConnection();
+        }
+    };
+
+    // 导出简写版本
+    global.lajax = function(config) {
+        return httpClient.request(config);
+    };
+
+    lajax.get = httpClient.get.bind(httpClient);
+    lajax.post = httpClient.post.bind(httpClient);
+    lajax.put = httpClient.put.bind(httpClient);
+    lajax.delete = httpClient.delete.bind(httpClient);
+    lajax.setCommonOptions = httpClient.setCommonOptions.bind(httpClient);
+    lajax.enableDebug = httpClient.enableDebug.bind(httpClient);
+    lajax.testConnection = httpClient.testConnection.bind(httpClient);
+
+})(window);

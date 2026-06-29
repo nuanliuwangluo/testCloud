@@ -1,0 +1,69 @@
+class LoginBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/LoginBtn',
+        })
+        this.btn_apple.addComponent(S_login_apple)
+        this.btn_wx.addComponent(S_login_wx)
+        this.btn_account.addComponent(S_login_account)
+        this.btn_xieyi.addComponent(S_login_xieyi)
+        this.btn_yinsi.addComponent(S_login_yinsi)
+        this.btn_select.addComponent(S_login_select)
+        this.btn_select.select = function () {
+            return this.skin == 'common/bt_g2.png'
+        }
+    }
+    onEnable() {
+
+    }
+}
+class S_login_apple extends Laya.Script {
+    onClick(e) {
+        if (!this.owner.parent.btn_select.select()) {
+            return __tips('请同意勾选：阅读并同意用户协议和隐私政策')
+        }
+        miniApi.app_login_apple()
+    }
+}
+class S_login_wx extends Laya.Script {
+    onClick(e) {
+        if (!this.owner.parent.btn_select.select()) {
+            return __tips('请同意勾选：阅读并同意用户协议和隐私政策')
+        }
+        miniApi.app_login_wx()
+    }
+}
+class S_login_account extends Laya.Script {
+    onClick(e) {
+        if (!this.owner.parent.btn_select.select()) {
+            return __tips('请同意须知')
+        }
+        game.scene.add(AppLoginAccount)
+    }
+}
+class S_login_xieyi extends Laya.Script {
+    onClick(e) {
+        let txt = [{
+            "url": `${config.urlHead}rule/yhxy.txt` + __version.res,
+            "type": Laya.Loader.TEXT
+        }]
+        __tool.load(txt, function () {
+            // game.scene.remove(LoadingSmall);
+            game.scene.add(GameMainSet1)
+        }, function (v) {
+        })
+    }
+}
+class S_login_yinsi extends Laya.Script {
+    onClick(e) {
+        let txt = [{
+            "url": `${config.urlHead}rule/yszc.txt` + __version.res,
+            "type": Laya.Loader.TEXT
+        }]
+        __tool.load(txt, function () {
+            // game.scene.remove(LoadingSmall);
+            game.scene.add(GameMainSet2)
+        }, function (v) {
+        })
+    }
+}

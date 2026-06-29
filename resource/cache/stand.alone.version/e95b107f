@@ -1,0 +1,75 @@
+class AppLoginAccount extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/AppLoginAccount',
+            layer: "panel1"
+        })
+        this.btn_login.addComponent(S_loginAccount_login)
+        this.btn_registe.addComponent(S_loginAccount_registe)
+    }
+    onEnable() {
+        this.txt_account.text = ''
+        this.txt_password.text = ''
+    }
+    clickMask() { }
+}
+class S_loginAccount_login extends Laya.Script {
+    async onClick(e) {
+        let account = this.owner.parent.txt_account.text
+        if (!account) {
+            __tips('请输入账号')
+            return
+        }
+        let password = this.owner.parent.txt_password.text
+        if (!password) {
+            __tips('请输入密码')
+            return
+        }
+        function isAlphaNumeric(str) {
+            // 正则表达式，^ 和 $ 分别表示字符串的开头和结尾，确保整个字符串都符合要求
+            // [a-zA-Z0-9] 匹配字母（大小写）和数字
+            return /^[a-zA-Z0-9]*$/.test(str);
+        }
+        if (!isAlphaNumeric(password)) {
+            __tips('密码包含特殊字符')
+            return
+        }
+        if (account != '12345678901' && account != '12345678902') {
+            __tips('账号不对')
+            return
+        }
+        window.AppLogin && AppLogin.save(account, account, '', '', '', 1)
+        if(window.APP_PACKAGE && window.APP_PACKAGE == window.ORIGIN_APP) OriginAppLogin.save(account, account, '', '', '', 1)
+
+        let a = await miniApi.reqIp('password', account, password)
+        let errcode = __tool.gdp(a, 'data.errcode')
+        let error = __tool.gdp(a, 'data.error')
+        if (errcode) {
+            game.reqIpR = errcode
+            if (errcode == 1) {
+
+            }
+            else if (errcode == 2) {
+
+            }
+            else if (errcode == 3) {
+
+            }
+            else if (errcode == 4) {
+                __tips(error)
+            }
+        } else {
+            __data.openid = account;
+            miniApi.setItem('appLoginId', account)
+            miniApi.setItem('appLoginPassword', password)
+            miniApi.setItem('loginType', 'password')
+            game.scene.remove(AppLoginAccount)
+            app_test_show_realName()
+        }
+    }
+}
+class S_loginAccount_registe extends Laya.Script {
+    async onClick(e) {
+        __tips('注册服务已暂停，请使用其他登录方式')
+    }
+}

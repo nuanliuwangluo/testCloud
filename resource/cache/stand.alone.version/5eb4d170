@@ -1,0 +1,263 @@
+class Icon_marketActivity extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Icon_marketActivity',
+        })
+        this.panel_icon.vScrollBarSkin = '';
+        this.btn_firstPay.addComponent(S_icon_marketActivity_firstPay)
+        this.btn_todayDiscount.addComponent(S_icon_marketActivity_todayDiscount)
+        this.btn_stepstepGift.addComponent(S_icon_marketActivity_stepstepGift)
+        this.btn_goldBox.addComponent(S_icon_marketActivity_goldBox)
+        this.btn_surpriseCrit.addComponent(S_icon_marketActivity_surpriseCrit)
+        this.btn_inviteRed.addComponent(S_icon_marketActivity_inviteRed)
+        this.btn_inviteRed.getChildByName('img_icon').getChildByName('nw').addComponent(S_IconNextWeek);
+    }
+    onAwake() {
+        this.iconArray = [
+            this.btn_firstPay,
+            this.btn_todayDiscount,
+            this.btn_stepstepGift,
+            this.btn_goldBox,
+            this.btn_surpriseCrit,
+            this.btn_inviteRed,
+        ]
+    }
+    onEnable() {
+        this.img_line.visible = false;
+        game.cb.on('icon_marketActivity_sort', this, this.onSort)
+        game.cb.on('marketActivity_panel_close', this, this.marketActivity_panel_close)
+        this.onSort()
+
+        let p = this.parent;
+        this.img_arrow.visible = this.parent == game.scene.layer['tips'].c;
+    }
+    onDisable() {
+        game.cb.off('icon_marketActivity_sort', this, this.onSort)
+        game.cb.off('marketActivity_panel_close', this, this.marketActivity_panel_close)
+    }
+    onSort() {
+        let h = 0
+        this.iconArray.forEach(e => {
+            if (e.visible) {
+                e.y = h;
+                h = e.y + e.height;
+            }
+        });
+        this.sp_container.height = h;
+        this.panel_icon.refresh()
+    }
+    isBtnInView(btn) {
+        let scrollY = this.panel_icon.vScrollBar.value;
+        let panelH = this.panel_icon.height;
+        let btnY = btn.y;
+        let btnH = btn.height;
+        let topVisible = btnY >= scrollY;
+        let bottomVisible = btnY + btnH <= scrollY + panelH;
+        return topVisible && bottomVisible;
+    }
+    selectBtn(btnName) {
+        let btn = this['btn_' + btnName];
+        btn.addChildAt(this.img_arrow, 0)
+        this.img_arrow.x = -17;
+        this.img_arrow.y = -7;
+        if (!this.isBtnInView(btn)) {
+            this.panel_icon.scrollTo(0, btn.y - btn.height + this.panel_icon.height);
+        }
+    }
+    marketActivity_panel_close() {
+        if (__showScene.sceneType == 'hall') {
+            this.img_line.visible = false
+            game.scene.layer['bottom'].c.addChild(this)
+        } else {
+            game.scene.remove(this)
+        }
+    }
+}
+let closeOtherMarketActivityPanel = () => {
+    game.utils.remove(game.scene.get(GameMainFirstPay))
+    game.utils.remove(game.scene.get(Panel_marketActivity_surpriseCrit))
+    game.utils.remove(game.scene.get(Panel_marketActivity_goldBox))
+    game.utils.remove(game.scene.get(Panel_marketActivity_stepstepGift))
+    game.utils.remove(game.scene.get(Panel_marketActivity_todayDiscount))
+    game.utils.remove(game.scene.get(Panel_marketActivity_inviteRed))
+}
+let showActivityPanel = async (name) => {
+    await __tool.await(200)
+    let iconModule = game.scene.get(Icon_marketActivity)
+    if (iconModule && iconModule.parent) {
+        game.scene.layer['tips'].c.addChild(iconModule)
+        iconModule.img_line.visible = true;
+        iconModule.selectBtn(name);
+    } else {
+        game.scene.add(Icon_marketActivity)
+        game.scene.layer['tips'].c.addChild(iconModule)
+        iconModule.img_line.visible = true;
+        iconModule.selectBtn(name);
+    }
+}
+class S_click_marketActivity_panel_closeBtn extends Laya.Script {
+    onClick(e) {
+        game.cb.event('marketActivity_panel_close')
+    }
+}
+class S_icon_marketActivity_firstPay extends Laya.Script {
+    onClick(e) {
+        closeOtherMarketActivityPanel()
+        __showScene.show_gameMain_firstPay()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '首充豪礼图标' })
+    }
+    onEnable() {
+        __data.firstPay.send(1)
+        this.update_red();
+        game.cb.on('update_firstPay_data', this, this.update_red)
+    }
+    onDisable() {
+        game.cb.off('update_firstPay_data', this, this.update_red)
+    }
+    update_red() {
+        // 是否显示 - 首充豪礼 按钮
+        if (!__data.firstPay.isHaveData) {
+            this.owner.visible = false;
+        }
+        else if (
+            __data.firstPay.isHasBuy
+            // || miniApi.isIOS
+        ) {
+            this.owner.visible = false;
+        } else {
+            this.owner.visible = true;
+        }
+        game.cb.event('icon_marketActivity_sort')
+    }
+}
+class S_icon_marketActivity_todayDiscount extends Laya.Script {
+    onEnable() {
+        // this.update_time();
+        // Laya.timer.loop(1000, this, this.update_time)
+    }
+    onDisable() {
+        // Laya.timer.clearAll(this)
+    }
+    update_time() {
+        // let now = new Date();
+        // let end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        // let diff = Math.floor((end.getTime() - now.getTime()) / 1000);
+        // this.owner.getChildByName('img_icon').getChildByName('txt_time').text = game.utils.numberToTime(diff);
+    }
+    onClick(e) {
+        closeOtherMarketActivityPanel()
+        __showScene.show_panel_todayDiscount()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '今日特惠图标' })
+    }
+}
+class S_icon_marketActivity_stepstepGift extends Laya.Script {
+    onEnable() {
+        game.cb.on('update_red_icon', this, this.redDot);
+        this.redDot();
+    }
+
+    onDisable() {
+        game.cb.off('update_red_icon', this, this.redDot);
+    }
+
+    redDot() {
+        this.owner.getChildByName('img_icon').getChildByName('img_red').visible = !__data.activity.stepstepGift.isEnd;
+    }
+
+    onClick(e) {
+        closeOtherMarketActivityPanel()
+        __showScene.show_panel_stepstepGift()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '步步高升图标' })
+    }
+}
+class S_icon_marketActivity_goldBox extends Laya.Script {
+    onEnable() {
+        game.cb.on('update_red_icon', this, this.redDot);
+        this.redDot();
+    }
+
+    onDisable() {
+        game.cb.off('update_red_icon', this, this.redDot);
+    }
+
+    redDot() {
+        this.owner.getChildByName('img_icon').getChildByName('img_red').visible = __data.activity.goldBox.isOpen;
+    }
+
+    onClick(e) {
+        closeOtherMarketActivityPanel()
+        __showScene.show_panel_goldBox()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '黄金宝箱图标' })
+    }
+}
+class S_icon_marketActivity_inviteRed extends Laya.Script {
+    onEnable() {
+        this.owner.visible = __data.redPacket.canShowInviteRedIcon()
+        game.cb.event('icon_marketActivity_sort')
+        game.cb.on('update_red_icon', this, this.redDot);
+        this.redDot();
+    }
+
+    onDisable() {
+        game.cb.off('update_red_icon', this, this.redDot);
+    }
+
+    redDot() {
+        let img_red = this.owner.getChildByName('img_icon').getChildByName('img_red');
+        img_red.visible = __data.activity.inviteRed.isOpen;
+    }
+    onClick(e) {
+        closeOtherMarketActivityPanel()
+        __showScene.show_panel_inviteRed()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '点击瓜分礼金图标' })
+    }
+}
+class S_icon_marketActivity_surpriseCrit extends Laya.Script {
+    onAwake() {
+    }
+    onEnable() {
+        this.owner.visible = false;
+        game.cb.event('icon_marketActivity_sort')
+        // 3.1.20版本暂时关闭惊喜暴击功能
+        // this.lastVisible = false;
+        // this.update_time();
+        // Laya.timer.loop(1000, this, this.update_time)
+    }
+    // 3.1.20版本暂时关闭惊喜暴击功能
+    // onDisable() {
+    //     Laya.timer.clearAll(this)
+    // }
+    // update_time() {
+    //     let now = new Date();
+    //     let end = Panel_marketActivity_surpriseCrit.time || new Date(Date.now() - 1000)
+    //     let diff = Math.round((end.getTime() - now.getTime()) / 1000);
+    //     this.owner.getChildByName('img_icon').getChildByName('txt_time').text = game.utils.numberToTime(diff, 2);
+    //     if (now >= end) {
+    //         this.owner.visible = false;
+    //     } else {
+    //         this.owner.visible = true;
+    //     }
+    //     if (this.lastVisible != this.owner.visible) {
+    //         this.lastVisible = this.owner.visible;
+    //         game.cb.event('icon_marketActivity_sort')
+    //     }
+    // }
+    // onClick(e) {
+    //     closeOtherMarketActivityPanel()
+    //     __showScene.show_panel_surpriseCrit()
+    //     miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '惊喜暴击图标' })
+    // }
+}
+
+class S_IconNextWeek extends Laya.Script {
+    onEnable() {
+        effectUtils.breathe(this.owner, 1, 1.1, 500)
+        let day = new Date().getDay(); // 0=周日 1=周一 ... 6=周六
+        let left = day === 0 ? 1 : 8 - day;
+        this.owner.getChildByName('txt_nextWeek').text = `剩${left}天`;
+    }
+
+    onDisable(){
+        effectUtils.stopBreathe(this.owner)
+    }
+}

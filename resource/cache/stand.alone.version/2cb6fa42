@@ -1,0 +1,28 @@
+class FriendRoom_record_main extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_record_main',
+            layer: 'panel'
+        })
+    }
+    async onEnable() {
+        await __tool.await(1)
+        game.cb.on('btn_group_index_' + this.btn_record.group_name, this, this.update)
+        this.btn_record.selectedIndex(0)
+    }
+    onDisable() {
+        game.cb.off('btn_group_index_' + this.btn_record.group_name, this, this.update)
+        ResUtils.clearTextureRes(['cdn.friendRoom_record'])
+        ResUtils.clearAtlas('res/atlas/cdn/friendRoom_record.atlas')
+    }
+    update(index) {
+        trace('记录tab index-' + index)
+        this.scene_battleResult.visible = index == 1;
+        this.scene_gameRecord.visible = index == 0;
+        if (index == 0) {
+
+        } else {
+
+        }
+    }
+}

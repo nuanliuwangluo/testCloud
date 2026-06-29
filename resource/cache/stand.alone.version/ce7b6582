@@ -1,0 +1,1000 @@
+let __socket_match_read = {
+
+    2501() {
+        try {
+            let result = this.readString(); // 胜利 失败
+            let state = this.readString(); // Mj_State
+            let cards = this.readString(); // Mj_Cards
+            let strategy = this.readString(); // 策略
+            let countyName = excelUtils.getUmEventName(__data.gameId.curId)
+            let typeName = __data.hashMatchModelTypeName[__data.deskData.roomVo.indexId] || '未知';
+            let uid = __data.uid.toString();
+            let gameMethod = excelUtils.getPlayIdName(__data.deskData.roomVo.modelId);
+            let coins = parseInt(__data.deskData.roomVo.smallResultData.myScore);
+            let winNumber = Math.max(0, window.keepWinNumber); // 
+            let deskData = __data.getMatchDataById(__data.prev_match_modelId, __data.gameId.curId, __data.prev_match_lv);
+            let deskCost = deskData ? deskData.cost : 0;
+            let truthRate = Math.round(__data.deskData.roomVo.smallResultData.myScore / __data.deskData.roomVo.bottomScore);
+            let vip = __data.vip.isVip ? '是' : '否';
+            let victoryMethod = '未知';
+            let vms = ['接炮', '自摸', '摸宝', '漏宝', '射宝', '对宝', '大风', '红中', '天胡'];
+            let capping = '';
+            let surplus = __data.deskData.roomVo.smallResultData.surplus;
+            let isPochan = '否';
+            let specialCard = 0;
+            let time = Math.floor(Date.now() / 1000);
+            for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+                let player = __data.deskData.roomVo.smallResultData.playerArray[i];
+                let winner = player.winPosition.indexOf(player.position) != -1;
+                if (winner) {
+                    let explains = player.scoreInfo.split(' ');
+                    for (let j = 0; explains && j < explains.length; j++) {
+                        if (victoryMethod != '未知') continue;
+                        let explain = explains[j];
+                        for (let z = 0; z < vms.length; z++) {
+                            if (victoryMethod != '未知') continue;
+                            // 找到这个描述文字了
+                            if (explain.indexOf(vms[z]) != -1) {
+                                victoryMethod = vms[z];
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (player.id == __data.uid) {
+                    capping = player.isMaxMatch ? '是' : '否';
+                }
+                if (player.id == __data.uid) {
+                    isPochan = __data.gold < __data.d_match.showReliefConditionGold ? '是' : '否';
+                }
+                // 方正
+                if (player.id == __data.uid && (__data.gameId.curId == 8 || __data.gameId.curId == 10)) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isXi = group.startsWith('82');
+                        isXi && specialCard++;
+                    }
+                }
+                // 富锦
+                if (player.id == __data.uid && __data.gameId.curId == 13) {
+                    let hands = [].concat(player.handTileArray);
+                    let picks = __compUtils.pickup(hands, __data.deskData.roomVo.mixedArr);
+                    specialCard = picks.pickups ? picks.pickups.length : 0;
+                }
+                // 泰来
+                if (player.id == __data.uid && HallPlay.lastCityId == 111) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isXi = group.startsWith('82');
+                        isXi && specialCard++;
+                    }
+                }
+                // 汤原 经典黑龙江
+                if (player.id == __data.uid && (HallPlay.lastCityId == 21 || HallPlay.curRuleId == -1)) {
+                    for (let s = 0; s < player.tileGroupArray.length; s++) {
+                        let group = player.tileGroupArray[s];
+                        let isGang = group.startsWith('5');
+                        isGang && specialCard++;
+                    }
+                }
+            }
+
+            // 我赢了 需要Mj_VictoryMethod字段
+            if (__data.deskData.roomVo.smallResultData.myResult) {
+
+                // 赢家找到的 是未知
+                if (victoryMethod == '未知') {
+                    for (let i = 0; i < __data.deskData.roomVo.smallResultData.playerArray.length; i++) {
+                        let player = __data.deskData.roomVo.smallResultData.playerArray[i];
+                        let loser = player.winPosition.indexOf(player.position) == -1;
+                        if (loser) {
+                            let explains = player.scoreInfo.indexOf('炮');
+                            if (explains != -1) { // 输家的描述中找到了 炮字
+                                victoryMethod = '接炮';
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                miniApi.trackEvent('Mj_Gameanalysis', {
+                    'Mj_County': countyName,
+                    'Mj_GameType': typeName,
+                    'Mj_Time': time,
+                    'Mj_State': state,
+                    'Mj_Cards': cards,
+                    'Mj_Results': result,
+                    'Mj_UserID': uid,
+                    'Mj_Strategy': strategy,
+                    'Mj_GameMethod': gameMethod,
+                    'Mj_GoldCoins': coins,
+                    'Mj_Victories': winNumber,
+                    'Mj_Fee': parseInt(deskCost),
+                    'Mj_TrueMultiple': parseInt(truthRate),
+                    'Mj_VictoryMethod': victoryMethod,
+                    'Mj_VIP': vip,
+                    'Mj_Remainder': surplus,
+                    'Mj_Capping': capping,
+                    'Mj_Bankrupt': isPochan,
+                    'Mj_SpecialCard': specialCard
+                });
+            }
+            // 我输了   不要Mj_VictoryMethod 这个字段
+            else {
+                miniApi.trackEvent('Mj_Gameanalysis', {
+                    'Mj_County': countyName,
+                    'Mj_GameType': typeName,
+                    'Mj_Time': time,
+                    'Mj_State': state,
+                    'Mj_Cards': cards,
+                    'Mj_Results': result,
+                    'Mj_UserID': uid,
+                    'Mj_Strategy': strategy,
+                    'Mj_GameMethod': gameMethod,
+                    'Mj_GoldCoins': coins,
+                    'Mj_Victories': winNumber,
+                    'Mj_Fee': parseInt(deskCost),
+                    'Mj_TrueMultiple': parseInt(truthRate),
+                    'Mj_VIP': vip,
+                    'Mj_Remainder': surplus,
+                    'Mj_Capping': capping,
+                    'Mj_Bankrupt': isPochan,
+                    'Mj_SpecialCard': specialCard
+                });
+            }
+
+            __data.deskData.roomVo.smallResultData && (__data.deskData.roomVo.smallResultData.playerState = state);
+        } catch (e) {
+
+        }
+    },
+
+    3000() {
+        var code = this.readInt()
+        if (code > 0) {
+            var allGame = this.readInt()
+            var maxPlayerNum = this.readInt()
+            var curPlayerNum = this.readInt()
+            var play = this.readString()
+            var limit = this.readString()
+            var createModel = this.readInt() //1房主 2AA 3体验
+            var roomCardCost = this.readInt()
+            var num = this.readInt();
+            var lonlatArr = []
+            for (var i = 0; i < num; i++) {
+                var a = {}
+                a.id = this.readInt();
+                a.lon = this.readString()
+                a.lat = this.readString()
+                lonlatArr.push(a)
+            }
+
+
+            trace('maxPlayerNum', maxPlayerNum)
+            trace('curPlayerNum', curPlayerNum)
+            trace('play', play)
+            trace('limit', limit)
+            trace('createModel', createModel)
+            trace('roomCardCost', roomCardCost)
+
+            var playArr = play.split(",")
+
+
+            __data.deskData.roomVo.qyqID = this.readInt(); //亲友圈ID
+            __data.deskData.roomVo.tygID = this.readInt(); //体验馆ID
+            //目前为死值   麻将为 1    斗地主为2
+            __data.deskData.roomVo.alias = 1;
+            __data.deskData.roomVo.getEsp();
+
+            // int - 匹配模式ID
+            // int - 匹配模式类型 1 - 普通 2 - 精英 3 - 土豪
+            // int - 底分
+            // int - 封顶
+            // int - 桌费
+            // int - 入场金币下限
+            // int - 入场金币上限
+            // int - 奖杯倍率
+            let modelId = this.readInt();
+            let indexId = this.readInt();
+            let bottomScore = this.readInt();
+            this.readInt();
+            this.readInt();
+            this.readInt();
+            this.readInt();
+            let maxRate = this.readInt();
+            __data.deskData.roomVo.modelId = modelId;
+            __data.deskData.roomVo.indexId = indexId;
+            __data.deskData.roomVo.bottomScore = bottomScore;
+            __data.deskData.roomVo.maxRate = maxRate;
+
+            __data.prev_match_modelId = modelId;
+            __data.prev_match_lv = indexId;
+            HallPlay.curRuleId = modelId;
+
+            if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) {
+                __data.deskData.roomVo.roomID = code
+                __data.deskData.roomVo.roomPlayer = maxPlayerNum
+                __data.deskData.roomVo.currPlayer = curPlayerNum
+                __data.deskData.roomVo.allGame = allGame
+                __data.deskData.roomVo.roomPlay = play
+                __data.deskData.roomVo.limit = limit
+                __data.deskData.roomVo.roomModel = createModel
+                __data.deskData.roomVo.needCard = roomCardCost
+            } else {
+                __data.deskData.roomVo.bottomScore = DeskReplayUtils.getBottomScore(HallPlay.curRuleId, __data.deskData.roomVo.roomPlay);
+            }
+            trace('房间玩法信息：', __data.prev_match_modelId, __data.prev_match_lv, HallPlay.lastCityId);
+
+            let uniqueId = MahjongConfig.getUniqueId(HallPlay.lastCityId, HallPlay.curRuleId);
+            if (window['MahjongDesk' + uniqueId + '3D']) {
+                game.scene.get(window['MahjongDesk' + uniqueId + '3D']).sceneInit();
+            }
+        }
+    },
+    // 加入房间
+    async 3002() {
+        // int -1 已经有房间 -2没有该房间 -3房卡不足 -4房间已满 -5 不满足进房规则 0 成功
+        var code = this.readInt()
+        __showScene.removeWait();
+        trace('3002:', code)
+        if (code < 0) {
+            MahjongRoomUpdateUtils.update();
+            if (code == -1) {
+                __tips('已经有房间')
+            } else if (code == -2) {
+                __tips('没有该房间')
+            } else if (code == -3) {
+                __tips("房卡不足")
+            } else if (code == -4) {
+                __tips('房间已满')
+            } else if (code == -5) {
+
+            }
+        } else {
+            if (code == 0) {
+                MahjongSmallResult.extraData = null;
+                await __showScene.load_game_mahjong();
+                __data.friendRoom.red.hashUidRed_room = {};
+                // __showScene.show_game_mahjong(true);
+                // if(__data.deskData.roomVo.roomModel == __data.deskData.roomVo.FRIEND)game.server.send(14016);
+                game.server.send(3323);
+                game.cb.dispatchEvent(__eh + "update_room_info")
+            }
+        }
+    },
+    // 比赛报名
+    3301() {
+        // 处理回馈(byte 1-成功 0-失败)
+        let matchId = this.int
+        let code = this.byte;
+        game.server.send(3316)
+    },
+    // 比赛退赛
+    3302() {
+        // 处理回馈(byte 1-成功 0-失败)
+        let matchId = this.int
+        let code = this.byte;
+        game.server.send(3316)
+    },
+    // 匹配
+    3303() {
+        // 游戏模式ID(int)
+        // 匹配等级ID(int 如果是快速开始 这里返回的是快速开始为玩家选择的匹配模式的ID， 如果匹配失败则是返回请求的参数中匹配等级ID的值)
+        // 匹配结果(byte 1 - 匹配开始 0 - 匹配失败， 无法进行任何匹配 比如金币不足等原因)
+        let status = this.int;
+        if (status != 0) {// 禁止匹配
+            let errStr = this.string;
+            __showScene.show_prompt_select(errStr);
+            return;
+        }
+        let ruleId = this.int; // 玩法id
+        let index = this.int; // lv
+        let cityId = this.int; // cityId
+        let code = this.int; // code
+
+        trace("3303：", ruleId, index, code, cityId);
+        // let matchVO = game.utils.arrayWhere(__data.gameMainQuickMatchDatas[cityId].match, {
+        //     matchLv: lv
+        // })
+        let type, score, bottomScore = __data.getMatchDataById(ruleId, cityId, index) ? __data.getMatchDataById(ruleId, cityId, index).bottomScore : 0;
+        try {
+            type = __data.hashMatchModelTypeName[index] || '';
+            score = bottomScore;
+        } catch (e) {
+            trace(e);
+        }
+
+        if (code == 1) {
+            __data.playNumbers++;
+            if (__data.gameId.isMahjong(cityId)) {
+                __data.deskData.roomVo.matchName = type;
+                __data.deskData.roomVo.bottomScore = bottomScore;
+                __data.deskData.roomVo.modelId = ruleId;
+                __data.deskData.roomVo.indexId = index;
+                __showScene.show_game_mahjong();
+                game.scene.add(GameMahjongMatch, [type, score]);
+                game.cb.event('update_roomId');
+            }
+            // __tips(__lang.match_success)
+        } else if (code == 0) {
+            // __tips(__lang.match_fail)
+            __showScene.show_hall();
+        }
+    },
+    // 匹配
+    14002() {
+        // 游戏模式ID(int)
+        // 匹配等级ID(int 如果是快速开始 这里返回的是快速开始为玩家选择的匹配模式的ID， 如果匹配失败则是返回请求的参数中匹配等级ID的值)
+        // 匹配结果(byte 1 - 匹配开始 0 - 匹配失败， 无法进行任何匹配 比如金币不足等原因)
+        let status = this.int;
+        if (status != 0) {// 禁止匹配
+            let errStr = this.string;
+            __showScene.show_prompt_select(errStr);
+            return;
+        }
+        let ruleId = this.int; // 玩法id
+        let index = this.int; // lv
+        let cityId = this.int; // cityId
+        let code = this.int; // code
+
+        trace("3303：", ruleId, index, code, cityId);
+        // let matchVO = game.utils.arrayWhere(__data.gameMainQuickMatchDatas[cityId].match, {
+        //     matchLv: lv
+        // })
+        let type, score, bottomScore = __data.getMatchDataById(ruleId, cityId, index) ? __data.getMatchDataById(ruleId, cityId, index).bottomScore : 0;
+        try {
+            type = __data.hashMatchModelTypeName[index] || '';
+            score = bottomScore;
+        } catch (e) {
+            trace(e);
+        }
+
+        if (code == 1) {
+            __data.playNumbers++;
+            if (__data.gameId.isMahjong(cityId)) {
+                __data.deskData.roomVo.matchName = type;
+                __data.deskData.roomVo.bottomScore = bottomScore;
+                __data.deskData.roomVo.modelId = ruleId;
+                __data.deskData.roomVo.indexId = index;
+                __showScene.show_game_mahjong();
+                game.scene.add(GameMahjongMatch, [type, score]);
+                game.cb.event('update_roomId');
+            }
+            // __tips(__lang.match_success)
+        } else if (code == 0) {
+            // __tips(__lang.match_fail)
+            __showScene.show_hall();
+        }
+    },
+    // 查询当前积分情况
+    3306() {
+        game.cb.event('update_gameMain_lv_info')
+    },
+    // 各个游戏排行榜
+    3311() {
+        // 1 个人榜；2 城市榜；城市榜干掉了 
+        let rankType = this.int;
+        let pageNum = this.int;
+        if (pageNum == 1) {
+            __data[`rank_list${rankType}`] = __data[`rank_list${rankType}`] || {};
+        }
+        let length = this.int;
+        let rankData = __data[`rank_list${rankType}`]
+        rankData[pageNum] = rankData[pageNum] || [];
+        for (let index = 0, length2 = length; index < length2; index++) {
+            rankData[pageNum][index] = rankData[pageNum][index] || {};
+            rankData[pageNum][index].rank = this.int;
+            rankData[pageNum][index].name = this.string + (rankType == 2 ? '麻将' : '');
+            rankData[pageNum][index].head = this.string;
+            rankData[pageNum][index].score = this.int;
+            rankData[pageNum][index].city = this.string + '麻将';
+            rankData[pageNum][index].uid = this.int;
+            rankData[pageNum][index].headFrameId = this.int;
+
+            rankData[pageNum][index].name = decodeURIComponent(rankData[pageNum][index].name)
+            if (rankData[pageNum][index].head && rankData[pageNum][index].head.includes('default')) {
+                rankData[pageNum][index].head = __data.defaultHead
+            } else if (rankData[pageNum][index].head) { rankData[pageNum][index].head += `?v=${rankData[pageNum][index].rank}` } else rankData[pageNum][index].head = __data.defaultHead;
+            if (rankType == 1) {
+                rankData[pageNum][index].cityId = excelUtils.getCityIdByMjName_mj(rankData[pageNum][index].city)
+            } else if (rankType == 2) {
+                rankData[pageNum][index].cityId = rankData[pageNum][index].uid
+                rankData[pageNum][index].city = rankData[pageNum][index].name;
+            }
+        };
+        // console.log(rankData);
+        rankData['my'] = rankData['my'] || {}
+        rankData['my'].rank = this.int;
+        rankData['my'].name = this.string;
+        rankData['my'].head = this.string;
+        rankData['my'].score = this.int;
+        rankData['my'].city = this.string + '麻将';
+        rankData['my'].uid = this.int;
+        rankData['my'].headFrameId = this.int;
+        if (rankData['my'].rank == 0) rankData['my'].rank = -1;
+        rankData['my'].name = decodeURIComponent(rankData['my'].name)
+
+        if (rankType == 2) {
+            rankData['my'].name += '麻将'
+            rankData['my'].cityId = rankData['my'].uid
+            rankData['my'].city = rankData['my'].name;
+        }
+
+        if (rankData['my'].head) { rankData['my'].head += `?v=${rankData['my'].rank}` } else rankData['my'].head = __data.defaultHead;
+        game.cb.event('update_rank_by_type')
+
+        if (rankType == 1) {
+            // 'cdn/headFrame/img_txk_mr.png'
+            let rd = RankUtils.getRankLvDataByScore(rankData['my'].score)
+            if (rd && window.wx) {
+                let headFrameSkin = PropIcon.icon[rankData['my'].headFrameId || 301].skin
+                headFrameSkin = headFrameSkin.replace('cdn/headFrame/', '')
+                headFrameSkin = headFrameSkin.replace('.png', '')
+                let queshenScore = 0
+                if (rd.toNextLevelNeedCup == 0) {
+                    queshenScore = rankData['my'].score - rd.minCup
+                }
+                let uid;
+                try {
+                    uid = __data.rank_list1[1][0].uid
+                } catch (error) {
+                }
+                wx.getOpenDataContext().postMessage({ 'type': 'setUidRank1', "uid": uid })
+                wx.getOpenDataContext().postMessage({ 'type': 'setUid', "uid": __data.uid })
+                wx.getOpenDataContext().postMessage({
+                    'type': 'setSelfData',
+                    data: {
+                        uid: __data.uid,
+                        headFrameName: headFrameSkin,
+                        score: rankData['my'].score,
+                        queshenScore,
+                        lv: rd.level,
+                        lvName: rd.name,
+                        lvBgName: `img_dwx${rd.iconIndex}`,
+                        toNextLevelNeedCup: rd.toNextLevelNeedCup,
+                        city: rankData['my'].city,
+                    }
+                })
+            }
+            if (pageNum == 1) {
+                game.cb.event('update_rank_whole_country_page_1')
+            }
+        }
+    },
+    // 查询赛季奖励
+    3312() {
+        let gameId = this.int;
+        let leng = this.int;
+        let d = __data.gameMainSeasonDatas[gameId] || [];
+        d.splice(0)
+        for (let index = 0, length = leng; index < length; index++) {
+            let vo = {
+                lv: this.int,
+                // (int 1-金币 2-钻石)
+                rewardType: this.int,
+                rewardNum: this.int,
+                // (byte 1-已领取 0-未领取)
+                rewardStatus: this.byte
+            }
+            d.push(vo)
+        };
+        __data.gameMainSeasonDatas[gameId] = d;
+        game.cb.event('update_gameMain_seasonRewardList')
+    },
+    // 领取赛季奖励
+    3313() {
+        let gameId = this.int;
+        let lv = this.int;
+        let code = this.byte;
+        if (code == 1) {
+            __tips(__lang.receive_success);
+            game.cb.event('receive_gameMain_seasonReward_success', [lv])
+        } else {
+            __tips(__lang.receive_fail);
+        }
+    },
+    // 查询比赛报名
+    3316() {
+        let l = this.int;
+        __data.iJoinMatchIds.splice(0)
+        for (let index = 0, length = l; index < length; index++) {
+            let type = this.int;
+            let matchId = this.int;
+            __data.iJoinMatchIds.push({
+                type,
+                matchId
+            })
+        };
+        trace('报名比赛的ids ' + JSON.stringify(__data.iJoinMatchIds))
+        game.cb.event('update_iJoinMatchIds')
+    },
+    // 匹配消息
+    async 3320() {
+        let ruleId = this.int;
+        let cityId = this.int;
+        let roomId = this.int;
+        game.server.send(2224); // 背包
+        // 麻将
+        if (__data.gameId.isMahjong(cityId)) {
+            await __showScene.load_game_mahjong();
+            __showScene.show_game_mahjong(true);
+        }
+        trace('加入房间：', roomId, cityId);
+        __reBack_info.in(cityId, roomId);
+        __data.matchCount++;
+        game.cb.event('hall_play_show_hand')
+    },
+
+    // 离开房间
+    3321() {
+        let gameId = this.int; // 游戏id
+        let code = this.byte; // 操作成功失败
+        trace('离开房间：', gameId, code);
+        if (__reBack_info.backMain) {
+            __reBack_info.backMain = false;
+            __showScene.show_hall();
+        }
+    },
+    // 换桌
+    3322() { },
+
+    //游戏id    模式id
+    3323() {
+        // 游戏模式ID(int)
+        // 匹配等级ID(int 如果是快速开始 这里返回的是快速开始为玩家选择的匹配模式的ID， 如果匹配失败则是返回请求的参数中匹配等级ID的值)
+        // 匹配结果(byte 1 - 匹配开始 0 - 匹配失败， 无法进行任何匹配 比如金币不足等原因)
+        let gameId = this.int;
+        let modelId = this.int;
+        let matchId = this.int;
+        trace("3323：", modelId, matchId, gameId);
+        // let matchVO = game.utils.arrayWhere(__data.gameMainQuickMatchDatas[gameId].match, {
+        //     matchLv: lv
+        // })
+        let matchVO = __data.gameMainQuickMatchDatas[gameId].match[matchId]
+        if (!matchVO) return;
+        trace(matchVO.matchName);
+        trace(matchVO.bottomScore);
+
+        __data.deskData.roomVo.matchName = matchVO.matchName;
+        __data.deskData.roomVo.bottomScore = matchVO.bottomScore;
+        game.cb.event('update_roomId');
+    },
+    // #创建好友房
+    async 14005() {
+        let status = this.int;
+        if (status != 0) {
+            let errStr = this.string;
+            __showScene.show_prompt_select(errStr);
+            return;
+        }
+        // 成功 1/失败 0
+        let code = this.int;
+        trace('创建房间：', code);
+    },
+    // #加入好友房
+    async 14006() {
+        let status = this.int;
+        if (status != 0) {
+            let errStr = this.string;
+            __showScene.show_prompt_select(errStr);
+            return;
+        }
+        //  int 进入人ID，int 座位
+        // - 如果加入失败 请求者会收到消息 进入人ID为负，-1 代表房间已满，-2 代表未找到房间可能密码错误
+        // - 如果加入成功 所有房间中包括请求者都会收到14006消息 需要根据id判断加入人是否是自己
+        // - 如果成功
+        let id = this.int;
+        if (id < 0) {
+            trace('加入房间：', id);
+            if (__data.autoInRoom) { __data.autoInRoom = false; __showScene.show_hall(); }
+            if (id == -1) { __tips('房间已满'); return; }
+            else if (id == -2) { __tips('房间不存在'); return }
+        }
+        game.server.send(16022);
+        let position = this.int;
+        // 自己加入房间先进入界面
+        if (id != __data.uid) {
+            trace('他人进入房间.', id);
+            game.server.send(14003, id);
+            game.server.send(2005, id);
+            var vo = __data.deskData.roomVo.getPlayer(id) || new __data.deskData.PlayerVo();
+            __data.deskData.roomVo.clearByVo(vo);
+            vo.id = id;
+            vo.position = position;
+            __data.deskData.roomVo.addPlayer(vo)
+            __data.deskData.roomVo.calcuPlayerSeat();
+            game.cb.dispatchEvent(__eh + "player_join_room")
+            game.cb.dispatchEvent(__eh + 'recheck_distance')
+            game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+            MahjongRoomUpdateUtils.update();
+        } else {
+            trace('自己进入房间.', id);
+            MahjongRoomUpdateUtils.status = false;
+            await game.server.send(14016);
+            PrayStatistics.instance.newRoom();
+        }
+        let pvo = __data.deskData.roomVo.getPlayer(id);
+        DeskRadio.push(pvo);
+    },
+    // #离开好友房
+    async 14007() {
+        // int 离开人ID
+        // - 如果离开失败 请求者会收到消息 离开人ID为负，-1 代表游戏已经开始无法离开
+        // - 如果离开成功 所有房间中包括请求者都会收到14007消息 需要根据id判断离开人是否是自己
+        let id = this.int;
+        if (id == -1) { return; }
+        var vo = __data.deskData.roomVo.getPlayer(id);
+        DeskRadio.remove(vo);
+        if (vo && vo.id == __data.uid) {
+            __data.othersVO[vo.id] = null;
+            await __showScene.show_hall()
+            __data.deskData.roomVo.clear();
+        } else if (vo) {
+            __data.othersVO[vo.id] = null;
+            __data.deskData.roomVo.clearByVo(vo);
+            __data.deskData.roomVo.calcuPlayerSeat();
+            game.cb.dispatchEvent(__eh + "update_user_info")
+        }
+
+        game.cb.dispatchEvent(__eh + 'recheck_distance')
+        game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+        game.cb.dispatchEvent(__eh + "player_join_room")
+    },
+    // #发起解散
+    14008() {
+        // int 发起人ID
+        // - 房间中包括请求者都会收到该消息
+        let id = this.int;
+        __data.deskData.roomVo.roomStatus = 1;
+        __data.deskData.roomVo.promoter = id;
+        //发起解散人的id
+        trace('解散发起人：', id)
+        var playerVO = __data.deskData.roomVo.getPlayer(id)
+        if (!playerVO) return;
+        playerVO.dis_status = 1;
+        DeskDissolveCheck.check();
+    },
+    // #解散投票
+    14009() {
+        // ##解散投票
+        // - 服务器发送 14009 int 投票人ID，int 投票人选择   int 同意 1/否决 0
+        // - 房间中包括请求者都会收到该消息
+        let id = this.int;
+        let state = this.int;
+
+        var playerVO = __data.deskData.roomVo.getPlayer(id)
+        if (!playerVO) return;
+        if (state == 0) {
+            if (id != __data.uid) __showScene.show_prompt_single('玩家【' + playerVO.name + '】拒绝解散房间');
+            DeskDissolveCheck.close();
+        } else {
+            playerVO.dis_status = state;
+            DeskDissolveCheck.check();
+        }
+    },
+    // #踢人
+    async 14010() {
+        // int 被踢的人ID，int 踢人的人ID
+        // - 如果踢人失败 请求者会收到消息 被踢的人ID为负，-1 要踢的人不存在，-2 代表无权踢人，-3 代表不能踢自己
+        // - 如果踢人成功 所有房间中包括请求者都会收到14010消息 需要根据id判断被踢的人是否是自己 需要根据id判断踢人的人是否是自己
+        let out_id = this.int;
+        let opt_id = this.int;
+        if (out_id < 0) {
+            if (out_id == -1) { __tips('用户不存在'); }
+            else if (out_id == -2) { __tips('权限不足'); }
+            else if (out_id == -3) { __tips('不能踢出自己'); }
+            return
+        }
+        var vo = __data.deskData.roomVo.getPlayer(out_id);
+        DeskRadio.remove(vo);
+        if (vo && vo.id == __data.uid) {
+            __data.deskData.roomVo.isOut = true;
+            __data.othersVO[vo.id] = null;
+            // __data.deskData.roomVo.clearByVo(vo);
+            // __data.deskData.roomVo.calcuPlayerSeat();
+            // game.cb.dispatchEvent(__eh + "update_user_info")
+            await __showScene.show_hall()
+            __data.deskData.roomVo.clear();
+            __showScene.show_prompt_single("您已被踢出房间");
+        } else if (vo) {
+            __data.othersVO[vo.id] = null;
+            __data.deskData.roomVo.clearByVo(vo);
+            __data.deskData.roomVo.calcuPlayerSeat();
+            game.cb.dispatchEvent(__eh + "update_user_info")
+        }
+
+        game.cb.dispatchEvent(__eh + 'recheck_distance')
+        game.cb.dispatchEvent(__eh + 'update_limit_kick_time')
+        game.cb.dispatchEvent(__eh + "player_join_room")
+    },
+    // #准备
+    14011() {
+        // int 准备的人ID
+        // - 如果准备失败 请求者会收到消息 准备的人ID为负，-1 游戏已经开始，-2 准备中
+        // - 如果准备成功 所有房间中包括请求者都会收到14011消息 需要根据id判断准备的人是否是自己
+        let id = this.int;
+        //处理准备
+        var vo = __data.deskData.roomVo.getPlayer(id)
+        if (vo) vo.readyState = 1
+        game.cb.dispatchEvent(__eh + "update_player_ready")
+    },
+    // #取消准备
+    14012() {
+        // int 取消准备的人ID
+        // - 如果取消准备失败 请求者会收到消息 取消准备的人ID为负，-1 游戏已经开始，-2 未准备
+        // - 如果取消准备成功 所有房间中包括请求者都会收到14012消息 需要根据id判断取消准备的人是否是自己
+        let id = this.int;
+        //处理准备
+        var vo = __data.deskData.roomVo.getPlayer(id)
+        if (vo) vo.readyState = 0
+        game.cb.dispatchEvent(__eh + "update_player_ready")
+    },
+    async 14015() {
+        __showScene.removeWait();
+        // var alias = this.readByte()
+        var state = this.readByte()
+        trace('code：' + state);
+        if (state != 1) {
+            __showScene.removeWait();
+            __tips('回放码错误');
+            return;
+        }
+        __data.deskData.roomVo.clear();
+        __data.deskData.roomVo.alias = 1;
+        __data.othersVO = [];
+        __data.deskData.roomVo.isRecordPlaying = true;
+
+        let playId = this.int; // - int 玩法id 创建房间时的参数
+        let cityId = this.int; // - int 地区id
+        HallPlay.lastCityId = cityId;
+        HallPlay.curRuleId = playId;
+        __data.deskData.roomVo.modelId = playId;
+        let __body = this.body; // 录像数据
+
+        __data.deskData.roomVo.curGame = this.int;
+        __data.deskData.roomVo.allGame = this.int;
+        __data.deskData.roomVo.roomPlay = this.string;
+        __data.deskData.roomVo.bottomScore = DeskReplayUtils.getBottomScore(playId, __data.deskData.roomVo.roomPlay);
+
+        __data.deskData.roomVo.roomModel = __data.deskData.roomVo.FRIEND;
+        // __data.deskData.roomVo.bottomScore = DeskReplayUtils.bottomScore;
+        await __showScene.load_game_resource_by_gameId();
+        let uniqueId = MahjongConfig.getUniqueId(HallPlay.lastCityId, HallPlay.curRuleId);
+        if (window[`mahjongReplay${uniqueId}`]) {
+            __showScene.wait();
+            __showScene.show_game_mahjong(false, false);
+            window[`mahjongReplay${uniqueId}`](__body.slice());
+            game.scene.add(DeskReplay);
+        } else {
+
+        }
+    },
+    // #获取所在好友房间信息
+    async 14016() {
+        // int 状态码 成功 1/没有房间 -1/房间不是好友房 -2
+        // - 如果成功则有后续数据
+        let state = this.int;
+        if (state == 1) {
+            let password = this.int; // - int 房间密码
+            let homeownerId = this.int; // - int 房主id
+            let playId = this.int; // - int 玩法id 创建房间时的参数
+            let cityId = this.int; //  - int 地区id
+            let plays = this.string; // - String 规则字符串 创建房间时的参数
+            let players = this.int; // - int 几人场
+            let allGame = this.int; // - int 总圈/局数
+            let roundType = this.int; // - int 1 圈 / 2 局
+            let curGame = this.int; // - int 当前局数
+            let time = this.int; // - int 开始倒计时（秒） -1代表没有倒计时
+            let roomId = this.int; // - int 正在对局的房间id -1代表处于准备状态
+            let status = this.int; // - int 房间状态 0 正常、1 解散投票中
+            let promoter = this.int; // 一个附加数据，如果是解散投票中，则代表发起人
+            let activityId = this.string;// 分享的活动id
+            let playerNumbers = this.int; // - int 房间中现有人数
+            trace('分享的活动id：', activityId);
+            HallPlay.lastCityId = cityId;
+            HallPlay.curRuleId = playId;
+
+            __data.deskData.roomVo.modelId = playId;
+
+            __data.deskData.roomVo.roomID = password;
+            __data.deskData.roomVo.roomModel = __data.deskData.roomVo.FRIEND;
+            __data.deskData.roomVo.roomOwner = homeownerId;
+            __data.deskData.roomVo.roomPlay = plays;
+            __data.deskData.roomVo.curGame = curGame;
+            __data.deskData.roomVo.allGame = allGame;
+            __data.deskData.roomVo.roomPlayer = players;
+            __data.deskData.roomVo.roomStatus = status;
+            __data.deskData.roomVo.promoter = promoter;
+            __data.deskData.roomVo.activityId = activityId;
+            game.server.send(2224)// 刷新一下背包
+
+            for (let i = 0; i < playerNumbers; i++) {
+                // - 数组房间中每个人的信息
+                let player = {};
+                player.id = this.int; // - int id
+                player.name = this.string; // - String 昵称
+                player.url = this.string; // - String 头像
+                player.score = this.int; // - int 积分
+                player.position = this.int; // - int 座位
+                player.state = this.int; // - int 准备状态 准备 1/未准备 0
+                player.dis_status = this.int; // - int 解散投票状态 1 同意/0 未选择
+                player.ip = this.string;// 用户ip
+                if (playId == FriendRoomPlays.AREA.WUHU) player.wuhu_jiaofen = this.int;// 芜湖交分
+
+                var vo = __data.deskData.roomVo.getPlayer(player.id) || new __data.deskData.PlayerVo();
+                __data.deskData.roomVo.clearByVo(vo);
+                vo.id = player.id;
+                vo.position = player.position;
+                vo.score = player.score;
+                vo.readyState = player.state;
+                vo.url = player.url;
+                vo.name = player.name;
+                vo.dis_status = player.dis_status;
+                vo.ipAddress = player.ip;
+                vo.wuhu_jiaofen = player.wuhu_jiaofen;
+                game.server.send(14003, player.id);
+                game.server.send(2005, player.id);
+                __data.deskData.roomVo.addPlayer(vo)
+                __data.deskData.roomVo.calcuPlayerSeat();
+            }
+            // int 正在对局的房间id -1代表处于准备状态
+            if (roomId != -1) __data.deskData.roomVo.phase = 'game';
+            else if (roomId == -1 && curGame > 1) __data.deskData.roomVo.phase = 'result';
+            __data.deskData.roomVo.phase == 'ready' && await game.server.send(14021, 1, TogetherData.size);
+
+            trace('刷新：', MahjongRoomUpdateUtils.status);
+            if (!MahjongRoomUpdateUtils.status) {
+                await __showScene.load_game_resource_by_gameId();
+                __showScene.show_game_mahjong(__data.deskData.roomVo.phase == 'ready' ? false : true, false);
+                // __showScene.show_game_mahjong(true, false);
+                // int 正在对局的房间id -1代表处于准备状态
+                if (roomId != -1) { game.server.send(3000, roomId); game.server.send(3002, roomId); }
+            } else {
+                MahjongRoomUpdateUtils.status = false;
+            }
+            DeskDissolveCheck.check();
+            game.cb.event(__eh + 'remove_lx')
+            game.cb.event(__eh + "show_phase");
+            game.cb.event(__eh + "update_user_info")
+            game.cb.event(__eh + "player_join_room")
+            game.cb.event(__eh + 'recheck_distance')
+            game.cb.event(__eh + 'update_limit_kick_time')
+            game.cb.event('update_roomId', ['房间号：' + __data.deskData.roomVo.roomID + '\n' + __data.deskData.roomVo.roundToString()]);
+
+        }
+    },
+    // #更换座位
+    14017() {
+        // int 换位置的人ID， int 原来座位， int 新座位
+        // - 如果准备失败 请求者会收到消息 换座位的人ID为负，-1 游戏已经开始，-2 目标座位被占用， -3 无权换座位
+        // - 如果准备成功 所有房间中包括请求者都会收到14017消息 需要根据id判断换座位的人是否是自己
+        let id = this.int;
+        if (id == -1) { __tips('换座失败'); return }
+        else if (id == -2) { __tips('座位已被占用'); return }
+        else if (id == -3) { __tips('权限不足'); return }
+        let old_position = this.int;
+        let new_position = this.int;
+
+        var vo = __data.deskData.roomVo.getPlayer(id);
+        if (!vo) return;
+        __data.deskData.roomVo.clearByVo(vo);
+        vo.position = new_position;
+        __data.deskData.roomVo.addPlayer(vo)
+        __data.deskData.roomVo.calcuPlayerSeat();
+        game.cb.dispatchEvent(__eh + "player_join_room")
+    },
+
+    async 14018() {
+        let code = this.int;
+        if (code == 1) {
+            __data.deskData.roomVo.isOut = true;
+            await __showScene.show_hall()
+            __data.deskData.roomVo.clear();
+            __showScene.show_prompt_single("房间已解散");
+        }
+    },
+
+    async 14019() {
+        // int 状态码 成功 1/没有房间 -1/房间不是好友房 -2
+        // - 如果成功则有后续数据
+        let state = this.int;
+        if (state == 1) {
+            let password = this.int; // - int 房间密码
+            let homeownerId = this.int; // - int 房主id
+            let playId = this.int; // - int 玩法id 创建房间时的参数
+            let cityId = this.int; //  - int 地区id
+            let plays = this.string; // - String 规则字符串 创建房间时的参数
+            let players = this.int; // - int 几人场
+            let allGame = this.int; // - int 总圈/局数
+            let roundType = this.int; // - int 1 圈 / 2 局
+            let curGame = this.int; // - int 当前局数
+            let time = this.int; // - int 开始倒计时（秒） -1代表没有倒计时
+            let roomId = this.int; // - int 正在对局的房间id -1代表处于准备状态
+            let status = this.int; // - int 房间状态 0 正常、1 解散投票中
+            let promoter = this.int; // 一个附加数据，如果是解散投票中，则代表发起人
+            let playerNumbers = this.int; // - int 房间中现有人数
+
+            HallPlay.lastCityId = cityId;
+            HallPlay.curRuleId = playId;
+
+            __data.deskData.roomVo.modelId = playId;
+
+            __data.deskData.roomVo.roomID = password;
+            __data.deskData.roomVo.roomModel = __data.deskData.roomVo.FRIEND;
+            __data.deskData.roomVo.roomOwner = homeownerId;
+            __data.deskData.roomVo.roomPlay = plays;
+            __data.deskData.roomVo.curGame = curGame;
+            __data.deskData.roomVo.allGame = allGame;
+            __data.deskData.roomVo.roomPlayer = players;
+            __data.deskData.roomVo.roomStatus = status;
+            __data.deskData.roomVo.promoter = promoter;
+
+
+            let playerGroups = [];
+            for (let i = 0; i < playerNumbers; i++) {
+                // - 数组房间中每个人的信息
+                let player = {};
+                player.id = this.int; // - int id
+                player.name = this.string; // - String 昵称
+                player.url = this.string; // - String 头像
+                player.score = this.int; // - int 积分
+                player.position = this.int; // - int 座位
+                player.state = this.int; // - int 准备状态 准备 1/未准备 0
+                player.dis_status = this.int; // - int 解散投票状态 1 同意/0 未选择
+
+                // var vo = __data.deskData.roomVo.getPlayer(player.id) || new __data.deskData.PlayerVo();
+                // __data.deskData.roomVo.clearByVo(vo);
+                // vo.id = player.id;
+                // vo.position = player.position;
+                // vo.score = player.score;
+                // vo.readyState = player.state;
+                // vo.url = player.url;
+                // vo.name = player.name;
+                // vo.dis_status = player.dis_status;
+                if (!__data.othersVO[player.id]) {
+                    game.server.send(14003, player.id);
+                    game.server.send(2005, player.id);
+                } else {
+                    player.headFrameId = __data.othersVO[player.id].headFrameId || 301;
+                    // vo.headFrameId = __data.othersVO[player.id].headFrameId || 301;
+                }
+                // __data.deskData.roomVo.addPlayer(vo)
+                // __data.deskData.roomVo.calcuPlayerSeat();
+
+                playerGroups.push(player);
+
+                if (player.id == __data.uid && player.score > 0) { GameMainWinLoseGuide.showType = 'win'; }
+                else if (player.id == __data.uid && player.score <= 0) { GameMainWinLoseGuide.showType = 'lose'; }
+            }
+
+            __data.deskData.roomVo.allRoundResult = {
+                roomPwd: password,
+                roomType: __data.deskData.roomVo.FRIEND,
+                roomPlay: __data.deskData.roomVo.roomPlay,
+                time: new Date(),
+                lastCityId: HallPlay.lastCityId,
+                curRuleId: HallPlay.curRuleId,
+                modelId: HallPlay.curRuleId,
+                roundCount: allGame,
+                playerCount: players,
+                playerArray: playerGroups
+            };
+            PrayStatistics.instance.allOver();
+            DeskDissolveCheck.check();
+            if (__data.deskData.roomVo.dissolved) {
+                __data.deskData.roomVo.dissolved = false;
+                game.scene.remove(FriendMahjongSmallResult);
+                game.scene.add(FriendMahjongAllResult);
+            }
+            // if (__data.deskData.roomVo.smallResultData && __data.deskData.roomVo.smallResultData.isOver) { return }
+            // await __showScene.load_game_resource_by_gameId();
+        }
+    },
+
+    14021() {
+        let jsonStr = this.string;
+        let info = JSON.parse(jsonStr);
+        TogetherData.list[info.page] = info.data;
+        game.cb.event('update_together_friend');
+    },
+}

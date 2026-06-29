@@ -1,0 +1,1573 @@
+class FriendRoomPlays {
+    // 玩法id 规则说明也需要根据玩法id  麻将config,内部需要根据cityid
+    static get map() {
+        if (!this._map) {
+            this._map = {
+                '-1': new Play_tongyong(),
+                '-2': new Play_dazhong(),
+                '-3': new Play_hongzhonglaizi(),
+                '-4': new Play_guangdong(),
+                '3': new Play_fazheng(),
+                '4': new Play_tonghe(),
+                '6': new Play_yanshou(),
+                '7': new Play_haerbin(),
+                '16': new Play_qqhe(),
+                '17': new Play_nehe(),
+                '24': new Play_tailai(),
+                '26': new Play_jixi(),
+                '30': new Play_hegang(),
+                '31': new Play_shuangyashan(),
+                '34': new Play_daqing(),
+                '41': new Play_jiamusi(),
+                '42': new Play_huanan(),
+                '43': new Play_tangyuan(),
+                '44': new Play_tongjiang(),
+                '46': new Play_mudanjiang(),
+                '53': new Play_heihe(),
+                '57': new Play_suihua(),
+                '77': new Play_fuyuan(),
+                '167': new Play_wuhu(),
+            }
+        }
+        return this._map;
+    }
+
+    static get spareMap() {
+        if (!this._spareMap) {
+            this._spareMap = {
+                '-1': new Play_tongyong(),
+                '-2': new Play_dazhong(),
+                '-3': new Play_hongzhonglaizi(),
+                '-4': new Play_guangdong(),
+                '3': new Play_fazheng(),
+                '4': new Play_tonghe(),
+                '6': new Play_yanshou(),
+                '7': new Play_haerbin(),
+                '16': new Play_qqhe(),
+                '17': new Play_nehe(),
+                '24': new Play_tailai(),
+                '26': new Play_jixi(),
+                '30': new Play_hegang(),
+                '31': new Play_shuangyashan(),
+                '34': new Play_daqing(),
+                '41': new Play_jiamusi(),
+                '42': new Play_huanan(),
+                '43': new Play_tangyuan(),
+                '44': new Play_tongjiang(),
+                '46': new Play_mudanjiang(),
+                '53': new Play_heihe(),
+                '57': new Play_suihua(),
+                '77': new Play_fuyuan(),
+                '167': new Play_wuhu(),
+            }
+        }
+        return this._spareMap;
+    }
+
+    static getPlay(pid) {
+        let comp = this.map[pid];
+        return comp;
+    }
+
+    /**
+     * 获取玩法说明
+     * @param {number|string} pid 玩法id
+     * @param {string} numbers 玩法value集合
+     * @returns 
+     */
+    static getPlaysInfo(pid, numbers) {
+        let comp = this.map[pid];
+        if (!comp) return '';
+        else {
+            return comp.numbersToInfos(numbers);
+        }
+    }
+
+    /**
+     * 获取封顶信息
+     * @param {*} pid 
+     * @param {*} numbers 
+     */
+    static getPlaysScoreMax(pid, numbers){
+        let comp = this.map[pid];
+        if (!comp) return 0;
+        else {
+            let score = comp.getTopInfo(numbers);
+            let max = score.replace(/\D+/g, '');
+            if(!max)
+                return 0;
+            else
+                return max;
+        }
+    }
+
+    /**
+     * 复制数据
+     * @param {Object} source 
+     * @returns 
+     */
+    static copyObject(source) {
+        var sourceCopy = source instanceof Array ? [] : {};
+        for (var item in source) {
+            sourceCopy[item] = typeof source[item] === 'object' ? this.copyObject(source[item]) : source[item];
+        }
+        return sourceCopy;
+    }
+
+    // 玩法
+    static get AREA(){
+        if (!this.area){
+            this.area = {
+                FUJIN:1,
+                WUHU:167,
+                TONGJIANG:44,
+                JIXI:26,
+                FUYUAN:77,
+                SHUANGYASHAN:31,
+                GUANGDONG:-4,
+                HONGZHONGLAIZI:-3,
+            }
+        }
+        return this.area;
+    }
+    // 城市
+    static get CITY(){
+        if (!this.city){
+            this.city = {
+                FUJIN:13,
+                TANGYUAN:21,
+            }
+        }
+        return this.city;
+    }
+}
+
+/**
+ * 全选脚本 (概率适用于所有创建房间玩法)
+ */
+class SelectAll_Script extends Laya.Script {
+    constructor() { super() }
+
+    onClick(e) {
+        this.update(e);
+    }
+
+    update(e) {
+        if (!this.owner.selectAll) { return }
+        if (e && e.target == this.owner.selectAll) {
+            let max = this.owner.plays.numChildren;
+            for (let i = 0; i < max; i++) {
+                let options = this.owner.plays.getChildAt(i);
+                if (!options || !options.name) { continue }
+                if (options.disabled) { continue }
+                if ('selected' in options) options.selected = this.owner.selectAll.selected
+            }
+        } else {
+            let allSelected = false
+            let selected_list = [];
+            let max = this.owner.plays.numChildren;
+            for (let i = 0; i < max; i++) {
+                let options = this.owner.plays.getChildAt(i);
+                if (!options || !options.name) { continue }
+                if (options.disabled) { continue }
+                if ('selected' in options) selected_list.push(options.selected);
+            }
+            // 所有都是true （被勾选） 
+            allSelected = selected_list.every(function (value) { return value == true });
+            //根据情况 重新设定 全选 勾选情况
+            this.owner.selectAll.selected = allSelected;
+        }
+    }
+}
+
+// 广东的特殊规则，只有选了抢杠胡才能选抢杠承包
+class GuangdongSelect_Script extends Laya.Script {
+
+    onEnable(){
+        this.refreshUI();
+    }
+
+    onClick(e) {
+        Laya.timer.callLater(this, this.refreshUI);
+    }
+
+    refreshUI(){
+        let btn1 = this.owner.plays.getChildByName(Play_guangdong.QIANGGANGHU);
+        let btn2 = this.owner.plays.getChildByName(Play_guangdong.QIANGGANGCHENGBAO);
+        if ('selected' in btn1 && btn1.selected){// 抢杠胡被选中了
+            SkinUtils.gray(btn2, false);// 恢复可点击状态
+        }else if ('selected' in btn1 && !btn1.selected){// 抢杠胡没有被选中了
+            SkinUtils.gray(btn2, true);// 不可点击
+            btn2.selected = false;// 不可点击
+        }
+    }
+}
+
+class ShuangyashanSelect_Script extends Laya.Script {
+
+    onEnable(){
+        this.refreshUI();
+    }
+
+    onClick(e) {
+        Laya.timer.callLater(this, this.refreshUI, [e]);
+    }
+
+    onMouseDown(e){
+        if (e && e.target == this.owner.selectAll){// 全选
+            // 点击全选的时候记录一下二闷和四闷的状态
+            this.saveLastState();
+        }
+    }
+
+    saveLastState(){
+        let btn1 = this.owner.plays.getChildByName(Play_shuangyashan.TWO_MEN);
+        let btn2 = this.owner.plays.getChildByName(Play_shuangyashan.FOUR_MEN);
+        this.two_men_state = btn1.selected;
+        this.four_men_state = btn2.selected;
+    }
+
+    refreshUI(e){
+        let btn1 = this.owner.plays.getChildByName(Play_shuangyashan.TWO_MEN);
+        let btn2 = this.owner.plays.getChildByName(Play_shuangyashan.FOUR_MEN);
+        if (e && e.target == this.owner.selectAll){// 点击全选的时候，恢复二闷和四闷的状态
+            btn1.selected = this.two_men_state;
+            btn2.selected = this.four_men_state;
+        }else if (e && e.target == btn1 && 'selected' in btn1 && btn1.selected){// 二闷选中了
+            btn2.selected = false;
+        }else if (e && e.target == btn2 && 'selected' in btn2 && btn2.selected){// 四闷选中了
+            btn1.selected = false;
+        }
+    }
+}
+
+class PlayBase extends game.ModuleBase {
+    constructor(name) {
+        super({
+            map: name,
+            module: false
+        })
+        this.defaultPlay = {};
+        this.playNames = {};
+        this.localKey = '';
+
+        this.select_all_tool = this.addComponent(SelectAll_Script);
+    }
+
+    onEnable() {
+        this.mouseEnabled = true;
+        this.restore();
+    }
+
+    /**
+     * 获取选项数据
+     */
+    getData() { }
+
+    /**
+     * 编号转成描述
+     * @param {string} numbers 
+     */
+    numbersToInfos(numbers) {
+        let topInfo = this.getTopInfo(numbers);
+        let scoreInfo = this.getScoreInfo(numbers);
+        let playInfo = this.getPlayInfo(numbers, [topInfo, scoreInfo]);
+        let all = this.takeEmptyByList(['底分' + scoreInfo, topInfo, playInfo]).join(',');
+        return all;
+    }
+
+    /**
+     * 获取封顶说明
+     * @param {Array} numbers 
+     */
+    getTopInfo(numbers) {
+        let list = numbers.split(',');
+        let number = list.find((value) => parseInt(value) <= 3);
+        let info = this.playNames[number];
+        return info ? info : '';
+    }
+
+    /**
+     * 获取底分说明
+     * @param {Array} numbers 
+     */
+    getScoreInfo(numbers) {
+        let list = numbers.split(',');
+        let number = list.find((value) => parseInt(value) >= 31);
+        let info = this.playNames[number];
+        return info ? info : '';
+    }
+
+    /**
+     * 获取玩法说明
+     * @param {Array} numbers 
+     * @param {Array} ignores 
+     */
+    getPlayInfo(numbers, ignores) {
+        let list = numbers.split(',');
+        let ig_list = [];
+        for (let i = 0; i < list.length; i++) {
+            let info = this.playNames[list[i]];
+            let isIgnore = ignores.indexOf(info) != -1;
+            if (!isIgnore && info) { ig_list.push(info); }
+        }
+        return ig_list.length ? ig_list.join(',') : '';
+    }
+
+    setPlay(players, round, plays) {
+        this.mouseEnabled = false;
+        trace('强制设置玩法：', players, round, plays);
+        let obj = FriendRoomPlays.copyObject(this.defaultPlay);
+        obj.rg_player = this.reversePlayersToIndex(players);
+        obj.rg_round = this.reverseRoundToIndex(round);
+        this.reversePlaysToIndex(obj, plays);
+        this.updateUI(obj);
+    }
+    // 根据人数还原选项index
+    reversePlayersToIndex(players) {
+        let playerlist = this.rg_player.name.split(',');
+        let index = playerlist.indexOf(players.toString());
+        return index == -1 ? 0 : index;
+    }
+    // 根据回合数还原选项index
+    reverseRoundToIndex(round) {
+        let roundlist = this.rg_round.name.split(',');
+        let index = roundlist.indexOf(round.toString());
+        return index == -1 ? 0 : index;
+    }
+    // 根据玩法还原选项index
+    reversePlaysToIndex(obj, plays) {
+        let playlist = plays.split(',')
+        for (const key in obj) {
+            if (key == 'rg_player' || key == 'rg_round') { continue }
+            if (key == 'plays') {
+                obj[key] = plays;
+            } else {
+                if (!this[key] || !this[key].name) { continue }
+                let names = this[key].name.split(',');
+                for (let i = 0; i < names.length; i++) {
+                    let index = playlist.indexOf(names[i]);
+                    if (index != -1) { obj[key] = i; break; }
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 还原玩法选项
+     */
+    restore() {
+        try {
+            let obj = LocalUtils.get(this.localKey);
+            obj = obj ? JSON.parse(obj) : this.defaultPlay;
+            this.updateUI(obj);
+        } catch (e) {
+            obj = this.defaultPlay;
+            this.updateUI(obj);
+        }
+    }
+
+    /**
+     * 保存玩法选项
+     */
+    save() {
+        let obj = FriendRoomPlays.copyObject(this.defaultPlay);
+        for (const key in obj) {
+            if (!this[key]) {
+                if (key != 'hidePlay') console.error('出现未对应的属性：', key);
+                continue
+            }
+            if (key == 'plays') {
+                let list = [];
+                let container = this[key];
+                for (let i = 0; i < container.numChildren; i++) {
+                    let options = container.getChildAt(i);
+                    if (options && options.selected && options.name) {
+                        list.push(options.name);
+                    }
+                }
+                obj[key] = list.join(',');
+            } else {
+                obj[key] = this[key].selectedIndex;
+            }
+        }
+        LocalUtils.save(this.localKey, JSON.stringify(obj));
+    }
+
+    /**
+     * 根据数据还原选项
+     * @param {object} obj 
+     */
+    updateUI(obj) {
+        if (!obj) { console.error('选项数据错误.'); }
+        for (const key in obj) {
+            if (!this[key]) {
+                if (key != 'hidePlay') console.error('出现未对应的属性：', key);
+                continue
+            }
+            if (key == 'plays') {
+                let container = this[key];
+                for (let i = 0; i < container.numChildren; i++) {
+                    let options = container.getChildAt(i);
+                    let result = this.matchPlay(obj[key], options.name);
+                    options && ('selected' in options) && (options.selected = result)
+                }
+            } else {
+                this[key].selectedIndex = obj[key];
+            }
+        }
+        this.select_all_tool.update();
+    }
+
+    /**
+     * 
+     * @param {string} play 
+     * @param {string} name 
+     */
+    matchPlay(play, name) {
+        if (!name || !play) return false;
+        let playlist = play.split(',');
+        let namelist = name.split(',');
+
+        let isMatch = true;
+        for (let i = 0; i < namelist.length; i++) {
+            let number = namelist[i];
+            let index = playlist.indexOf(number);
+            if (index == -1) {
+                isMatch = false;
+                break;
+            }
+        }
+        return isMatch;
+    }
+
+    /**
+     * 获取多选一选项 对应的值
+     * @param {Laya.RadioGroup} rg 
+     * @returns 
+     */
+    getRgSelectValue(rg) {
+        if (!rg) return '';
+        let index = rg.selectedIndex;
+        let values = rg.name ? rg.name.split(',') : [];
+        let value = values[index] ? values[index] : '';
+        return value;
+    }
+
+    /**
+     * 获取单选 对应的值
+     * @param {Laya.CheckBox} cb 
+     * @returns 
+     */
+    getCbSelectValue(cb) {
+        if (!cb || !cb.selected || !cb.name) return '';
+        return cb.name;
+    }
+
+    /**
+     * 获取所有勾选的玩法
+     */
+    getPlays() {
+        let list = [];
+        for (let i = 0; i < this.plays.numChildren; i++) {
+            let options = this.plays.getChildAt(i);
+            let value = this.getCbSelectValue(options);
+            value && list.push(value);
+        }
+        list = this.takeEmptyByList(list);
+        return list.length ? list.join(',') : '';
+    }
+
+    /**
+     * 删除数组中空元素
+     * @param {Array} list 
+     */
+    takeEmptyByList(list) {
+        for (let i = 0; list && i < list.length; i++) {
+            if (!list[i]) {
+                list.splice(i, 1);
+                i--;
+            }
+        }
+        return list;
+    }
+}
+
+class Play_tongyong extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_tongyong');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '6,7,8,9,10,11,12,13,14,15'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '不夹不胡',
+            '6': '边吊算夹',
+            '7': '支对',
+            '8': '站立听',
+            '9': '七对粘',
+            '10': '七对宝',
+            '11': '宝中宝',
+            '12': '漏宝',
+            '13': '刮大风',
+            '14': '红中满天飞',
+            '15': '黑炮包三家',
+            '31': '1分'
+        }
+        this.localKey = 'play_tongyong';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_dazhong extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_dazhong');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: ''
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '不可吃牌',
+            '6': '不可点炮',
+            '31': '1分'
+        }
+        this.localKey = 'play_dazhong';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_hongzhonglaizi extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_hongzhonglaizi');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: ''
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '不可吃牌',
+            '6': '不可点炮',
+            '31': '1分'
+        }
+        this.localKey = 'play_hongzhonglaizi';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_fazheng extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_fangzheng');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_xi: 1,
+            hidePlay: '',
+            plays: '7,8,9,10,11,12,13'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '带喜一番',
+            '5': '带喜任意番',
+            '6': '不带喜',
+            '7': '不夹不胡',
+            '8': '三七边夹',
+            '9': '亮掌',
+            '10': '清一色翻倍',
+            '11': '刮大风',
+            '12': '天胡',
+            '13': '黑炮一家付',
+            '31': '1分'
+        }
+        this.localKey = 'play_fangzheng';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_xi), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_tonghe extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_tonghe');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_xi: 1,
+            hidePlay: '',
+            plays: '7,8,9,10,11,12,13,14'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '带喜一番',
+            '5': '带喜任意番',
+            '6': '不带喜',
+            '7': '不夹不胡',
+            '8': '三七边夹',
+            '9': '亮掌',
+            '10': '清一色翻倍',
+            '11': '刮大风',
+            '12': '天胡',
+            '13': '黑炮一家付',
+            '14': '攒喜',
+            '31': '1分'
+        }
+        this.localKey = 'play_tonghe';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_xi), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_haerbin extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_haerbin');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,8,9,10,11,12'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '死卡(不夹不胡)',
+            '6': '三七边夹',
+            '7': '单吊夹',
+            '8': '站立算炮',
+            '9': '漏宝',
+            '10': '刮大风',
+            '11': '红中满天飞',
+            '12': '黑炮包三家',
+            '31': '1分'
+        }
+        this.localKey = 'play_haerbin';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_daqing extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_daqing');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '6,7,8,9,10,11,12,13,14,15'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '不夹不胡',
+            '6': '三七边夹',
+            '7': '单吊夹',
+            '8': '支对',
+            '9': '漏宝',
+            '10': '刮大风',
+            '11': '红中满天飞',
+            '12': '杠算分',
+            '13': '通宝',
+            '14': '开牌炸',
+            '15': '黑炮包三家',
+            '31': '1分'
+        }
+        this.localKey = 'play_daqing';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_mudanjiang extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_mudanjiang');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,8,9,10,11,12'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '摆夹算夹',
+            '6': '三七边夹',
+            '7': '单吊夹',
+            '8': '门清',
+            '9': '漏宝',
+            '10': '刮大风',
+            '11': '红中满天飞',
+            '12': '黑炮包三家',
+            '31': '1分'
+        }
+        this.localKey = 'play_mudanjiang';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_nehe extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_nehe');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,6,7'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '红中加倍',
+            '6': '站立听',
+            '7': '清一色',
+            '8': '飘胡可缺幺九',
+            '9': '开牌炸',
+            '10': '对倒算夹',
+            '31': '1分'
+        }
+        this.localKey = 'play_nehe';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+class Play_qqhe extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_qqhe');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,6,7,8,9,10,11,13,14'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '摆夹算夹',
+            '6': '边吊算夹',
+            '7': '红中加倍',
+            '8': '黑炮一家付',
+            '9': '站立听',
+            '10': '清一色',
+            '11': '纯中纯',
+            '12': '飘胡可缺幺九',
+            '13': '刮大风',
+            '14': '杠加分',
+            '15': '对倒算夹',
+            '16': '鸡下蛋',
+            '31': '1分'
+        }
+        this.localKey = 'play_qqhe';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+
+class Play_tailai extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_tailai');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_xi: 1,
+            hidePlay: '',
+            plays: '8,9,10,11,12,13,14,15,16'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '带喜一番',
+            '5': '带喜任意番',
+            '6': '不带喜',
+            '7': '不夹不胡',
+            '8': '七小对',
+            '9': '飘胡',
+            '10': '漏宝',
+            '11': '通宝',
+            '12': '中发白满天飞',
+            '13': '清一色',
+            '14': '刮大风',
+            '15': '黑炮包三家',
+            '16': '杠算分',
+            '31': '1分'
+        }
+        this.localKey = 'play_tailai';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_xi), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+class Play_wuhu extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_wuhu');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_rule: 0,
+            hidePlay: '',
+            plays: '7,8'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '525规则',
+            '7': '八支',
+            '8': '报警',
+            '9': '杠算胡分',
+            '31': '1分'
+        }
+        this.localKey = 'play_wuhu';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_rule), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_tangyuan extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_tangyuan');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_hei: 0,
+            hidePlay: '',
+            plays: '6,7,8,9'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '点炮三家付',
+            '5': '点炮包三家',
+            '6': '带特',
+            '7': '七对',
+            '8': '带杠分',
+            '9': '钓鱼',
+            '10': '天胡',
+            '31': '1分'
+        }
+        this.localKey = 'play_tangyuan';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_hei), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+
+    static get FISH(){ return '9'; }
+}
+
+
+class Play_tongjiang extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_tongjiang');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_wf: 0,
+            rg_dp: 0,
+            hidePlay: '',
+            plays: ''
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '干里干',
+            '5': '血战玩法（有混不让胡）',
+            '6': '点炮三家付',
+            '7': '点炮包三家',
+            '31': '1番'
+        }
+        this.localKey = 'play_tongjiang';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_wf), this.defaultPlay.hidePlay, this.getRgSelectValue(this.rg_dp)]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+class Play_jiamusi extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_jiamusi');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_hp: 0,
+            hidePlay: '',
+            plays: '6,7,8,9,10,11,13,17'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '黑炮包三家',
+            '5': '黑炮三家付',
+            '6': '漏宝',
+            '7': '假宝',
+            '8': '宝中宝',
+            '9': '刮大风',
+            '10': '红中满天飞',
+            '11': '开牌炸',
+            '12': '不夹不胡',
+            '13': '摆夹算夹',
+            '14': '清一色',
+            '15': '飘胡',
+            '16': '七对',
+            '17': '杠加分',
+            '18': '站立胡',
+            '19': '特夹',
+            '31': '1分'
+        }
+        this.localKey = 'play_jiamusi';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_hp), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+
+class Play_fuyuan extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_fuyuan');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_fish: 2,
+            rg_hei: 1,
+            hidePlay: '',
+            plays: '10,11,12,13,14,15'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '点炮三家付',
+            '5': '点炮包三家',
+            '6': '海洋鱼1条',
+            '7': '海洋鱼2条',
+            '8': '数字鱼',
+            '9': '摆夹算夹',
+            '10': '七小对',
+            '11': '飘胡',
+            '12': '神风',
+            '13': '天胡',
+            '14': '地胡',
+            '15': '特胡',
+            '31': '1分'
+        }
+        this.localKey = 'play_fuyuan';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_hei), this.getRgSelectValue(this.rg_fish), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+
+    static get FISH_1(){ return '6'; }
+    static get FISH_2(){ return '7'; }
+    static get NUMBER_FISH(){ return '8'; }
+}
+
+
+class Play_huanan extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_huanan');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_hp: 1,
+            hidePlay: '',
+            plays: '6,8'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '点炮包三家',
+            '5': '点炮三家付',
+            '6': '七小对',
+            '7': '飘特一边大',
+            '8': '清一色',
+            '9': '红中胡',
+            '31': '1分'
+        }
+        this.localKey = 'play_huanan';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_hp), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+
+class Play_guangdong extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_guangdong');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rule_km: 0,
+            rule_mm: 3,
+            hidePlay: '',
+            plays: '10,11,12,13,14,15,16,17,18'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '另一副牌开马',
+            '5': '剩余牌开马',
+            '6': '2马',
+            '7': '4马',
+            '8': '6马',
+            '9': '8马',
+            '10': '七小对',
+            '11': '清一色',
+            '12': '十三幺',
+            '13': '字一色',
+            '14': '幺九',
+            '15': '可抢杠胡',
+            '16': '抢杠承包',
+            '17': '杠爆承包',
+            '18': '12张落地承包',
+            '19': '无鬼牌',
+            '31': '1分'
+        }
+        this.localKey = 'play_jiamusi';
+
+        this.addComponent(GuangdongSelect_Script);
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rule_km), this.getRgSelectValue(this.rule_mm), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+
+    static get NOGHOST(){ return '19'; }
+    static get QIANGGANGHU(){ return '15'; }
+    static get QIANGGANGCHENGBAO(){ return '16'; }
+
+    static get SHENGYUKAIMA(){ return '5'; }
+    static get ANOTHERKAIMA(){ return '4'; }
+}
+
+
+
+class Play_suihua extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_suihua');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,6,8,9,10,11,12,13,15,7,16,18,17,20'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '滚宝',
+            '6': '漏宝',
+            '7': '闷胡',
+            '8': '不夹不胡',
+            '9': '摆夹算夹',
+            '10': '边吊算夹',
+            '11': '七小对',
+            '12': '七对刮风',
+            '13': '飘胡',
+            '14': '三砍',
+            '15': '刮大风',
+            '16': '清一色',
+            '17': '红中满天飞',
+            '18': '黑炮一家付',
+            '19': '缺幺胡幺',
+            '20': '手把一',
+            '21': '对倒算夹',
+            '22': '杠加分',
+            '31': '1分'
+        }
+        this.localKey = 'play_suihua';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+class Play_jixi extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_jixi');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,6,7,8,9,10,11,12,13,14,15,16,17'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '漏宝',
+            '6': '前进宝',
+            '7': '周一张',
+            '8': '不夹不胡',
+            '9': '摆夹算夹',
+            '10': '边吊算夹',
+            '11': '刮大风',
+            '12': '清一色',
+            '13': '红中满天飞',
+            '14': '杠加分',
+            '15': '闷听',
+            '16': '无对胡',
+            '17': '黑炮一家付',
+            '18': '二八杠',
+            '19': '缺幺胡幺',
+            '31': '1分'
+        }
+        this.localKey = 'play_jixi';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+
+class Play_heihe extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_heihe');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,7,8,9,10,11,12'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '纯夹（不夹不胡）',
+            '6': '摆夹算夹',
+            '7': '红中混',
+            '8': '边吊算夹',
+            '9': '门清胡',
+            '10': '对宝',
+            '11': '刮大风',
+            '12': '黑炮一家付',
+            '31': '1分'
+        }
+        this.localKey = 'play_heihe';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+
+    static get HONGZHONGMIXED(){ return '7'; }
+}
+
+class Play_hegang extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_hegang');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '5,6,7,8,9,10,11,16'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '5': '不夹不胡',
+            '6': '摆夹算夹',
+            '7': '暗听',
+            '8': '红中满天飞',
+            '9': '边吊算夹',
+            '10': '飘胡',
+            '11': '七小对',
+            '12': '手把一',
+            '13': '清一色',
+            '14': '开牌炸',
+            '15': '红中加倍',
+            '16': '黑炮一家付',
+            '31': '1分'
+        }
+        this.localKey = 'play_hegang';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+class Play_yanshou extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_yanshou');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            hidePlay: '',
+            plays: '4,5,6,8'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '漏胡',
+            '5': '刮大风',
+            '6': '红中满天飞',
+            '7': '三色胡',
+            '8': '黑炮一家付',
+            '9': '站立',
+            '10': '庄翻倍',
+            '31': '1分'
+        }
+        this.localKey = 'play_yanshou';
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+}
+
+
+
+class Play_shuangyashan extends PlayBase {
+    constructor() {
+        super('scene_friendRoom/play_shuangyashan');
+
+        this.defaultPlay = {
+            rg_player: 0,
+            rg_round: 0,
+            rg_score: 0,
+            rg_top: 0,
+            rg_jia: 0,
+            rg_zh:0,
+            hidePlay: '',
+            plays: '8,13'
+        }
+        this.playNames = {
+            '0': '无封顶',
+            '1': '64分封顶',
+            '2': '128分封顶',
+            '3': '256分封顶',
+            '4': '纯夹',
+            '5': '摆夹算夹',
+            '6': '周一张',
+            '7': '对海洋',
+            '8': '缺ㄠ胡么',
+            '9': '杠加分',
+            '10': '二闷',
+            '11': '四闷',
+            '12': '开牌炸',
+            '13': '黑炮一家付',
+            '31': '1分'
+        }
+        this.localKey = 'play_shuangyashan';
+
+        this.addComponent(ShuangyashanSelect_Script);
+    }
+
+    getData() {
+        return {
+            player: this.getRgSelectValue(this.rg_player), // 基本全区统一
+            round: this.getRgSelectValue(this.rg_round), // 基本全区统一
+            score: this.getRgSelectValue(this.rg_score), // 基本全区统一
+            top: this.getRgSelectValue(this.rg_top), // 基本全区统一
+            plays: this.takeEmptyByList([this.getRgSelectValue(this.rg_jia), this.getRgSelectValue(this.rg_zh), this.defaultPlay.hidePlay, this.getPlays()]).join(','), // 请注意当前玩法不同区可能不同
+        }
+    }
+
+    static get SEA(){ return '7'; }
+
+    static get TWO_MEN(){ return '10'; }
+    static get FOUR_MEN(){ return '11'; }
+}

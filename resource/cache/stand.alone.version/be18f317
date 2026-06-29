@@ -1,0 +1,183 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-16 12:45:40
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-04-09 15:51:37
+ */
+
+'use strict';
+
+class DeskMap extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskMap',
+            "layer": 'panel',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.addComponent(DeskMap_Mahjong_Create_Script)
+        this.addComponent(DeskMap_Puke_Create_Script)
+        this.btn_vip.addComponent(S_show_friendRoom_vip).init(FriendRoom_vipSale.location)
+    }
+
+    onEnable() {
+        // game.utils.remove(this.player_up, this.player_down, this.player_left, this.player_right)
+    }
+
+    onDisable() {}
+}
+
+class DeskMap_Mahjong_Create_Script extends Laya.Script {
+    constructor() { super(); }
+    onEnable() {
+        this.clearLine();
+        this.resetUI();
+        //申请的用户数据接收事件
+        game.cb.on(__eh + 'update_map_data', this, this.updateMapHandler);
+        //被显示后申请一次用户数据 
+        game.cb.event(__eh + 'request_map_data');
+    }
+    onDisable() {
+        game.cb.off(__eh + 'update_map_data', this, this.updateMapHandler);
+    }
+
+    resetUI() {
+        if (!__data.vip.isVip) {
+            this.owner.player_left.visible = false;
+            this.owner.player_right.visible = false;
+            this.owner.player_up.visible = false;
+            this.owner.vip_explain.visible = true;
+            this.owner.btn_vip.visible = true;
+        } else {
+            this.owner.player_left.visible = false;
+            this.owner.player_right.visible = false;
+            this.owner.player_up.visible = false;
+            this.owner.vip_explain.visible = false;
+            this.owner.btn_vip.visible = false;
+        }
+
+        let a = ['down', 'left', 'up', 'right'];
+        for (let i = 0; i <= a.length; i++) {
+            let view = this.getView(a[i]);
+            if (!view) { continue }
+            SkinUtils.load(view.getChildByName('frame'), 'cdn/map/img_avatarwbox.png')
+        }
+    }
+
+    //
+    updateMapHandler(data) {
+        let __r = 0
+        for (let i = 0; i <= 4; i++) {
+            //如果没有该用户 或者该用户的经纬度未知  当前用户 跳过
+            if (!data[i]) { continue }
+            let view = this.getView(data[i].seat_tag);
+            if (!view) { continue }
+            view.visible = true;
+            // view.getChildByName('txt_name').text = data[i].name
+            // SkinUtils.load(view.getChildByName('frame'), 'cdn/map/img_avatarwbox.png')
+            // view.getChildByName('txt_ip').text = data[i].ipAddress ? 'IP：' + data[i].ipAddress : 'IP：??????';
+            // view.getChildByName('txt_dress').text = this.getAddress(data[i]);
+            // view.getChildByName('txt_ip').color = '#ffffff'
+            // view.getChildByName('txt_address').color = '#ffffff'
+            
+            if ('url' in data[i])
+                SkinUtils.load(view.getChildByName('head'), data[i].url)
+            else if ('headUrl' in data[i])
+                SkinUtils.load(view.getChildByName('head'), data[i].headUrl)
+
+            if (!__data.vip.isVip) {
+                view.getChildByName('txt_ip').text = 'IP：? . ? . ? . ?';
+                continue;
+            }else{
+                view.getChildByName('txt_ip').text = data[i].ipAddress ? 'IP：' + data[i].ipAddress : 'IP：未知';
+            }
+            
+            let finallyStatus = false;
+            //如果已经判定过近  跳出循环
+            for (let k = 0; k <= 4; k++) {
+                //如果没有该用户 或者该用户的经纬度未知  当前用户 跳过
+                if (!data[k]) { continue }
+                //依次比对距离  （不和自己比对）
+                if (data[i].id != data[k].id) {
+                    let status = this.getError(data[i], data[k]);
+                    this.setLine(data[i].seat_tag, data[k].seat_tag, status);
+                    finallyStatus = status ? status : finallyStatus;
+                }
+            }
+            if(finallyStatus)
+                SkinUtils.load(view.getChildByName('frame'), 'cdn/map/img_avatarredbox.png')
+            else
+                SkinUtils.load(view.getChildByName('frame'), 'cdn/map/img_avatargreenbox.png')
+        }
+    }
+
+    setLine(a_name, b_name, status){
+        if(this.owner[`${a_name}_${b_name}`]){
+            this.owner[`${a_name}_${b_name}`].visible = status;
+        }else if(this.owner[`${b_name}_${a_name}`]){
+            this.owner[`${b_name}_${a_name}`].visible = status;
+        }
+    }
+
+
+    clearLine(){
+        let a = ['down', 'left', 'up', 'right'];
+        for(let i = 0;i < a.length;i++){
+            for(let j = i;j < a.length;j++){
+                this.setLine(a[i], a[j], false);
+            }
+        }
+    }
+
+    getView(seat) {
+        return this.owner['player_' + seat];
+    }
+
+    getAddress(data) {
+        if (data.longitude && data.latitude && data.longitude != '0.0' && data.latitude != '0.0') {
+            return `位置：(经度${this.ingoreNumber(data.longitude)}，纬度${this.ingoreNumber(data.latitude)})`;
+        } else {
+            return '地址：??????';
+        }
+    }
+
+    ingoreNumber(value) {
+        let index = value.toString().indexOf('.');
+        if (index == -1)
+            return value;
+        else
+            return parseInt(value).toFixed(5);
+    }
+
+    getError(data_a, data_b) {
+        if (data_a.ipAddress == data_b.ipAddress) {
+            return true;
+        }
+        // if (data_a.longitude && data_a.latitude && data_b.longitude && data_b.latitude) {
+        //     if (data_a.latitude != '0.0' && data_a.longitude != '0.0' && data_b.latitude != '0.0' && data_b.longitude != '0.0') {
+        //         if (data_a.latitude == data_b.latitude && data_a.longitude == data_b.longitude) {
+        //             return true;
+        //         }
+        //     }
+        // }
+        // if (!data_a.longitude && !data_a.latitude) {
+        //     return true;
+        // }
+        // if (data_a.longitude == '0.0' && data_a.latitude == '0.0') {
+        //     return true;
+        // }
+        return false;
+    }
+}
+
+class DeskMap_Puke_Create_Script extends Laya.Script {
+    constructor() { super(); }
+    onEnable() {}
+    onDisable() {}
+}

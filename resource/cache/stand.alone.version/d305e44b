@@ -1,0 +1,359 @@
+class Panel_marketActivity_inviteRed extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.btn_help.addComponent(S_click_marketActivity_panel_explainBtn)
+        this.addComponent(Panel_marketActivity_inviteRed_Comp);
+
+        this.btn_redRank.addComponent(S_click_marketActivity_panel_rankBtn)
+        this.btn_accept.addComponent(S_click_marketActivity_panel_acceptBtn)
+        this.btn_applyExtra.addComponent(S_click_marketActivity_panel_applyExtraBtn)
+        this.btn_again.addComponent(S_click_marketActivity_panel_againBtn)
+    }
+
+    onEnable() {
+        this.activeClose = false;
+		game.server.send(20002)
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_inviteRed', 1)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '瓜分礼金界面' })
+        // miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '瓜分礼金', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        showActivityPanel('inviteRed')
+        game.cb.on('marketActivity_panel_close', this, this.marketActivity_panel_close);
+    }
+
+    onDisable() {
+        game.scene.remove(Panel_marketActivity_inviteRed_explain);
+        game.cb.off('marketActivity_panel_close', this, this.marketActivity_panel_close);
+        this.saveCount();
+        this.checkinghallTestShowPanel();
+    }
+
+    marketActivity_panel_close() {
+        this.activeClose = true;
+    }
+
+    saveCount(){
+        if(__data.activity.inviteRed.taskData.state == 1){// 已经接取任务的状态下，记录关闭次数
+            let count = LocalUtils.getByToday('close_inviteRed_count_by_tasking') || 0;
+            count = parseInt(count) + 1
+            LocalUtils.saveByToday('close_inviteRed_count_by_tasking', count);
+        }
+    }
+
+    checkinghallTestShowPanel() {
+        // 非主动关闭，直接检测是否需要显示其它弹出面板
+        if(!this.activeClose){
+            hallTestShowPanel();
+        }else{// 主动关闭的时候，需要检测是否弹出海报
+            let done = LocalUtils.getByToday('show_poster_page');
+            // 如果已经展示过海报，就不需要再展示
+            if(done){ hallTestShowPanel(); }
+            else{
+                if (miniApi.clientType == 'app') return;
+                if (miniApi.getWxDeviceName() === 'windows') return;
+                let state = __data.activity.inviteRed.taskData.state;// 任务状态
+                let count = LocalUtils.getByToday('close_inviteRed_count_by_tasking') || 0;
+                let inviteNumbers = __data.activity.inviteRed.taskData.data ? __data.activity.inviteRed.taskData.data.filter(item => item.lq > 0) : [];
+                if(state == 1 && count >= 2 && inviteNumbers.length < 3){// 关闭次数超过2次，展示海报
+                    __showScene.show_imageSharePre(hallTestShowPanel);
+                }else{// 不满足条件 ，检测弹出面板
+                    hallTestShowPanel();
+                }
+            }
+        }
+    }
+
+    clickMask() { }
+}
+
+// 邀请红包说明
+class Panel_marketActivity_inviteRed_explain extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed_explain',
+            layer: 'panel0'
+        })
+        this.panel.vScrollBarSkin = '';
+    }
+}
+
+
+
+// 邀请红包排名
+class Panel_marketActivity_inviteRed_rank extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed_rank',
+            layer: 'panel0'
+        })
+        this.__list.vScrollBarSkin = '';
+    }
+
+    added() {
+        this.request();
+        this.__list.array = [];
+        this.img_noData.visible = false;
+        game.cb.on('update_inviteRed_rank_data', this, this.update_rank_data)
+    }
+    onDisable() {
+        game.cb.off('update_inviteRed_rank_data', this, this.update_rank_data)
+    }
+
+    request() {
+        game.server.send(18026);// 请求邀请红包排名数据
+    }
+    update_rank_data() {
+        if (__data.activity.inviteRed.rankData.top_list.length == 0) {
+            this.img_noData.visible = true;
+        } else {
+            this.img_noData.visible = false;
+            this.__list.array = __data.activity.inviteRed.rankData.top_list;
+        }
+    }
+}
+// 邀请红包排名
+class Panel_marketActivity_inviteRed_rankItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed_rankItem',
+            module: false
+        })
+    }
+
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+
+        LabelHiddenUtils.getAdapterContent(this.txt_rank_name, vo.name)
+        SkinUtils.setSkin(this.img_head, vo.avatar ? vo.avatar : '');
+        SkinUtils.setSkin(this.img_head_frame, PropIcon.icon[vo.headFrameId || 301].skin);
+        this.txt_money.text = `${parseFloat(vo.value)}元`;
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.index == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.index <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.index}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.index
+        }
+        this.txt_mjName.text = excelUtils.getCityName_mj(vo.game); // cityId
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.Panel_marketActivity_inviteRed_rankItemUI', Panel_marketActivity_inviteRed_rankItem);
+
+
+// 订阅
+class Panel_marketActivity_inviteRed_subscribe extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed_subscribe',
+            layer: 'panel0'
+        })
+        this.btn_subscribe.addComponent(S_click_marketActivity_panel_subscribeBtn)
+    }
+}
+
+// 邀请红包说明
+class Panel_marketActivity_inviteRed_playerItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_inviteRed_playerItem',
+            module: false
+        })
+
+        this.btn_get.on(Laya.Event.CLICK, this, this.clickGet);
+        this.btn_invite.on(Laya.Event.CLICK, this, this.clickInvite);
+        this.wait.on(Laya.Event.CLICK, this, this.clickInvite);
+    }
+
+    set dataSource(value) {
+        if (value) {
+            this.value = value;
+            // 隐藏加号
+            this.wait.visible = false;
+            // 设置头像
+            if(value.data && value.data.avatar){
+                SkinUtils.setSkin(this.head, value.data.avatar);
+            }else{
+                SkinUtils.setSkin(this.head, '');
+            }
+            
+            if (value.lq == 0) {// 未邀请
+                // 显示加号
+                this.wait.visible = true;
+                this.btn_invite.visible = true;
+                this.btn_get.visible = false;
+                this.geted.visible = false;
+            } else if (value.lq == 1) {// 已邀请  且已完成任务
+                this.btn_get.visible = true;
+                this.btn_invite.visible = false;
+                this.geted.visible = false;
+            } else if (value.lq == 2) {// 已领取
+                this.geted.visible = true;
+                this.btn_get.visible = false;
+                this.btn_invite.visible = false;
+            }
+            // geted 已领取标志
+        } else {
+            // 显示加号
+            this.wait.visible = true;
+            this.geted.visible = false;
+            this.btn_get.visible = false;
+            this.btn_invite.visible = true;
+        }
+    }
+
+    clickGet() {
+        game.server.send(18029, this.value.index);
+    }
+
+    clickInvite() {
+        miniApi.share({
+            titleId: __tool.randomRange(1, 10),
+            params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+        });
+    }
+
+    set index(value) { this.__index = value; }
+    get index() { return this.__index; }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.Panel_marketActivity_inviteRed_playerItemUI', Panel_marketActivity_inviteRed_playerItem);
+
+
+class Panel_marketActivity_inviteRed_Comp extends Laya.Script {
+
+    onEnable() {
+        game.cb.on('update_inviteRed_taskStatus', this, this.updateUI);
+        this.updateUI();
+    }
+
+    onDisable() {
+        game.cb.off('update_inviteRed_taskStatus', this, this.updateUI);
+    }
+
+    updateUI() {
+        this.showUI();
+        this.setSurplusReds(__data.activity.inviteRed.taskData.hb_count);// 设置剩余红包
+        this.setAchievement(__data.activity.inviteRed.taskData.all_invite, __data.activity.inviteRed.taskData.total);// 设置完成情况以及获得的奖励
+    }
+
+    // 根据不同状态显示不同UI
+    showUI() {
+        if (__data.activity.inviteRed.taskStatus == __data.activity.inviteRed.STATUS_READY) {
+            this.owner.ready.visible = true;
+            this.owner.ing.visible = false;
+            this.owner.btn_again.visible = false;
+            // 还有红包个数  显示接受任务按钮 反之显示申请额外红包按钮
+            this.owner.btn_accept.visible = __data.activity.inviteRed.taskData.hb_count != 0;
+            this.owner.btn_applyExtra.visible = !this.owner.btn_accept.visible;
+        } else if (__data.activity.inviteRed.taskStatus == __data.activity.inviteRed.STATUS_ING) {
+            // 所有邀请人都已完成任务，且都领取了奖励，显示结束按钮
+            if (__data.activity.inviteRed.isAllDone) {
+                this.owner.ready.visible = false;
+                this.owner.ing.visible = true;
+                this.owner.btn_again.visible = true;
+            } else {// 有邀请人未完成任务  或者还有奖励未领取
+                this.owner.ready.visible = false;
+                this.owner.ing.visible = true;
+                this.owner.btn_again.visible = false;
+            }
+            // 显示邀请人列表
+            this.setList(__data.activity.inviteRed.taskData.data);
+        }
+    }
+
+    setList(arrays) {
+        while (arrays.length < 3) arrays.push({});// 补充空项
+        arrays.map((item, index) => { item.index = index + 1; })
+        this.owner.list.array = arrays;
+    }
+
+    setSurplusReds(num) {
+        HtmlTextUtils.text(
+            this.owner.txt_surplus_reds, { align: 'left', valign: 'top', fontSize: 50, bold: true, width: this.owner.width, color: '#ffffff', stroke: 4, strokeColor: '##730000' },
+            '本轮剩余待锁定红包&nbsp;', {},
+            num, { color: '#fff000' },
+            '&nbsp;个', {}
+        )
+        Laya.timer.callLater(this, this.relocation);
+    }
+
+    setAchievement(num, cash) {
+        HtmlTextUtils.text(
+            this.owner.txt_achievement, { align: 'left', valign: 'top', fontSize: 40, bold: false, width: this.owner.width, color: '#e5ff00' },
+            '已成功邀请&nbsp;', {},
+            num, { color: '#ffffff' },
+            '&nbsp;人，获得&nbsp;', {},
+            parseFloat(cash), { color: '#ffffff' },
+            '&nbsp;元', {}
+        )
+        Laya.timer.callLater(this, this.relocation);
+    }
+
+    relocation() {
+        this.owner.txt_surplus_reds.x = this.owner.btn_redRank.x - this.owner.txt_surplus_reds.contextWidth / 2;
+        this.owner.txt_surplus_reds.y = this.owner.btn_redRank.y - this.owner.btn_redRank.height / 2 - this.owner.txt_surplus_reds.contextHeight - 10;
+
+        this.owner.txt_achievement.x = this.owner.width - this.owner.txt_explain.x - this.owner.txt_achievement.contextWidth;
+        this.owner.txt_achievement.y = this.owner.txt_explain.y;
+    }
+}
+
+// 显示说明
+class S_click_marketActivity_panel_explainBtn extends Laya.Script {
+    onClick() {
+        game.scene.add(Panel_marketActivity_inviteRed_explain);
+    }
+}
+// 显示排名
+class S_click_marketActivity_panel_rankBtn extends Laya.Script {
+    onClick() {
+        game.scene.add(Panel_marketActivity_inviteRed_rank);
+    }
+}
+
+// 接任务
+class S_click_marketActivity_panel_acceptBtn extends Laya.Script {
+    onClick() {
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '接受瓜分礼金任务' });
+        game.server.send(18028);
+    }
+}
+// 申请额外红包
+class S_click_marketActivity_panel_applyExtraBtn extends Laya.Script {
+    onClick() {
+        game.server.send(18030);// 申请额外红包
+    }
+}
+// 再次接任务
+class S_click_marketActivity_panel_againBtn extends Laya.Script {
+    onClick() {
+        game.server.send(18031);// 重置任务
+    }
+}
+
+// 点击订阅按钮
+class S_click_marketActivity_panel_subscribeBtn extends Laya.Script {
+    async onClick() {
+        // 邀请红包待完成(点击订阅按钮)
+        if (!__data.allPlayerRed.isSub) {
+            let a = await miniApi.activitySubscribe()
+            if (a == 1) {
+                game.server.send(18005)
+                game.scene.remove(Panel_marketActivity_inviteRed_subscribe)
+            }
+        } else {
+            __tips('订阅成功')
+            game.scene.remove(Panel_marketActivity_inviteRed_subscribe)
+        }
+    }
+}

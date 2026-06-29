@@ -1,0 +1,99 @@
+class PochanFramework {
+
+    static active() {
+        if (this.gold) {
+            __showScene.show_pochan();
+        }
+    }
+
+    static clear() { this._gold = 0; }
+
+    // 充值成功  或者是vip可以立即申请返还
+    static getRes() {
+        if (this.gold) {
+            // 请求返还破产金额
+            // game.scene.add(LoadingSmall);
+            game.server.send(2247);
+            try {
+                game.scene.remove(GameMainLookVideoWin);
+                game.scene.remove(GameMainLookVideoLose);
+            } catch (e) {
+
+            }
+        }
+    }
+
+    static set gold(value) { this._gold = value; }
+
+    static get gold() { return this._gold; }
+}
+class GameMainPochan extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_pochan',
+            layer: 'panel'
+        })
+        this.addComponent(PochanRunTimeScript);
+    }
+
+    onDisable() {
+        ResultPanelManager.show();
+    }
+
+    clickMask() { }
+}
+
+class PochanRunTimeScript extends Laya.Script {
+    onAwake() {
+        this.owner.btn_open.addComponent(PochanGotoVip);
+        this.owner.btn_get.addComponent(PochanGet);
+        this.owner.btn_next.addComponent(PochanClose)
+    }
+
+    onEnable() {
+        game.cb.on('update_vip_data', this, this._updateUI);
+        this._updateUI();
+    }
+
+    onDisable() {
+        game.cb.off('update_vip_data', this, this._updateUI);
+        PochanFramework.clear();
+    }
+
+    _updateUI() {
+        this.owner.txt_gold.text = GoldFormatUtils.format(PochanFramework.gold, 2);
+        // 是vip 显示返还
+        if (__data.vip.isVip) {
+            this.owner.txt_info.text = `（今日剩余${__data.vip.noGoldProtectCount}次）`;
+            this.owner.btn_open.visible = false;
+            this.owner.btn_get.visible = true;
+            // 有次数 可以点击领取
+            if (__data.vip.noGoldProtectCount > 0) {
+                SkinUtils.gray(this.owner.btn_get, false, false);
+            } else {
+                SkinUtils.gray(this.owner.btn_get, true);
+            }
+        } else { // 不是vip  现实开通
+            this.owner.txt_info.text = `（今日剩余1次）`;
+            this.owner.btn_open.visible = true;
+            this.owner.btn_get.visible = false;
+        }
+    }
+}
+class PochanGotoVip extends Laya.Script {
+    onClick() {
+        __showScene.show_vip()
+        // 显示财产保护促销
+        // __showScene.show_vipBombbox(1) // 1财产保护 2奖杯特权
+    }
+}
+class PochanGet extends Laya.Script {
+    onClick() {
+        PochanFramework.getRes();
+    }
+}
+class PochanClose extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainPochan);
+    }
+}

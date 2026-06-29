@@ -1,0 +1,1076 @@
+(function (game, Laya) {
+    // class
+    class TiledMap {
+        constructor() {
+            this._viewRect = new Laya.Rectangle();
+            this._rect = new Laya.Rectangle();
+            this._padding = { up: 0, down: 0, left: 0, right: 0 };
+            this._mapRect = {}
+            this._mapLastRect = {}
+            this._mapSprite = new Laya.Sprite();
+            this._layerArray = [];
+            this._textureSetDic = {};
+            this.grid_w_num = 0
+            this.grid_h_num = 0
+            this._x = 0;
+            this._y = 0;
+            this._scale = 1;
+            this._pivotScaleX = 0.5;
+            this._pivotScaleY = 0.5;
+            this._viewPortWidth = 0;
+            this._viewPortHeight = 0;
+            this._bigGridWidth = 500;
+            this._bigGridHeight = 500;
+            this._bigGridArray = [];
+            this._hash_name_layer = {};
+            // this._showGridKey = true;
+        }
+        createMap(parent, mapData, viewRect, padding__) {
+            viewRect = viewRect || new Laya.Rectangle(0, 0, 500, 500);
+            if (padding__) {
+                this._padding = padding__
+            }
+            this._mapData = mapData || {
+                tilewidth: 64,
+                tileheight: 32,
+                widthNum: 3,
+                heightNum: 11,
+                orientation: '45', // 45 normal
+                layer: [
+                    {
+                        name: 'ground',
+                        data: [
+                            1, 52, 52, 0, 52, 52,
+                            1, 52, 52, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1,
+                        ],
+                        // 特舒格子设置名字
+                        setNames: {
+                            '0-1': 'flower1'
+                        }
+                    },
+                ],
+                tilesets: [
+                    {
+                        name: 'a',
+                        image: 'tiled.map/isometric_grass_and_water.png',
+                        tilewidth: 64,
+                        tileheight: 40,
+                        imagewidth: 384,
+                        imageheight: 256,
+                        spacing: 0,
+                        animation: {
+                            52: {
+                                duration: 1000,
+                                tileId: [2, 3, 4],
+                            }
+                        }
+                    }
+                ]
+            }
+            parent.addChild(this._mapSprite)
+            // .x = 100
+            // this._mapSprite.graphics.drawRect(0, 0, 500, 500, '0xff0000')
+
+            this._orientation = this._mapData.orientation
+            this._rect.x = viewRect.x;
+            this._rect.y = viewRect.y;
+            this._rect.width = viewRect.width;
+            this._rect.height = viewRect.height;
+            this._viewPortWidth = viewRect.width / this._scale;
+            this._viewPortHeight = viewRect.height / this._scale;
+            this._mapLastRect.top = this._mapLastRect.bottom = this._mapLastRect.left = this._mapLastRect.right = -1;
+            this.tilewidth = this._mapData.tilewidth
+            this.tileheight = this._mapData.tileheight
+            this.grid_w_num = this._mapData.widthNum;
+            this.grid_h_num = this._mapData.heightNum;
+
+            this._mapTileWidthNum = this._mapData.widthNum;
+            this._mapTileHeightNum = this._mapData.heightNum;
+
+            // 根据方向计算宽高
+            switch (this._mapData.orientation) {
+                case TiledMap.orientation_normal:
+                    this._width = this.tilewidth * this._mapData.widthNum;
+                    this._height = this.tileheight * this._mapData.heightNum;
+                    break;
+                case TiledMap.orientation_45:
+                    this._width = this._mapData.widthNum * this.tilewidth * 0.5 + this._mapData.heightNum * this.tilewidth * 0.5;
+                    this._height = this._mapData.widthNum * this.tileheight * 0.5 + this._mapData.heightNum * this.tileheight * 0.5;;
+                    break;
+            }
+
+            this._bigGridWidth = Math.floor(this._bigGridWidth / this.tilewidth) * this.tilewidth;
+            this._bigGridHeight = Math.floor(this._bigGridHeight / this.tileheight) * this.tileheight;
+            if (this._bigGridWidth < this.tilewidth) {
+                this._bigGridWidth = this.tilewidth;
+            }
+            if (this._bigGridHeight < this.tileheight) {
+                this._bigGridHeight = this.tileheight;
+            }
+            this._bigGridW_num = Math.ceil(this._width / this._bigGridWidth);
+            this._bigGridH_num = Math.ceil(this._height / this._bigGridHeight);
+            this._totalBigGridNum = this._bigGridW_num * this._bigGridH_num;
+            for (var i = 0; i < this._bigGridH_num; i++) {
+                var tGridArray = [];
+                this._bigGridArray.push(tGridArray);
+                for (var j = 0; j < this._bigGridW_num; j++) {
+                    tGridArray.push(null);
+                }
+            }
+
+            this.initTileTexture()
+            this.initMapLayer()
+            this.moveViewPort(this._rect.x, this._rect.y);
+        }
+        initTileTexture() {
+            if (this._mapData.tilesets)
+                for (let index = 0, length = this._mapData.tilesets.length; index < length; index++) {
+                    const e = this._mapData.tilesets[index];
+                    this.tileTextureSetAdd(e)
+                };
+        }
+        initMapLayer() {
+            if (this._mapData.layer)
+                for (let index = 0, length = this._mapData.layer.length; index < length; index++) {
+                    const layerData = this._mapData.layer[index];
+                    let layerSprite = new TileLayer()
+                    layerSprite.initMap(layerData, this);
+                    this._mapSprite.addChild(layerSprite)
+                    this._layerArray.push(layerSprite);
+                    this._hash_name_layer[layerData.name] = layerSprite;
+                };
+        }
+        moveViewPort(moveX, moveY) {
+            this._x = -moveX;
+            this._y = -moveY;
+            this._rect.x = moveX;
+            this._rect.y = moveY;
+            this.updateViewPort();
+        }
+        changeViewPort(moveX, moveY, width, height) {
+            if (moveX == this._rect.x && moveY == this._rect.y && width == this._rect.width && height == this._rect.height)
+                return;
+            this._x = -moveX;
+            this._y = -moveY;
+            this._rect.x = moveX;
+            this._rect.y = moveY;
+            this._rect.width = width;
+            this._rect.height = height;
+            this._viewPortWidth = width / this._scale;
+            this._viewPortHeight = height / this._scale;
+            this.updateViewPort();
+        }
+        setViewPortPivotByScale(scaleX, scaleY) {
+            this._pivotScaleX = scaleX;
+            this._pivotScaleY = scaleY;
+        }
+        updateViewPort() {
+            this._centerX = this._rect.x + this._rect.width * this._pivotScaleX;
+            this._centerY = this._rect.y + this._rect.height * this._pivotScaleY;
+
+            var posChanged = false;
+            var preValue = this._viewPortX;
+            this._viewPortX = this._centerX - this._rect.width * this._pivotScaleX / this._scale;
+            if (preValue != this._viewPortX) {
+                posChanged = true;
+            }
+            else {
+                preValue = this._viewPortY;
+            }
+            this._viewPortY = this._centerY - this._rect.height * this._pivotScaleY / this._scale;
+            if (!posChanged && preValue != this._viewPortY) {
+                posChanged = true;
+            }
+
+            this._mapRect.top = Math.floor((this._viewPortY - this._padding.up) / this._bigGridHeight);
+            this._mapRect.bottom = Math.floor((this._viewPortY + this._viewPortHeight + this._padding.down) / this._bigGridHeight);
+            this._mapRect.left = Math.floor((this._viewPortX - this._padding.left) / this._bigGridWidth);
+            this._mapRect.right = Math.floor((this._viewPortX + this._viewPortWidth + this._padding.right) / this._bigGridWidth);
+
+            if (this._mapRect.top != this._mapLastRect.top || this._mapRect.bottom != this._mapLastRect.bottom || this._mapRect.left != this._mapLastRect.left || this._mapRect.right != this._mapLastRect.right) {
+                this.clipViewPort();
+                this._mapLastRect.top = this._mapRect.top;
+                this._mapLastRect.bottom = this._mapRect.bottom;
+                this._mapLastRect.left = this._mapRect.left;
+                this._mapLastRect.right = this._mapRect.right;
+                posChanged = true;
+            }
+            if (!posChanged)
+                return;
+            var tMapLayer;
+            var len = this._layerArray.length;
+            // this._mapSprite.x = -47100;
+            // this._mapSprite.y = -24200;
+            for (var i = 0; i < len; i++) {
+                tMapLayer = this._layerArray[i];
+                tMapLayer.updatePos();
+            }
+        }
+        clipViewPort() {
+            var tSub = 0;
+            var tAdd = 0;
+            var i, j;
+            if (this._mapRect.left > this._mapLastRect.left) {
+                tSub = this._mapRect.left - this._mapLastRect.left;
+                if (tSub > 0) {
+                    for (j = this._mapLastRect.left; j < this._mapLastRect.left + tSub; j++) {
+                        for (i = this._mapLastRect.top; i <= this._mapLastRect.bottom; i++) {
+                            this.hideGrid(j, i);
+                        }
+                    }
+                }
+            }
+            else {
+                tAdd = Math.min(this._mapLastRect.left, this._mapRect.right + 1) - this._mapRect.left;
+                if (tAdd > 0) {
+                    for (j = this._mapRect.left; j < this._mapRect.left + tAdd; j++) {
+                        for (i = this._mapRect.top; i <= this._mapRect.bottom; i++) {
+                            this.showGrid(j, i);
+                        }
+                    }
+                }
+            }
+            if (this._mapRect.right > this._mapLastRect.right) {
+                tAdd = this._mapRect.right - this._mapLastRect.right;
+                if (tAdd > 0) {
+                    for (j = Math.max(this._mapLastRect.right + 1, this._mapRect.left); j <= this._mapLastRect.right + tAdd; j++) {
+                        for (i = this._mapRect.top; i <= this._mapRect.bottom; i++) {
+                            this.showGrid(j, i);
+                        }
+                    }
+                }
+            }
+            else {
+                tSub = this._mapLastRect.right - this._mapRect.right;
+                if (tSub > 0) {
+                    for (j = this._mapRect.right + 1; j <= this._mapRect.right + tSub; j++) {
+                        for (i = this._mapLastRect.top; i <= this._mapLastRect.bottom; i++) {
+                            this.hideGrid(j, i);
+                        }
+                    }
+                }
+            }
+            if (this._mapRect.top > this._mapLastRect.top) {
+                tSub = this._mapRect.top - this._mapLastRect.top;
+                if (tSub > 0) {
+                    for (i = this._mapLastRect.top; i < this._mapLastRect.top + tSub; i++) {
+                        for (j = this._mapLastRect.left; j <= this._mapLastRect.right; j++) {
+                            this.hideGrid(j, i);
+                        }
+                    }
+                }
+            }
+            else {
+                tAdd = Math.min(this._mapLastRect.top, this._mapRect.bottom + 1) - this._mapRect.top;
+                if (tAdd > 0) {
+                    for (i = this._mapRect.top; i < this._mapRect.top + tAdd; i++) {
+                        for (j = this._mapRect.left; j <= this._mapRect.right; j++) {
+                            this.showGrid(j, i);
+                        }
+                    }
+                }
+            }
+            if (this._mapRect.bottom > this._mapLastRect.bottom) {
+                tAdd = this._mapRect.bottom - this._mapLastRect.bottom;
+                if (tAdd > 0) {
+                    for (i = Math.max(this._mapLastRect.bottom + 1, this._mapRect.top); i <= this._mapLastRect.bottom + tAdd; i++) {
+                        for (j = this._mapRect.left; j <= this._mapRect.right; j++) {
+                            this.showGrid(j, i);
+                        }
+                    }
+                }
+            }
+            else {
+                tSub = this._mapLastRect.bottom - this._mapRect.bottom;
+                if (tSub > 0) {
+                    for (i = this._mapRect.bottom + 1; i <= this._mapRect.bottom + tSub; i++) {
+                        for (j = this._mapLastRect.left; j <= this._mapLastRect.right; j++) {
+                            this.hideGrid(j, i);
+                        }
+                    }
+                }
+            }
+        }
+        showGrid(bigGridX, bigGridY) {
+            if (bigGridX < 0 || bigGridX >= this._bigGridW_num || bigGridY < 0 || bigGridY >= this._bigGridH_num) {
+                return;
+            }
+            var tGridSprite;
+            var tTempArray = this._bigGridArray[bigGridY][bigGridX];
+            if (tTempArray == null) {
+                tTempArray = this.getGridArray(bigGridX, bigGridY);
+            }
+            else {
+                for (let i = 0; i < tTempArray.length && i < this._layerArray.length; i++) {
+                    let e = tTempArray[i]
+                    for (let j = 0, length = e.length; j < length; j++) {
+                        const e1 = e[j];
+                        e1.show()
+                    };
+                }
+            }
+        }
+        hideGrid(bigGridX, bigGridY) {
+            if (bigGridX < 0 || bigGridX >= this._bigGridW_num || bigGridY < 0 || bigGridY >= this._bigGridH_num) {
+                return;
+            }
+            var tTempArray = this._bigGridArray[bigGridY][bigGridX];
+            if (tTempArray) {
+                for (let i = 0; i < tTempArray.length; i++) {
+                    let e = tTempArray[i]
+                    for (let j = 0, length = e.length; j < length; j++) {
+                        const e1 = e[j];
+                        e1.hide()
+                    };
+                }
+            }
+        }
+        getGridArray(bigGridX, bigGridY) {
+            var i, j;
+            var tGridSprite;
+            var tTempArray = this._bigGridArray[bigGridY][bigGridX];
+            if (tTempArray == null) {
+                tTempArray = this._bigGridArray[bigGridY][bigGridX] = [];
+
+                var tGridWidth = this._bigGridWidth;
+                var tGridHeight = this._bigGridHeight;
+
+                var tLayer = null;
+                var tTGridSprite;
+                var tDrawMapLayer;
+                for (var z = 0; z < this._layerArray.length; z++) {
+                    tLayer = this._layerArray[z];
+
+                    let all_tile_grid = tLayer.getTileGridArray(bigGridX, bigGridY);
+                    tTempArray.push(all_tile_grid);
+
+                    // var tColorStr;
+                    // if (this._showGridKey) {
+                    //     tColorStr = "#";
+                    //     tColorStr += this._colorArray[Math.floor(Math.random() * this._colorArray.length)];
+                    //     tColorStr += this._colorArray[Math.floor(Math.random() * this._colorArray.length)];
+                    //     tColorStr += this._colorArray[Math.floor(Math.random() * this._colorArray.length)];
+                    // }
+                    if (!all_tile_grid || !all_tile_grid.length) continue;
+                    for (let index10 = 0, length10 = all_tile_grid.length; index10 < length10; index10++) {
+                        const e = all_tile_grid[index10];
+                        e.parent__ = tLayer;
+                        tLayer.drawTileTexture(e, e.gridx, e.gridy)
+                        // !e.parent && tLayer.addChild(e)
+                    };
+                }
+            }
+            return tTempArray;
+        }
+        getTexture(index) {
+            return this._textureSetDic[index];
+        }
+        getTileByLayerNameAndTileName(layerName, tileName) {
+            return this._hash_name_layer[layerName] && this._hash_name_layer[layerName]._hash_name_grid[tileName] || null;
+        }
+        getTileByLayerNameAndTileXY(layerName, tilex, tiley) {
+            return this._hash_name_layer[layerName] && this._hash_name_layer[layerName]._hashGrid[tilex + '-' + tiley] || null;
+        }
+        getScreenPositionByTileXY(TX, TY) {
+            TX = parseInt(TX)
+            TY = parseInt(TY)
+            switch (this._mapData.orientation) {
+                case TiledMap.orientation_normal:
+
+                    break;
+                case TiledMap.orientation_45:
+                    let tTileW = this._mapData.tilewidth
+                    let tTileH = this._mapData.tileheight
+
+                    let tx = this._mapData.heightNum * tTileW / 2 + (TX - TY) * tTileW / 2 - tTileW / 2
+                    let ty = (TX + TY) * tTileH / 2
+
+                    return { x: tx, y: ty }
+                    break;
+            }
+            return { x: 0, y: 0 }
+        }
+        getTilePositionByScreenXY(screenX, screenY) {
+            switch (this._mapData.orientation) {
+                case TiledMap.orientation_normal:
+
+                    break;
+                case TiledMap.orientation_45:
+                    let tTileW = this._mapData.tilewidth
+                    let tTileH = this._mapData.tileheight
+                    var tDirX = screenX - this._mapData.heightNum * tTileW / 2;
+                    var tDirY = screenY;
+                    let TY = -(tDirX / tTileW - tDirY / tTileH);
+                    let TX = tDirX / tTileW + tDirY / tTileH;
+                    TY = Math.floor(TY)
+                    TX = Math.floor(TX)
+
+                    let tx = this._mapData.heightNum * tTileW / 2 + (TX - TY) * tTileW / 2 - tTileW / 2
+                    let ty = (TX + TY) * tTileH / 2
+
+                    return { x: tx, y: ty, ux: TX, uy: TY }
+                    break;
+            }
+            return { x: 0, y: 0, ux: 0, uy: 0 }
+        }
+        getTileXYByGroupName(groupName) {
+            let b = [];
+            let a = this._mapData.group.find((e) => {
+                return e.name == groupName
+            })
+            if (!a) {
+                console.error('组不存在', groupName)
+                return []
+            }
+            // x-y
+            return a.gridArray
+        }
+        getGroupTileByTileXY(TX, TY) {
+            if (!this._mapData.group) return null
+            // a.mapData.group.push({
+            //     name,
+            //     name2,
+            //     layerName: Editor_layer_item.selectVO.name,
+            //     gridArray: c ux-uy
+            // })
+            let b = []
+            for (const a of this._mapData.group) {
+                if (a.gridArray.includes(TX + '-' + TY)) {
+                    b.push({
+                        layerName: a.layerName,
+                        name: a.name,
+                        name2: a.name2,
+                        gridArray: a.gridArray,
+                        index: this._mapData.layer.findIndex((c) => {
+                            return c.name == a.layerName;
+                        })
+                    })
+                }
+            }
+            b.sort((a1, a2) => {
+                return a2.index - a1.index;
+            })
+            return b
+        }
+        tileTextureSetAdd(e) {
+
+            var tTileTextureW = e.tilewidth;
+            var tTileTextureH = e.tileheight;
+            var tImageWidth = e.imagewidth;
+            var tImageHeight = e.imageheight;
+            var tName = e.name;
+            var tFirstgid = 1;
+
+            var tTileWNum = Math.floor(tImageWidth / tTileTextureW);
+            var tTileHNum = Math.floor(tImageHeight / tTileTextureH);
+            var tTileTexSet = null;
+
+            for (var i = 0; i < tTileHNum; i++) {
+                for (var j = 0; j < tTileWNum; j++) {
+                    if (this._textureSetDic[tName + '-' + tFirstgid]) {
+                        this._textureSetDic[tName + '-' + tFirstgid].clear()
+                    } else {
+                        tTileTexSet = new TileTextureSet();
+
+                        if (e.useMapGridWH) {
+                            tTileTexSet.width = this._mapData.tilewidth
+                            tTileTexSet.height = this._mapData.tileheight
+                        } else {
+                            tTileTexSet.width = tTileTextureW;
+                            tTileTexSet.height = tTileTextureH;
+                        }
+                        tTileTexSet.offX_base = this._mapData.tilewidth / 2 - tTileTexSet.width / 2;
+                        tTileTexSet.offY_base = this._mapData.tileheight - tTileTexSet.height;
+                        tTileTexSet.offX_set = e.offX || 0
+                        tTileTexSet.offY_set = e.offY || 0
+                        tTileTexSet.texture = null//
+
+                        tTileTexSet.image_url = e.image;
+                        tTileTexSet.cut_x = (tTileTextureW + (e.spacing || 0)) * j
+                        tTileTexSet.cut_y = (tTileTextureH + (e.spacing || 0)) * i
+                        tTileTexSet.cut_w = tTileTextureW - 0
+                        tTileTexSet.cut_h = tTileTextureH - 0
+                        tTileTexSet.textureId = tName + '-' + tFirstgid
+                        this._textureSetDic[tTileTexSet.textureId] = tTileTexSet;
+                    }
+                    tFirstgid++;
+                }
+            }
+
+            // 创建动画贴图设置
+            if (e.animation) {
+                for (const tileId in e.animation) {
+                    tTileTexSet = new TileTextureSet();
+                    if (e.useMapGridWH) {
+                        tTileTexSet.width = this._mapData.tilewidth
+                        tTileTexSet.height = this._mapData.tileheight
+                    } else {
+                        tTileTexSet.width = tTileTextureW;
+                        tTileTexSet.height = tTileTextureH;
+                    }
+                    tTileTexSet.offX_base = this._mapData.tilewidth / 2 - tTileTexSet.width / 2;
+                    tTileTexSet.offY_base = this._mapData.tileheight - tTileTexSet.height;
+                    tTileTexSet.offX_set = e.offX || 0;
+                    tTileTexSet.offY_set = e.offY || 0;
+                    tTileTexSet._isAnimation = true;
+                    tTileTexSet._durationTime = e.animation[tileId].duration;
+                    tTileTexSet._animationTextureArray = []
+                    for (let n1 = 0, length = e.animation[tileId].tileId.length; n1 < length; n1++) {
+                        const n2 = e.animation[tileId].tileId[n1];
+                        tTileTexSet._animationTextureArray.push(this._textureSetDic[n2])
+                    };
+                    tTileTexSet.textureId = tileId
+                    this._textureSetDic[tileId] = tTileTexSet;
+                }
+            }
+        }
+        tileAdd(layerName, gridx, gridy) {
+            let tLayer = this._hash_name_layer[layerName]
+            if (!tLayer) return;
+            let grid = tLayer._hashGrid[gridx + '-' + gridy]
+            if (!grid) return;
+            grid.clearTexture();
+            tLayer.drawTileTexture(grid, grid.gridx, grid.gridy, false)
+            if (grid.visible) {
+                grid.isDrawTexture = null;
+                grid.isInitNestMap = null;
+                grid.isInitDragon = null;
+                grid.updatePos()
+                grid.show()
+            }
+        }
+        tileHide(layerName, gridx, gridy) {
+            let tLayer = this._hash_name_layer[layerName]
+            if (!tLayer) return;
+            let grid = tLayer._hashGrid[gridx + '-' + gridy]
+            if (!grid) return;
+            grid.hide()
+        }
+        tileClear(layerName, gridx, gridy) {
+            let tLayer = this._hash_name_layer[layerName]
+            if (!tLayer) return;
+            let grid = tLayer._hashGrid[gridx + '-' + gridy]
+            if (!grid) return;
+            grid.clear_1()
+        }
+        tileClearTexture(layerName, gridx, gridy) {
+            let tLayer = this._hash_name_layer[layerName]
+            if (!tLayer) return;
+            let grid = tLayer._hashGrid[gridx + '-' + gridy]
+            if (!grid) return;
+            grid.clearTexture();
+        }
+        setMapTextureId(layerName, tilex, tiley, newTileTexureId) {
+            let d = this._mapData.layer.find((e) => {
+                return e.name == layerName
+            })
+            if (d) {
+                d.data[tiley * this._mapData.widthNum + tilex] = newTileTexureId
+                if (!newTileTexureId) {
+                    delete d.data[tiley * this._mapData.widthNum + tilex]
+                }
+            }
+        }
+        getMapTextureId(layerName, tilex, tiley) {
+            let d = this._mapData.layer.find((e) => {
+                return e.name == layerName
+            })
+            if (d) {
+                return d.data[tiley * this._mapData.widthNum + tilex]
+            }
+            return null;
+        }
+        tileChangeTexture(layerName, tilex, tiley, newTileTexureId) {
+            tilex = parseInt(tilex)
+            tiley = parseInt(tiley)
+            this.setMapTextureId(layerName, tilex, tiley, newTileTexureId)
+            this.tileAdd(layerName, tilex, tiley)
+        }
+        get width() {
+            return this._width;
+        }
+        get height() {
+            return this._height;
+        }
+        get gridWidth() {
+            return this._bigGridWidth;
+        }
+        get gridHeight() {
+            return this._bigGridHeight;
+        }
+        set scale(scale) {
+            if (scale <= 0)
+                return;
+            this._scale = scale;
+            this._viewPortWidth = this._rect.width / scale;
+            this._viewPortHeight = this._rect.height / scale;
+            this._mapSprite.scale(this._scale, this._scale);
+            this.updateViewPort();
+        }
+        get scale() {
+            return this._scale;
+        }
+        clear() {
+            this._viewRect = new Laya.Rectangle();
+            this._rect = new Laya.Rectangle();
+            this._mapRect = {};
+            this._mapLastRect = {};
+            for (const key in this._textureSetDic) {
+                this._textureSetDic[key].clear()
+            }
+            this._textureSetDic = {};
+            this._hash_name_layer = {};
+
+            game.utils.removeAll(this._mapSprite)
+            game.utils.remove(this._mapSprite)
+            for (let index = 0, length = this._layerArray.length; index < length; index++) {
+                const e = this._layerArray[index];
+                e.clear();
+            };
+            this._layerArray = [];
+            this._textureSetDic = {};
+            this._bigGridArray = [];
+        }
+    }
+    TiledMap.hash_map = {};
+    TiledMap.orientation_normal = 'normal';
+    TiledMap.orientation_45 = '45';
+    class TileLayer extends Laya.Sprite {
+        constructor() {
+            super(...arguments)
+            this._layerData;
+            this._map
+            this._gridArray = [];
+            this._hashGrid = {};
+            this._hash_name_grid = {};
+            this._layerName;
+            this.cacheAs = 'normal'
+        }
+        initMap(layerData, map) {
+            this._setNames = layerData.setNames;
+            this._layerData = layerData.data;
+            this._layerName = layerData.name;
+            this._map = map;
+            this.tTileW = map._mapData.tilewidth;
+            this.tTileH = map._mapData.tileheight;
+            this._tileWidthHalf = this.tTileW / 2;
+            this._tileHeightHalf = this.tTileH / 2;
+        }
+        getTileGridArray(big_gridx, big_gridy) {
+            // console.log(big_gridx, big_gridy);
+            let at = []
+
+            var tLeft = 0;
+            var tRight = 0;
+            var tTop = 0;
+            var tBottom = 0;
+            var tGridWidth = this._map.gridWidth;
+            var tGridHeight = this._map.gridHeight;
+            // switch (this.orientation) {
+            //     case TiledMap.ORIENTATION_ISOMETRIC:
+            tLeft = Math.floor(big_gridx * tGridWidth);
+            tRight = Math.floor(big_gridx * tGridWidth + tGridWidth);
+            tTop = Math.floor(big_gridy * tGridHeight);
+            tBottom = Math.floor(big_gridy * tGridHeight + tGridHeight);
+
+            let wx = this._map.getTilePositionByScreenXY(tLeft, tTop)
+            let tileXYArray = []
+            let findNext1 = (ux, uy, off_ux, off_uy) => {
+                let tTileW = this.tTileW
+                let tTileH = this.tTileH
+                let tx = this._map._mapData.heightNum * tTileW / 2 + (ux - uy) * tTileW / 2 - tTileW / 2
+                let ty = (ux + uy) * tTileH / 2
+
+                if (tx > tRight) return;
+                if (ty > tBottom) return;
+
+                if (tx >= tLeft && tx < tRight && ty >= tTop && ty < tBottom) {
+                    if (ux >= 0 && ux < this._map._mapData.widthNum && uy >= 0 && uy < this._map._mapData.heightNum) {
+                        tileXYArray.push({
+                            x: ux,
+                            y: uy,
+                        })
+                    }
+                }
+                findNext2(ux + 1, uy - 1)
+                findNext1(ux + off_ux, uy + off_uy, off_ux == 0 ? 1 : 0, off_ux == 0 ? 0 : 1)
+            }
+            let findNext2 = (ux, uy) => {
+                let tTileW = this.tTileW
+                let tTileH = this.tTileH
+                let tx = this._map._mapData.heightNum * tTileW / 2 + (ux - uy) * tTileW / 2 - tTileW / 2
+                let ty = (ux + uy) * tTileH / 2
+
+                if (tx > tRight) return;
+                if (ty > tBottom) return;
+
+                if (tx >= tLeft && tx < tRight && ty >= tTop && ty < tBottom) {
+                    if (ux >= 0 && ux < this._map._mapData.widthNum && uy >= 0 && uy < this._map._mapData.heightNum) {
+                        tileXYArray.push({
+                            x: ux,
+                            y: uy,
+                        })
+                    }
+                }
+                findNext2(ux + 1, uy - 1)
+            }
+            findNext1(wx.ux, wx.uy, 1, 0)
+
+            // all_tile = this._map.hash_bigGridXY_tilexy[big_gridy + '-' + big_gridx] || [];
+            let all_tile = tileXYArray;
+            for (let index10 = 0, length10 = all_tile.length; index10 < length10; index10++) {
+                const e = all_tile[index10];
+                let t = new TileGrid();
+                t.gridx = e.x;
+                t.gridy = e.y;
+                t._map = this._map;
+                if (this._setNames && this._setNames[e.x + '-' + e.y]) {
+                    t.gridName = this._setNames[e.x + '-' + e.y]
+                    this._hash_name_grid[t.gridName] = t;
+                }
+                at.push(t)
+                this._gridArray.push(t)
+                t.zOrder__ = e.y * this._map.grid_w_num + e.x;
+                t.zOrder = e.y * this._map.grid_w_num + e.x;
+                this._hashGrid[e.x + '-' + e.y] = t;
+            };
+            return at;
+        }
+        updatePos() {
+            this.x = -this._map._viewPortX;
+            this.y = -this._map._viewPortY;
+            // var tSprite;
+            // for (var i = 0; i < this._gridArray.length; i++) {
+            //     tSprite = this._gridArray[i];
+            //     tSprite.updatePos();
+            // }
+        }
+        drawTileTexture(tg, tileX, tileY, isShow = true) {
+            if (tileY >= 0 && tileY < this._map._mapData.heightNum && tileX >= 0 && tileX < this._map._mapData.widthNum) {
+                var tIndex = tileY * this._map._mapData.widthNum + tileX;
+                var tMapData = this._layerData;
+                // if (tMapData != null && tIndex < tMapData.length) {
+                if (tMapData != null) {
+                    if (tMapData[tIndex]) {
+                        // if (tMapData[tIndex] != 0) {
+                        var tX = 0;
+                        var tY = 0;
+                        switch (this._map._orientation) {
+                            case TiledMap.orientation_normal:
+                                tX = tileX * this._map.tilewidth;
+                                tY = tileY * this._map.tileheight;
+                                break;
+                            case TiledMap.orientation_45:
+                                tX = (this._map._mapTileHeightNum - 1 - tileY + tileX) * this._tileWidthHalf;
+                                tY = ((tileX + tileY) * this._tileHeightHalf);
+                                break;
+                        }
+                        tg.relativeX = tX;
+                        tg.relativeY = tY;
+                        tg.updatePos()
+                        if (tMapData[tIndex].includes('.json')) {
+                            let mapName = tMapData[tIndex].replace('.json', '')
+                            tg.setNestMapData(TiledMap.hash_map[mapName]);
+                            isShow && tg.show()
+                            return true;
+                        } else if (tMapData[tIndex].includes('.sk')) {
+                            tg.setDragon(tMapData[tIndex]);
+                            isShow && tg.show()
+                            return true;
+                        } else {
+                            var tTileTexSet = this._map.getTexture(tMapData[tIndex]);
+                            if (tTileTexSet) {
+                                tg.setTileTextureSet(tIndex.toString(), tTileTexSet);
+                                isShow && tg.show()
+                                return true;
+                            } else {
+                                console.error('tiledmap texture 不存在 id', tMapData[tIndex])
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        clear() {
+            // game.utils.removeAll(this)
+            // for (let index = 0, length = this._gridArray.length; index < length; index++) {
+            //     const e = this._gridArray[index];
+            //     e.clearAll();
+            // };
+            this._hash_name_grid = null
+            this._gridArray = null
+            this._map = null
+            this._layerData = null
+            this._layerName = null
+            this._hashGrid = null;
+        }
+    }
+    class TileGrid extends Laya.Sprite {
+        constructor() {
+            super()
+            this.gridx;
+            this.gridy;
+            this.tileTextureSet;
+            this.gridName;
+            this.tIndex;
+            this.isDrawTexture
+            this.isInitNestMap
+            this.isInitDragon
+            this.relativeX;
+            this.relativeY;
+            this._map;
+            this.useOffXY = 1;
+        }
+        updatePos() {
+            if (this._map) {
+                this.x = this.relativeX //- this._map._viewPortX;
+                this.y = this.relativeY //- this._map._viewPortY;
+            }
+        }
+        setNestMapData(nestMapData) {
+            // 默认对其下面格子
+            this.gridType = 'map'
+            this.nestMapData = nestMapData;
+        }
+        setDragon(dragonName) {
+            // 默认对其下面格子
+            this.gridType = 'dragon'
+            this.dragonName = dragonName;
+        }
+        setTileTextureSet(tIndex, tileTextureSet) {
+            this.gridType = 'texture'
+            this.tIndex = tIndex;
+            this.tileTextureSet = tileTextureSet;
+        }
+        show() {
+            if (!this.tileTextureSet && !this.nestMapData && !this.dragonName) return;
+            this.visible = true;
+            if (!this.parent) this.parent__ && this.parent__.addChild(this)
+            this.zOrder = this.zOrder__;
+            if (this.gridType == 'texture') {
+                if (this.tileTextureSet._isAnimation) {
+                    let n = this.gridx + '-' + this.gridy + '-' + this.tIndex;
+                    this.tileTextureSet.addAniSprite(n, this);
+                    // } else if (!this.isDrawTexture) {
+                    //     this.tileTextureSet.drawNum11++
+                    //     this.isDrawTexture = true;
+                    //     this.tileTextureSet.drawTexture(this, this.tileTextureSet)
+                    // }
+                } else {
+                    this.tileTextureSet.drawNum11++
+                    this.tileTextureSet.drawTexture(this, this.tileTextureSet)
+                }
+            } else if (this.gridType == 'map') {
+                if (!this.isInitNestMap) {
+                    this.isInitNestMap = true;
+                    this.nestMap = this.nestMap || new game.TiledMap();
+                    this.nestMap.clear();
+
+                    let up = (this.nestMapData.widthNum + this.nestMapData.heightNum) * this.nestMapData.tileheight / 2
+                    let left = (this.nestMapData.widthNum + this.nestMapData.heightNum) * this.nestMapData.tilewidth / 2
+
+                    this.nestMap.createMap(this, this.nestMapData,
+                        new Laya.Rectangle(0, 0, this.width, this.height),
+                        { up: up, down: up, left: left, right: left })
+
+                    let n = this.nestMap.getScreenPositionByTileXY(this.nestMapData.widthNum - 1, this.nestMapData.heightNum - 1)
+                    this.nestMap.moveViewPort(n.x, n.y);
+                }
+            } else if (this.gridType == 'dragon') {
+                if (!this.isInitDragon) {
+                    this.isInitDragon = true;
+
+                    let a = this.dragonName.toArray('-')
+                    // a[0] url a[1] 动画名字 a[2] isLoop a[3] scale
+                    this.dragon = this.dragon || new game.Dragon('cdn/a_tiledMap/' + a[0], 0, a[1] || 0, a[2] == 1, false)
+                    this.dragon.init('cdn/a_tiledMap/' + a[0], 0, a[1] || 0, a[2] == 1)
+                    this.dragon.completeHandler = () => {
+                        this.dragon.clear()
+                        game.utils.remove(this.dragon)
+                        this.isInitDragon = null
+                        game.cb.event('tiledmap_dragon_play_com', [a[0]])
+                    }
+                    this.dragon.scaleX = a[3]
+                    this.dragon.scaleY = a[3]
+
+                    if (a[0].includes('Jianzao')) {
+                        this.dragon.x = this._map._mapData.tilewidth / 2
+                        this.dragon.y = this._map._mapData.tileheight / 2
+                    }
+
+                    this.addChild(this.dragon)
+                }
+            }
+            this._map && this._map.tileShowCallback && this._map.tileShowCallback(this)
+        }
+        hide() {
+            if (!this.tileTextureSet && !this.nestMapData && !this.dragonName) return;
+            this.visible = false;
+            game.utils.remove(this)
+            if (this.tileTextureSet && this.tileTextureSet._isAnimation) {
+                let n = this.gridx + '-' + this.gridy + '-' + this.tIndex;
+                this.tileTextureSet.removeAniSprite(n);
+            }
+            if (this.tileTextureSet) {
+                this.tileTextureSet.drawNum11--;
+                if (this.tileTextureSet.drawNum11 < 0) this.tileTextureSet.drawNum11 = 0;
+                if (this.tileTextureSet.drawNum11 <= 0) {
+                    if (this.tileTextureSet.texture) {
+                        this.tileTextureSet.texture.destroy();
+                        this.tileTextureSet.texture = null
+                    }
+                }
+            }
+            if (this.nestMap) {
+                this.isInitNestMap = false;
+                this.nestMap.clear();
+            }
+            if (this.dragon) {
+                this.isInitDragon = false
+                this.dragon.clear();
+                this.dragon = null
+            }
+        }
+        clearAll() {
+            this.clear_1()
+            this.destroy();
+        }
+        clear_1() {
+            this.hide()
+            this.clearTexture()
+        }
+        clearTexture() {
+            this.graphics.clear()
+            let n = this.gridx + '-' + this.gridy + '-' + this.tIndex;
+            this.tileTextureSet && this.tileTextureSet.removeAniSprite(n);
+            this.tileTextureSet = null;
+            this.isDrawTexture = null
+            this.isInitNestMap = null
+            if (this.nestMap) {
+                this.nestMap.clear()
+                game.utils.remove(this.nestMap)
+                this.nestMap = null
+            }
+
+            this.isInitDragon = null
+            if (this.dragon) {
+                this.dragon.clear()
+                game.utils.remove(this.dragon)
+                this.dragon = null
+            }
+
+            this.nestMapData = null;
+            this.dragonName = null;
+            this.gridType = null
+        }
+    }
+    // 小格子里面的贴图数据 是贴图还是动画设置
+    class TileTextureSet {
+        constructor() {
+            this.offX = 0;
+            this.offY = 0;
+            this.texture = null;
+            this._isAnimation = false;
+            this._animationTextureArray = [];
+            this._durationTime = 100;
+            this._frameIndex = 0;
+            this._spriteNum = 0;
+            this._aniDic = {};
+            this.textureId;
+            this.width;
+            this.height;
+            this.drawNum11 = 0;
+        }
+        clear() {
+            this.offX = 0;
+            this.offY = 0;
+            if (this.texture) this.texture.destroy();
+            this.texture = null;
+            this._isAnimation = false;
+            this._animationTextureArray = [];
+            this._durationTime = 100;
+            this._frameIndex = 0;
+            this._spriteNum = 0;
+            this._aniDic = {};
+            this.textureId = null;
+            this.width = 0;
+            this.height = 0;
+            this.drawNum11 = 0;
+            Laya.timer.clear(this, this.animate)
+        }
+        addAniSprite(aniName, sprite) {
+            if (!this._isAnimation) return;
+            if (this._spriteNum == 0) {
+                Laya.timer.loop(this._durationTime, this, this.animate)
+                this._frameIndex = 0;
+            }
+            this._spriteNum++;
+            this._aniDic[aniName] = sprite;
+            var t = this._animationTextureArray[this._frameIndex];
+            this.drawTexture(sprite, t);
+        }
+        animate() {
+            this._frameIndex++;
+            if (this._frameIndex >= this._animationTextureArray.length) {
+                this._frameIndex = 0;
+            }
+            for (const key in this._aniDic) {
+                var t = this._animationTextureArray[this._frameIndex];
+                this.drawTexture(this._aniDic[key], t);
+            }
+        }
+        drawTexture(sprite, tileTextSet) {
+            let offx;
+            let offy;
+            if (sprite.useOffXY) {
+                offx = tileTextSet.offX_base + tileTextSet.offX_set
+                offy = tileTextSet.offY_base + tileTextSet.offY_set
+            } else {
+                offx = 0;
+                offy = 0;
+            }
+            if (tileTextSet.texture) {
+                sprite.graphics.clear(true);
+                sprite.graphics.drawImage(tileTextSet.texture, offx, offy, tileTextSet.width, tileTextSet.height);
+            } else {
+                __tool.load([tileTextSet.image_url], () => {
+                    if (!sprite.gridType) return;
+                    let imgTexture = Laya.Loader.getRes(tileTextSet.image_url);
+                    if (!imgTexture) {
+                        return console.error('图片加载失败', tileTextSet.image_url)
+                    }
+                    if (!tileTextSet.texture) {
+                        tileTextSet.texture = Laya.Texture.createFromTexture(imgTexture,
+                            tileTextSet.cut_x, tileTextSet.cut_y, tileTextSet.cut_w, tileTextSet.cut_h);
+                    } else {
+                    }
+                    sprite.graphics.clear(true);
+                    sprite.graphics.drawImage(tileTextSet.texture, offx, offy, tileTextSet.width, tileTextSet.height);
+                })
+            }
+        }
+        removeAniSprite(_name) {
+            if (this._aniDic && this._aniDic[_name]) {
+                delete this._aniDic[_name];
+                this._spriteNum--;
+                if (this._spriteNum == 0) {
+                    Laya.timer.clear(this, this.animate)
+                }
+            }
+        }
+    }
+    game.TiledMap = TiledMap;
+    game.TileGrid = TileGrid;
+    game.TileTextureSet = TileTextureSet;
+}(window.game = window.game || {}, Laya));

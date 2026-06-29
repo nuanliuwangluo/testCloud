@@ -1,0 +1,53 @@
+class FriendRoom_record_main_battleResult extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_record_main_battleResult',
+            module: false
+        })
+        this.btn_vip.addComponent(S_show_friendRoom_vip).init(FriendRoom_vipSale.battleResult)
+    }
+    onEnable() {
+        this.update()
+        game.cb.on('update_vip_data', this, this.update)
+        game.cb.on('update_friendRoom_battle_result_data', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_vip_data', this, this.update)
+        game.cb.off('update_friendRoom_battle_result_data', this, this.update)
+    }
+    update() {
+        this.btn_vip.visible = !__data.vip.isVip;
+        [1, 2, 3, 4].forEach((e2) => {
+            ['winRate', 'score'].forEach(e3 => {
+                this[`img_${e3}_${e2}`].getChildByName('txt').visible = __data.vip.isVip
+                this[`img_${e3}_${e2}`].getChildByName('img').visible = !__data.vip.isVip
+            });
+        })
+        if (!__data.vip.isVip) {
+            this.txt_gameNum_1.text = `今日场次数:?`
+            this.txt_gameNum_2.text = `昨日场次数:?`
+            this.txt_gameNum_3.text = `近3日场次数:?`
+            this.txt_gameNum_4.text = `近7日场次数:?`
+        } else {
+            [1, 2, 3, 4].forEach((e2) => {
+                ['winRate', 'score'].forEach(e3 => {
+                    this[`img_${e3}_${e2}`].getChildByName('txt').text = __data.friendRoom.battleResult[e3 + e2];
+                });
+            })
+            this.txt_gameNum_1.text = `今日场次数:` + __data.friendRoom.battleResult.gameNum1
+            this.txt_gameNum_2.text = `昨日场次数:` + __data.friendRoom.battleResult.gameNum2
+            this.txt_gameNum_3.text = `近3日场次数:` + __data.friendRoom.battleResult.gameNum3
+            this.txt_gameNum_4.text = `近7日场次数:` + __data.friendRoom.battleResult.gameNum4
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_friendRoom.friendRoom_record_main_battleResultUI', FriendRoom_record_main_battleResult);
+
+class S_show_friendRoom_vip extends Laya.Script {
+    init(type) {
+        this.type = type;
+    }
+    onClick(e) {
+        __showScene.show_friendRoom_vipSale(this.type)
+    }
+}

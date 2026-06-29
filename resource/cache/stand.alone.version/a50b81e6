@@ -1,0 +1,337 @@
+class Panel_marketActivity_stepstepGift extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_stepstepGift',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.addComponent(Panel_marketActivity_stepstepGift_Comp);
+        this.btn_get.addComponent(Panel_marketActivity_stepstepGift_finalGet);
+    }
+    onEnable() {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_stepstepGift_time', 1)
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '步步有礼', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        showActivityPanel('stepstepGift');
+    }
+    onDisable() {
+        hallTestShowPanel()
+    }
+    clickMask() { }
+
+    static get playing() { return this._playing; }
+    static set playing(value) { this._playing = value; }
+}
+class Panel_marketActivity_stepstepGift_item extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_stepstepGift_item',
+            module: false
+        })
+        this.btn_get.addComponent(Panel_marketActivity_stepstepGift_get).setStep(this.getStep.bind(this));
+        this.snowComp = this.snow.addComponent(PlayComponent);
+    }
+
+    updateUI() {
+        SkinUtils.setSkin(this.icon, this.getSkin());
+        this.txt_number.text = `×${this.getNumber()}`;
+        // 可领取当前奖励
+        if (this.step == __data.activity.stepstepGift.stepGiftProgress) {
+            this.snow.visible = true;
+            this.startSnowAni();
+            this.updateButton();
+        } else {// 没领取到这一步呢
+            this.snow.visible = false;
+            this.snowComp.stop();
+            this.updateButton(true);
+        }
+    }
+
+    // 更新按钮状态
+    updateButton(islock = false) {
+        this.lock.visible = islock;// 是否显示锁
+        let info = __data.activity.stepstepGift.rewards[this.step];
+        let w = 0, space = 0, lock_space = 10; // 计算出来需要显示的UI 宽度，方便进行排版   space为元素间距 
+        // 免费的
+        if (info.gold == 0 && info.stone == 0) {
+            this.stone.visible = false;
+            this.txt_cost.text = `免费领取`
+            if (islock) { // 锁着的时候  需要显示锁的图标
+                w = this.txt_cost.width + this.lock.width + lock_space;
+            } else { // 不锁着的时候  只需要显示文字
+                w = this.txt_cost.width;
+            }
+            // ui排版
+            this.txt_cost.x = (this.btn_get.width - w) / 2;
+            this.lock.x = this.txt_cost.x + this.txt_cost.width + lock_space;
+        }
+        // 钻石领取
+        else if (info.stone > 0) {
+            this.stone.visible = true;
+            this.txt_cost.text = info.stone;
+            if (islock) { // 锁着的时候  需要显示锁的图标和钻石图标
+                w = this.txt_cost.width + this.lock.width + this.stone.width + space + lock_space;
+            } else { // 不锁着的时候  只需要显示文字和钻石图标
+                w = this.txt_cost.width + this.stone.width + space;
+            }
+            // ui排版
+            this.stone.x = (this.btn_get.width - w) / 2;
+            this.txt_cost.x = this.stone.x + this.stone.width + space;
+            this.lock.x = this.txt_cost.x + this.txt_cost.width + lock_space;
+        }
+    }
+
+    // 飘雪动画
+    startSnowAni() {
+        this.snowComp.start({ startIndex: 1, endIndex: 17, frame: 2, loop: true, prefix: 'cdn/marketActivity_stepstepGift/', tail: 'png' });
+    }
+
+    // 获取奖励数量
+    getNumber() {
+        let element = __data.activity.stepstepGift.rewards[this.step];
+        return element.reward ? __data.activity.stepstepGift.formatNumber(element.reward.number) : 0;
+    }
+
+    // 获取奖励皮肤
+    getSkin() {
+        let element = __data.activity.stepstepGift.rewards[this.step];
+        if (element.reward && element.reward.skin)
+            return element.reward.skin;
+        else if (PropIcon.icon[reward.id])
+            return PropIcon.icon[reward.id].skin;
+        else
+            return '';
+    }
+
+    // 获取当前item 所属的step
+    getStep() { return this.step; }
+
+    set step(value) { this._step = value; this.updateUI(); }
+    get step() { return this._step; }
+
+    set maxScale(value) { this._maxScale = value; }
+    get maxScale() { return this._maxScale; }
+}
+
+// 领取步步有礼
+class Panel_marketActivity_stepstepGift_get extends Laya.Script {
+    onClick() {
+        // 当前领取的步骤  不是当前进度不处理
+        if (this.getStep) {
+            if (this.getStep() != __data.activity.stepstepGift.stepGiftProgress) { return }
+            let info = __data.activity.stepstepGift.rewards[this.getStep()];
+            if (info) {
+                if (info.gold == 0 && info.stone == 0) {// 免费的直接领取
+                    game.server.send(19004);
+                } else if (info.stone > 0) {// 钻石领取
+                    if (__data.stone >= info.stone) {
+                        game.server.send(19004);
+                    } else {
+                        // 提示领取
+                        __showScene.show_payPrompt(info.stone, () => {
+                            game.server.send(19004);
+                        })
+                    }
+                }
+            }
+        }
+    }
+
+    setStep(step) {
+        this.getStep = step;
+    }
+}
+
+// 领取步步有礼终极大奖
+class Panel_marketActivity_stepstepGift_finalGet extends Laya.Script {
+    onClick() { game.server.send(19004); }
+}
+
+class Panel_marketActivity_stepstepGift_Comp extends Laya.Script {
+
+    onAwake() {
+        this.owner.container.size(this.owner.box.width, this.owner.box.height);
+        this.owner.final_list.renderHandler = new Laya.Handler(this, this.itemRender);
+
+        this.rect = new Laya.Rectangle(0, 0, 0, this.owner.bar.height);
+        this.owner.bar.scrollRect = this.rect;
+    }
+    onEnable() {
+        game.cb.on('props_tips_closed', this, this.toNext);
+        game.cb.on('update_activity_stepstepGift', this, this.updateUI);
+        this.init();
+        this.request();
+    }
+
+    onDisable() {
+        game.cb.off('props_tips_closed', this, this.toNext);
+        game.cb.off('update_activity_stepstepGift', this, this.updateUI);
+    }
+
+    init() {
+        this.owner.box.visible = false;
+        this.owner.endImg.visible = false;
+        this.moveTime = 150;// 移动时间
+        this.removeScale = 0.3;// 移除时的缩放
+        this.removeScaleTime = 50;// 第一个缩放时间
+        this.removeWait = 50;// 移除第一个等待的时间
+        this.space = -15;// item之间的间距
+
+        this.itemNumberCanShow = 3;// 同时显示的item数量
+        this.maxScale = 1;// 最大缩放
+        this.minScale = 0.75;// 最小缩放
+        this.points = this.getPoints(); //坐标点
+        this.reset();// 重置item列表
+    }
+
+    reset() {
+        // 移除所有的item
+        this.items = [];// item列表
+        this.imgs = [];
+        while (this.owner.container.numChildren > 0) {
+            let child = this.owner.container.removeChildAt(0);
+            child.destroy();
+        }
+        this.owner.final.scale(1, 1);
+        this.owner.final.pos(this.owner.box.width - this.owner.final.width, 20);
+    }
+
+    async request() {
+        game.server.send(19003);
+        this.updateUI();
+    }
+
+    itemRender(item, index) {
+        if (item) {
+            // SkinUtils.setSkin(item.getChildByName('icon'), PropIcon.icon[__data.activity.stepstepGift.finnals[index].id] ? PropIcon.icon[__data.activity.stepstepGift.finnals[index].id].skin : '');
+            item.getChildByName('number').text = `×${__data.activity.stepstepGift.formatNumber(__data.activity.stepstepGift.finnals[index].number)}`;
+        }
+    }
+
+    // 展示所有item
+    updateUI() {
+        this.owner.box.visible = true;
+        this.owner.txt_date.text = `本期 ${__data.activity.stepstepGift.getWeekRange()}`;// 活动有效期
+        // 最终奖励
+        this.owner.txt_progress.text = `领取进度：${__data.activity.stepstepGift.stepGiftProgress}/${__data.activity.stepstepGift.rewards.length}`;
+        this.setProgress(__data.activity.stepstepGift.stepGiftProgress / __data.activity.stepstepGift.rewards.length);
+        this.owner.final_list.array = __data.activity.stepstepGift.finnals;
+        this.owner.btn_get.visible = false;
+        // 全部领取完成
+        if (__data.activity.stepstepGift.isEnd) {
+            this.owner.final.visible = false;
+            this.owner.endImg.visible = true;
+        }
+        // 可领取最终奖励
+        else if (__data.activity.stepstepGift.isFinal) {
+            this.owner.final.scale(1.2, 1.2);
+            this.owner.btn_get.visible = true;
+            this.owner.final.pos(this.owner.container.width - this.owner.final.width * this.owner.final.scaleX >> 1, this.owner.container.height / 2 - this.owner.final.height * this.owner.final.scaleY);
+        }
+        // 可领取基础奖励
+        else {
+            this.reset();
+            let index = 0;
+            for (let i = __data.activity.stepstepGift.stepGiftProgress; i < __data.activity.stepstepGift.stepGiftProgress + this.itemNumberCanShow; i++) {
+                let item = this.createNextItem(i, index);
+                if (item) {
+                    this.owner.container.addChild(item);
+                    this.items.push(item);
+                    index++;
+                    // item.scale(0, 0);// 初始缩放为0
+                }
+            }
+            // 添加箭头标志
+            this.items.forEach((item, index) => {
+                if (index < this.items.length - 1) {
+                    let img = new Laya.Image('cdn/marketActivity_stepstepGift/img_jt.png');
+                    img.pos(item.x + item.width * item.maxScale / 2 - img.width / 2 - 5, item.y - img.height / 2);
+                    this.owner.container.addChild(img);
+                    this.imgs.push(img);
+                }
+            });
+            // this.items.forEach(item => {
+            //     Laya.Tween.to(item, { scaleX:item.maxScale, scaleY:item.maxScale }, 100);
+            // });
+        }
+    }
+
+    setProgress(value) {
+        this.rect.width = this.owner.bar.width * value;
+    }
+
+    // 领取奖励触发 移除第一个元素，后续前移
+    toNext() {
+        if (!__data.activity.stepstepGift.isGeted) { return }// isGeted为false 代表没有领取奖励，也就是19004消息没收到
+        __data.activity.stepstepGift.isGeted = false;// 动画开始播放， 状态设置为false
+        Panel_marketActivity_stepstepGift.playing = true;
+        let item = this.items[0];
+        if (item) {
+            Laya.Tween.to(item, { scaleX: this.removeScale, scaleY: this.removeScale }, this.removeScaleTime, Laya.Ease.linearOut, Laya.Handler.create(this, this.onRemoveComplete, [item]));
+        } else {
+            this.onMoveComplete();
+        }
+    }
+
+    // 第一个移除 等待后开始移动item
+    onRemoveComplete(item) {
+        Laya.timer.once(this.removeWait, this, this.moveItems, [item]);
+    }
+
+    // 移动item
+    moveItems(item) {
+        // 创建下一个item
+        let nextItem = this.createNextItem(this.items[this.items.length - 1], this.items.length);
+        nextItem && this.items.push(nextItem);
+        nextItem && this.owner.container.addChild(nextItem);
+
+        // 移除第一个item
+        game.utils.remove(item);
+        this.items.shift();// 删除掉第一个已经移除的元素
+
+        // 没有要移动的奖励了，所有的基础奖励全部领取完成
+        if (!this.items.length) { this.onMoveComplete(); }
+        // 所有item向前移动
+        this.items.forEach((item, index) => {
+            console.log('移动：', item.step, index);
+            let maxScale = item.step == __data.activity.stepstepGift.stepGiftProgress ? this.maxScale : this.minScale;
+            Laya.Tween.to(item, { scaleX: maxScale, scaleY: maxScale, x: this.points[index].x, y: this.points[index].y }, this.moveTime, null, Laya.Handler.create(this, this.onMoveComplete));
+        });
+    }
+
+    // 移动完成，播放状态设置为false
+    onMoveComplete() {
+        Panel_marketActivity_stepstepGift.playing = false;
+        this.updateUI();
+    }
+
+    // 创建一个item
+    createNextItem(itemOrStep, index) {
+        let step = itemOrStep instanceof Panel_marketActivity_stepstepGift_item ? itemOrStep.step + 1 : itemOrStep;
+        if (__data.activity.stepstepGift.rewards[step]) {
+            let scale = index == 0 ? this.maxScale : this.minScale;
+            let item = new Panel_marketActivity_stepstepGift_item();// 生成实例
+            item.pivot(item.width / 2, item.height / 2);// 让item的旋转点在中心
+            item.step = step;
+            item.scale(scale, scale);// 初始缩放为scale
+            item.maxScale = scale;
+            item.pos(this.points[index].x, this.points[index].y);// 设置位置
+            return item;
+        }
+        return null;
+    }
+
+    // 定位坐标点
+    getPoints() {
+        let points = [];
+        let item = new Panel_marketActivity_stepstepGift_item();// 生成实例
+        let [w, iw, ih] = [0, item.width, item.height];
+        for (let i = 0; i < 5; i++) {
+            let scale = i == 0 ? this.maxScale : this.minScale;
+            let point = { x: w + iw * scale / 2, y: this.owner.container.height - ih / 2 * scale }
+            w = point.x + iw * scale / 2 + this.space;// 记录宽度，以后的item根据w进行位置计算
+            points.push(point);
+        }
+        item.destroy();
+        return points;
+    }
+}

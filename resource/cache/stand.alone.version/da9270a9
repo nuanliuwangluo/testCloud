@@ -1,0 +1,44 @@
+class GameMainNotice extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_notice',
+            layer: 'panel'
+        })
+        this.addChild(this.__tab)
+        this.__tab.selectHandler = new Laya.Handler(this, this.onSelect);
+    }
+    async added() {
+        // IOS能支付修改
+        // if (miniApi.isIOS) {
+        //     this.__tab.labels = '违规处罚公告'
+        // } else {
+        this.__tab.labels = '违规处罚公告,每日上限说明'
+        // }
+        GameMainNotice.defaultIndex = 0;
+        this.__tab.selectedIndex = GameMainNotice.defaultIndex
+        // 这里需要延迟 不延迟 onSelect 里面设置颜色不好使 laya bug
+        await __tool.await(10)
+        this.onSelect(GameMainNotice.defaultIndex);
+    }
+    onDisable() {
+    }
+    onSelect(selectedIndex) {
+        GameMainNotice.defaultIndex = selectedIndex;
+        // 更改文字
+        let bs = this.__tab.items
+        this.origin_tab_labelColors = this.origin_tab_labelColors || this.__tab.labelColors;
+        for (let index = 0, length = bs.length; index < length; index++) {
+            const e = bs[index];
+            e.labelColors = this.origin_tab_labelColors;
+            e.labelStroke = 0;
+        };
+        bs[selectedIndex].labelStroke = 4;
+        bs[selectedIndex].labelColors = '#fff,#fff,#fff';
+
+        if (selectedIndex == 0) {
+            this.img_tips.skin = 'cdn/notice/img_wgcfgg.png'
+        } else {
+            this.img_tips.skin = `cdn/notice/img_mrsxsm.png`
+        }
+    }
+}

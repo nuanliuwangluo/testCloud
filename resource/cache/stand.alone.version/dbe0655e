@@ -1,0 +1,113 @@
+class Panel_marketActivity_goldBox extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_goldBox',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_marketActivity_panel_closeBtn)
+        this.addComponent(Panel_marketActivity_goldBox_Comp);
+        this.btn_explain.on(Laya.Event.CLICK, __showScene, __showScene.show_panel_goldBox_explain);
+        this.btn_open.on(Laya.Event.CLICK, this, this.openGoldBox);
+    }
+    onEnable() {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_goldBox_time', 1)
+        miniApi.trackEvent('Mj_Marketing', { 'Mj_MarketingScene': '金币罐', 'Mj_MarketingType': '营销活动', 'Mj_MarketingStatus': '曝光' })
+        showActivityPanel('goldBox')
+    }
+    onDisable() {
+        game.scene.remove(Panel_marketActivity_goldBox_explain);
+        hallTestShowPanel()
+    }
+    openGoldBox() {
+        if (!__data.activity.goldBox.isOpen) { __tips('尚未达到开启条件'); return; }
+        let needPrice = __data.activity.goldBox.openNeedStone;
+        if (__data.stone >= needPrice) {
+            game.server.send(19006);
+        } else {
+            __showScene.show_payPrompt(needPrice, () => {
+                game.server.send(19006);
+            })
+        }
+    }
+    clickMask() { }
+}
+class Panel_marketActivity_goldBox_explain extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_marketActivity_goldBox_explain',
+            layer: 'panel0'
+        })
+    }
+    onEnable() { }
+    onDisable() { }
+}
+
+class Panel_marketActivity_goldBox_Comp extends Laya.Script {
+    onEnable() {
+        this.init();
+        this.request();
+        game.cb.on('update_activity_goldBox', this, this.updateUI);
+    }
+
+    onDisable() {
+        game.cb.off('update_activity_goldBox', this, this.updateUI);
+    }
+
+    // 为了防止尴尬，先隐藏部分UI，等待数据更新后再显示
+    init() {
+        this.owner.newImg.visible = false;
+        this.owner.explain.visible = false;
+    }
+
+    async request() {
+        game.server.send(19005);
+        this.updateUI();
+    }
+
+    updateUI() {
+        // __data.activity.goldBox.gold = 500000;// 测试用
+        // __data.activity.goldBox.level = 10;// 测试用
+        this.owner.newImg.visible = __data.activity.goldBox.gold == 0;// 新 标志显示条件
+        this.owner.txt_need.visible = !__data.activity.goldBox.isOpen;// 不满足开启条件，显示内容
+
+        this.owner.txt_date.text = this.getCurrentMonthRange();// 日期范围
+        this.owner.txt_gold.text = `${__data.activity.goldBox.gold}金币`;// 金币数量
+        this.owner.txt_need.text = `再累计${__data.activity.goldBox.formatGold(this.need)}金币即可开启`;// 需求金币数量
+
+        this.owner.txt_explain.text = __data.activity.goldBox.isFull ? `金币罐（价值${__data.activity.goldBox.fullStone}钻石）已满，快快开启吧！` : `最高容量：${__data.activity.goldBox.fullNumber}金币（价值${__data.activity.goldBox.fullStone}钻石）`;
+
+        this.owner.explain.width = this.owner.txt_explain.x * 2 + this.owner.txt_explain.width;// 设置 explain 的宽度
+        this.owner.explain.x = this.owner.width - this.owner.explain.width >> 1;// 设置 explain 的 x 坐标
+        this.owner.explain.visible = true;
+
+        this.owner.txt_cost.text = `${__data.activity.goldBox.openNeedStone} 开启`;// 开启金币罐的费用
+        this.owner.box.x = this.owner.btn_open.width - this.owner.box.width >> 1;// 设置 box 的 x 坐标
+
+        SkinUtils.gray(this.owner.btn_open, !__data.activity.goldBox.isOpen, true);// 开启按钮在不满足开启条件的情况下不显示
+    }
+
+    get need() {
+        let numbers = 30000 * __data.activity.goldBox.level - __data.activity.goldBox.gold;
+        return numbers > 0 ? numbers : 0;
+    }
+
+    // 获取当前月份的开始和结束日期
+    getCurrentMonthRange() {
+        let date = new Date();
+        let year = date.getFullYear();
+        let month = date.getMonth() + 1; // getMonth 从 0 开始
+
+        // 开始日期永远是 1 号
+        let startDay = 1;
+
+        // 获取当月最后一天：下个月第 0 天即为当月最后一天
+        let endDay = new Date(year, month, 0).getDate();
+
+        // 格式化函数：补零
+        let pad = (num) => num < 10 ? '0' + num : '' + num;
+
+        return `${pad(month)}.${pad(startDay)} ——— ${pad(month)}.${pad(endDay)}`;
+    }
+
+
+}

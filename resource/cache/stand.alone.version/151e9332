@@ -1,0 +1,52 @@
+class HallPlayLeft extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_playLeft',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_friendRoom_question.addComponent(S_click_HallPlay_friendRoom_question)
+        // this.btn_return.addComponent(S_click_HallPlay_return)
+        this.btn_return.addComponent(S_scene_return)
+        this.btn_changePlay.addComponent(S_hall_changePlay).init(0);
+        // this.btn_allPlay.addComponent(S_hall_mj_more).init(0);
+    }
+    added(cityId, model) {
+        this.btn_friendRoom_question.visible = HallPlay.roomType == 'friend';
+        this.img_bg_1.visible = HallPlay.roomType == 'friend' ? 'local/friendRoom_play/1/img_dqbox2.png' : 'local/hall_play/1/img_dqbox.png';
+        this.img_bg_1.width = HallPlay.roomType == 'friend' ? 1200 : 670
+
+        this.hall_play_update_name(excelUtils.getCityName_mj(cityId))
+        game.cb.on('hall_play_update_name', this, this.hall_play_update_name)
+        game.server.send(11004, __data.myCityId)
+    }
+    onDisable() {
+        game.cb.off('hall_play_update_name', this, this.hall_play_update_name);
+        this.clearAwait && this.clearAwait();
+        HallPlayLeft.lookExtraRank = null;
+
+        // ResUtils.clearTextureRes(['local.cupNum.cupNum'], [
+        //     'local/hall_play/1/tab_gz.png',
+        //     'local/hall_play/1/tab_gz2.png',
+        //     'local/hall_play/1/bt_x3.png',
+        // ])
+        // ResUtils.clearAtlas("res/atlas/local/hall_play/1.atlas")
+        // ResUtils.clearAtlas("res/atlas/local/matchCount/1.atlas")
+        // ResUtils.clearAtlas("res/atlas/local/friendRoom_play/1.atlas")
+        // ResUtils.clearAtlas("res/atlas/cdn/seasonStartEndReward.atlas")
+        // ResUtils.clearTextureRes(['cdn.hall_play_season_title', 'cdn.seasonStartEndReward'])
+    }
+    hall_play_update_name(v) {
+        if (HallPlay.roomType == 'friend') {
+            this.txt_cur_mj_name.text = v + '·好友房'
+            this.btn_friendRoom_question.x = this.txt_cur_mj_name.x + this.txt_cur_mj_name.textField.textWidth + this.btn_friendRoom_question.width / 2 + 0;
+            this.btn_changePlay.x = this.btn_friendRoom_question.x + this.btn_friendRoom_question.width / 2 + this.btn_changePlay.width / 2 + 0;
+        } else {
+            this.txt_cur_mj_name.text = v
+            this.btn_changePlay.x = this.txt_cur_mj_name.x + this.txt_cur_mj_name.textField.textWidth + this.btn_changePlay.width / 2 + 10;
+        }
+    }
+}

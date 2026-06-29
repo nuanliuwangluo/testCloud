@@ -1,0 +1,782 @@
+var __tool = window.__tool = (function (exports) {
+    exports.promise = function (func) {
+        return new Promise(func)
+    }
+    exports.load = function (urlArr, completeCallback, progressCallback) {
+        var completeHandler = completeCallback ? Laya.Handler.create(null, completeCallback) : null
+        var progressHandler = progressCallback ? Laya.Handler.create(null, progressCallback, null, false) : null
+        let noResUrlArr = urlArr.filter((e) => {
+            let url = e && e.url || e;
+            let a = Laya.Loader.getRes(url);
+            return !a
+        })
+        if (noResUrlArr.length == 0) {
+            completeCallback()
+            return
+        }
+        Laya.loader.load(noResUrlArr, completeHandler, progressHandler)
+    }
+    exports.hasLoadZip = []
+    exports.loadZip = function (url, completeCallback, progressCallback, zipUrlPrefix, cacheDeleteUrl) {
+        zipUrlPrefix = zipUrlPrefix || ''
+        cacheDeleteUrl = cacheDeleteUrl || '' //  == a/   or  b/ 这种
+        if (completeCallback && typeof completeCallback != 'function') throw Error('参数必须是function')
+        if (progressCallback && typeof progressCallback != 'function') throw Error('参数必须是function')
+        var vo = {
+            url: url,
+            completeCallback: completeCallback,
+            progressCallback: progressCallback,
+            zipUrlPrefix: zipUrlPrefix,
+            cacheDeleteUrl: cacheDeleteUrl
+        }
+        if (exports.hasLoadZip[vo.url]) {
+            exports.zipAsyncZip(vo);
+        } else {
+            var u = [{
+                'url': vo.url,
+                type: Laya.Loader.BUFFER
+            }];
+            this.load(u, function () {
+                exports.hasLoadZip[vo.url] = 1
+                exports.zipAsyncZip(vo);
+            })
+        }
+
+    }
+    exports.jszip = null;
+    exports.hasAsyncZip = [];
+    exports.hasAsyncAtlas = [];
+    exports.zipAsyncZip = function (vo) {
+        var zipBuffer = Laya.loader.getRes(vo.url)
+        exports.jszip = exports.jszip || new JSZip()
+        if (exports.hasAsyncZip[vo.url]) {
+            exports.zipAsyncAllFile(exports.hasAsyncZip[vo.url], vo)
+        } else {
+            exports.jszip.loadAsync(zipBuffer).then((data) => {
+                exports.hasAsyncZip[vo.url] = data;
+                exports.zipAsyncAllFile(data, vo)
+            })
+        }
+    }
+    exports.zipAsyncAllFile = function (data, vo) {
+        // trace('解析压缩包完成')
+        vo.loadFileCount = 0;
+        vo.hasLoadFileCount = 0;
+        for (var name in data.files) {
+            var curFile = data.files[name];
+            var index1 = name.indexOf('.')
+            var index2 = name.lastIndexOf('/')
+            var fileName = name.substring(index2 + 1, index1)
+            if (curFile.dir == false && fileName) vo.loadFileCount++;
+        }
+        for (var name in data.files) {
+            var curFile = data.files[name];
+            if (curFile.dir == false) {
+                var index1 = name.indexOf('.')
+                var index2 = name.lastIndexOf('/')
+                var isAtlas = name.indexOf('.atlas') > -1 ? true : false;
+                var isPng = name.indexOf('.png') > -1 ? true : false;
+                var isJpg = name.indexOf('.jpg') > -1 ? true : false;
+                var isJson = name.indexOf('.json') > -1 ? true : false;
+                var isJs = name.indexOf('.js') > -1 ? true : false;
+                var fileAsyncType = isPng ? 'base64' : ''
+                fileAsyncType = isJpg ? 'base64' : fileAsyncType
+                fileAsyncType = isJson ? 'text' : fileAsyncType
+                fileAsyncType = isAtlas ? 'text' : fileAsyncType
+                fileAsyncType = isJs ? 'text' : fileAsyncType
+                // name.split('/').pop()
+                var fileName = name.substring(index2 + 1, index1)
+                fileName && exports.test_zipAsyncFile(data, name, fileAsyncType, vo, function () {
+                    vo.hasLoadFileCount++
+                    vo.progressCallback && vo.progressCallback(vo.hasLoadFileCount / vo.loadFileCount)
+                    if (vo.hasLoadFileCount == vo.loadFileCount) {
+                        if (!exports.hasAsyncAtlas[vo.url]) {
+                            for (var name_2 in data.files) {
+                                var curFile = data.files[name_2];
+                                if (curFile.dir == false) {
+                                    var isAtlas = name_2.indexOf('.atlas') > -1 ? true : false;
+                                    if (isAtlas) {
+                                        var imgURL = name_2.replace('.atlas', '.png')
+                                        var __atlas = Laya.loader.getRes(vo.zipUrlPrefix + name_2.replace(vo.cacheDeleteUrl, ''))
+                                        var __texture = Laya.loader.getRes(vo.zipUrlPrefix + imgURL.replace(vo.cacheDeleteUrl, ''))
+                                        if (!__texture) {
+                                            console.warn('无法在Laya.loader.getRes里面找到' + vo.zipUrlPrefix + imgURL.replace(vo.cacheDeleteUrl, '') + '图片，解析atlas失败！！！')
+                                            continue;
+                                        }
+                                        var prefix = __atlas.meta.prefix
+                                        var frames = __atlas.frames
+                                        for (name_1 in frames) {
+                                            var obj = frames[name_1];
+                                            // tPic = pics[obj.frame.idx ? obj.frame.idx : 0];
+                                            var url = Laya.URL.formatURL(prefix + name_1);
+                                            tTexture = Laya.Texture._create(__texture, obj.frame.x, obj.frame.y, obj.frame.w, obj.frame.h, obj.spriteSourceSize.x, obj.spriteSourceSize.y, obj.sourceSize.w, obj.sourceSize.h, Laya.Loader.getRes(url));
+                                            Laya.Loader.cacheTexture(url, tTexture);
+                                            tTexture.url = url;
+                                            // map.push(url);
+                                        }
+                                    }
+                                }
+                            }
+                            exports.hasAsyncAtlas[vo.url] = 1;
+                        }
+                        vo.completeCallback && vo.completeCallback();
+                    }
+                })
+            }
+        }
+    }
+    exports.hasAsyncFile = []; // 已经解析的文件
+    exports.test_zipAsyncFile = function (zipData, fileUrl, fileAsyncType, vo, completeCallback) {
+        if (exports.hasAsyncFile[vo.zipUrlPrefix + fileUrl]) {
+            completeCallback && completeCallback()
+        } else {
+            exports.zipAsyncFile(zipData, fileUrl, fileAsyncType, vo, completeCallback)
+        }
+    }
+    exports.zipAsyncFile = function (zipData, fileUrl, fileAsyncType, vo, completeCallback) {
+        zipData.file(fileUrl).async(fileAsyncType).then((content) => {
+            exports.hasAsyncFile[vo.zipUrlPrefix + fileUrl] = 1
+            if (fileAsyncType == 'base64') {
+                const testPng = new Laya.Texture();
+                testPng.load('data:image/png;base64,' + content, Laya.Handler.create(null, function () {
+                    trace('cache-url', vo.zipUrlPrefix + fileUrl.replace(vo.cacheDeleteUrl, ''))
+                    Laya.loader.cacheRes(vo.zipUrlPrefix + fileUrl.replace(vo.cacheDeleteUrl, ''), testPng)
+                    Laya.loader.clearRes('data:image/png;base64,' + content)
+                    completeCallback && completeCallback()
+                }))
+            } else if (fileAsyncType == 'text') {
+                if (fileUrl.indexOf('.js') > -1) {
+                    var script = document.createElement('script');
+                    script.setAttribute('type', 'text/javascript');
+                    script.id = fileUrl;
+                    script.text = content;
+                    document.body.appendChild(script);
+                    // document.body.removeChild(script);
+                    completeCallback && completeCallback()
+                } else { // atlas json 文件
+                    trace('cache-url', vo.zipUrlPrefix + fileUrl.replace(vo.cacheDeleteUrl, ''))
+                    Laya.loader.cacheRes(vo.zipUrlPrefix + fileUrl.replace(vo.cacheDeleteUrl, ''), JSON.parse(content))
+                    completeCallback && completeCallback()
+                }
+            }
+        })
+    }
+    exports.analyzingBufferImageArrray = async function (bufferImageUrlArray) {
+        let allP = []
+        for (let index = 0, length = bufferImageUrlArray.length; index < length; index++) {
+            const e = bufferImageUrlArray[index];
+            // LayaZip.getPlatform == 'web'
+            allP.push(__tool.analyzingABufferImage_web(e))
+        };
+        await Promise.all(allP);
+        return 1;
+    }
+    exports.analyzingABufferImage_web = function (e) {
+        return new Promise((resolve, reject) => {
+            if (e.type != Laya.Loader.BUFFER) {
+                return resolve(1)
+            }
+            let arrayBuffer = Laya.Loader.getRes(e.url)
+            if (typeof arrayBuffer == 'Texture') {
+                return resolve(1)
+            }
+            Laya.Loader.clearRes(e.url)
+            let image;
+            function clear() {
+                var img = image;
+                img.onload = null;
+                img.onerror = null;
+            }
+            var onerror = function (e1) {
+                clear();
+                console.error(e.url, e1);
+            };
+            var onload = function () {
+                clear();
+                let data123 = image
+                let tex = new Laya.Texture2D(data123.width, data123.height, 1, false, false);
+                tex.wrapModeU = 1 //exports.WarpMode.Clamp;
+                tex.wrapModeV = 1 //exports.WarpMode.Clamp;
+                tex.loadImageSource(data123, true);
+                tex._setCreateURL(data123.src);
+
+                var texture = new Laya.Texture(tex);
+                texture.url = this._url;
+                Laya.loader.cacheRes(e.url, texture)
+                resolve(1)
+            };
+            image = new Laya.Browser.window.Image();
+            image.crossOrigin = "";
+            image.onload = onload;
+            image.onerror = onerror;
+            let blob = new Blob([arrayBuffer]);
+            let fileReader = new FileReader();
+            fileReader.onload = function (data) {
+                image.src = data.target.result;
+            }
+            fileReader.readAsDataURL(blob)
+        })
+    }
+    exports.scriptLoadCountArr = [],
+        exports.scriptLoadedArr = [],
+        exports.loadScript = function (urls, complete, progress, maxLoaderCount) {
+            if (!urls || !urls.length) { complete && setTimeout(complete, 1) }
+            var loadedCount = 0,
+                loadLength = urls.length
+            maxLoaderCount = maxLoaderCount > 0 ? maxLoaderCount : 1
+
+            function loadNextJS(url_) {
+                if (!url_) return;
+                if (exports.scriptLoadedArr[url_]) {
+                    loadAScriptComplete(url_);
+                    return
+                }
+                exports.scriptLoadCountArr[url_] = exports.scriptLoadCountArr[url_] >= 0 ? exports.scriptLoadCountArr[url_] : 0
+                exports.scriptLoadCountArr[url_]++;
+                var script = document.createElement("script");
+                script.type = "text/javascript";
+                script.onerror = function () {
+                    script.src = url_;
+                    if (exports.scriptLoadCountArr[url_] <= 2) {
+                        setTimeout(function () {
+                            loadNextJS(url_)
+                        }, 200)
+                    } else {
+                        // trace(url_)
+                        // alert('资源加载错误，请刷新游戏')
+                    }
+                }
+                if (script.readyState) { //IE
+                    script.onreadystatechange = function () {
+                        if (script.readyState == "loaded" || script.readyState == "complete") {
+                            script.onreadystatechange = null;
+                            loadAScriptComplete(url_);
+                        }
+                    }
+                } else {
+                    script.onload = function () {
+                        loadAScriptComplete(url_);
+                    }
+                } //非IE
+                script.src = url_;
+                document.body.appendChild(script);
+            }
+
+            function loadAScriptComplete(value) {
+                exports.scriptLoadedArr[value] = 1
+                loadedCount++
+                progress && progress(loadedCount / loadLength, value)
+                if (loadedCount == loadLength) complete && setTimeout(complete, 1)
+                else loadNextJS(urls.shift())
+            }
+            for (var i = 0; i < maxLoaderCount; i++) loadNextJS(urls.shift())
+        }
+    exports.getHttpParams = function (name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        var r = decodeURIComponent(results[2].replace(/\+/g, ' '))
+        r = r == 'false' ? false : r
+        r = r == 'true' ? true : r
+        return r;
+    };
+    // var str = "shingfkhshsnf";
+    // 用法，把所有n替换成w
+    // str= str.replaceAll("n","w")
+    String.prototype.replaceAll = function (FindText, RepText) {
+        return this.replace(new RegExp(FindText, "g"), RepText);
+    };
+    String.prototype.toArray = function (sign) {
+        if (this.length == 0) return [];
+        return this.split(sign)
+    }
+    // new Date().dateFormat("yyyy年MM月dd日");
+    // new Date().dateFormat("MM/dd/yyyy");
+    // new Date().dateFormat("yyyyMMdd");
+    // new Date().dateFormat("yyyy-MM-dd hh:mm:ss");
+    Date.prototype.dateFormat = function (format) {
+        var o = {
+            "M+": this.getMonth() + 1, //month
+            "d+": this.getDate(), //day
+            "h+": this.getHours(), //hour
+            "m+": this.getMinutes(), //minute
+            "s+": this.getSeconds(), //second
+            "q+": Math.floor((this.getMonth() + 3) / 3), //quarter
+            "S": this.getMilliseconds() //millisecond
+        }
+        if (/(y+)/.test(format)) {
+            format = format.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+        }
+        for (var k in o) {
+            if (new RegExp("(" + k + ")").test(format)) {
+                format = format.replace(RegExp.$1, RegExp.$1.length == 1 ? o[k] : ("00" + o[k]).substr(("" + o[k]).length));
+            }
+        }
+        return format;
+    }
+    window.trace = function () {
+        try {
+            if (!config || !config.log) return
+            console.log.apply(null, arguments)
+        } catch (e) {
+            console.log.apply(null, arguments)
+        }
+        // console.log(Array.prototype.slice.call(arguments).join(' '))
+    };
+    exports.trace = window.trace
+    window.tp = function (v) {
+        for (var name in v) {
+            console.log(`%c ${name} %c ${v[name]} `, "color:#fff;background:black;border-radius:5px 0 0 5px", "color:#fff;background:#3e6752;border-radius:0 5px 5px 0")
+        }
+    };
+    Object.extend = function (destination, source) {
+        for (property in source) {
+            destination[property] = source[property];
+        }
+        return destination;
+    }
+    exports.toFixed = (v, n) => {
+        let v1 = String(v)
+        if (!v1.includes('.')) {
+            v1 = v1 + '.' + Array(n + 1).join('0')
+        }
+        let v2 = v1.substring(0, v1.indexOf('.') + (n + 1))
+        return Number(v2);
+    }
+    exports.memoize = function (fnkey, fn) {
+        const cache = {};
+        return function (...args) {
+            const key = fnkey + ':' + JSON.stringify(args)
+            if (!cache.hasOwnProperty(key)) {
+                cache[key] = fn.apply(this, args)
+            }
+            return cache[key]
+        }
+    }
+    exports.tween = function (target, atrributesOB, time, ease = Laya.Ease.linearNone, completeFunc = null, completeFuncThis = null, delay = 0) {
+        let t = Laya.Tween.to(target, atrributesOB, time, ease, completeFunc ? new Laya.Handler(completeFuncThis, completeFunc) : null, delay)
+        return t;
+    }
+    exports.tweenUpdate = function (tween_, updateFunc, updateFuncThis = null) {
+        tween_.update = new Laya.Handler(updateFuncThis, updateFunc)
+    }
+    exports.randomRange = function (min, max) {
+        min = Math.floor(min)
+        max = Math.floor(max)
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    }
+    exports.clamp = (value, min_v, max_v) => {
+        return Math.min(Math.max(value, min_v), max_v);
+    }
+    // exports.await = function (time, target) {
+    //     if (target) {
+    //         target.awaitTimer = target.awaitTimer || {};
+    //         target.clearAwait = target.clearAwait || function (e) {
+    //             // Laya.timer.callLater(null, () => {
+    //             target.clearAwait = null;
+    //             Laya.timer.clearAll(target.awaitTimer)
+    //             // })
+    //         }
+    //     }
+    //     return new Promise(async function (res, rej) {
+    //         Laya.timer.once(time, target && target.awaitTimer, () => {
+    //             res(1)
+    //         })
+    //     });
+    // }
+    // ... existing code ...
+    exports.await = function (time, target) {
+        if (target) {
+            target.clearAwait = target.clearAwait || function (e) {
+                target.awaitVO.cancelled = true;// ✅ 设置取消信号
+                clearTimeout(target.awaitVO.timer)
+                target.awaitVO.timer = null;
+                // 兼容老方法
+                target.clearAwait = null;
+            }
+        }
+
+        // ✅ 创建一个可被取消的 Promise
+        const cancelPromise = new Promise((res, rej) => {
+            let timer = setTimeout(() => {
+                // ✅ 定时器触发时检查取消状态
+                if (target && target.awaitVO.cancelled) {
+                    // 兼容老方法
+                    target.clearAwait = null;
+                    return;
+                }
+                // if (target)
+                //     target.awaitVO = null;
+                res(1)
+            }, time)
+            if (target)
+                target.awaitVO = {
+                    timer, cancelled: false,
+                }
+        });
+        return cancelPromise
+    }
+    // ... existing code ...
+    exports.tweenPromise = function (instance, tweenVO, duration, ease = Laya.Ease.linearNone) {
+        return new Promise((resolve, reject) => {
+            let vo = {
+                complete: new Laya.Handler(this, () => {
+                    resolve(1)
+                }),
+                ease,
+            }
+            Object.assign(vo, tweenVO)
+            Laya.Tween.to(instance, vo, duration);
+        })
+    }
+    exports.tweenp = exports.tweenPromise
+    /**
+    * 获取两个时间 同一天
+    * @param {Date 类型 参数1} old_date 
+    * @param {Date 类型 参数2} now_date 
+    */
+    exports.isSameDay = function (old_date, now_date) {
+        return old_date.toDateString() === now_date.toDateString();
+    }
+    exports.getTimezoneOffset = function () {
+        if (!__tool._TimezoneOffset) {
+            const now = new Date();
+            // 获取时区偏差（分钟）
+            const timezoneOffsetMinutes = now.getTimezoneOffset();
+            // 将时区偏差转换为毫秒
+            __tool._TimezoneOffset = timezoneOffsetMinutes * 60 * 1000;
+        }
+        return __tool._TimezoneOffset
+    }
+    exports.getDayCount = function (ms) {
+        const adjustedMs = ms - this.getTimezoneOffset();
+        return Math.floor(adjustedMs / (24 * 60 * 60 * 1000));
+    }
+    exports.getWeeks = function (date) {
+        const currentYear = date.getFullYear();
+        const currentMonth = date.getMonth();
+        const currentDay = date.getDate();
+        date = new Date(currentYear, currentMonth, currentDay, 0, 0, 0)
+        let n = Math.floor((Math.floor(date.getTime() / (24 * 60 * 60 * 1000)) - 3) / 7);
+        return n + 1;
+    }
+    exports.getMonths = function (date) {
+        const currentYear = date.getFullYear();
+        const currentMonth = date.getMonth();
+        const currentDay = date.getDate();
+        date = new Date(currentYear, currentMonth, currentDay, 0, 0, 0)
+        // 获取当前年份和月份
+        // const currentYear = date.getFullYear();
+        // const currentMonth = date.getMonth(); // getMonth() 返回的是 0-11，所以 0 表示 1 月
+        // 计算从 1970 年到现在总共经过的月份数
+        const months = (currentYear - 1970) * 12 + currentMonth;
+        return months;
+    }
+    /**
+     * let anm = __tool.createOverload()
+     * anm.addFn('number', () => { console.log(123); })
+     * anm.addFn('number', 'number',() => { console.log(456); })
+     * anm(1)
+     * anm(1, 2)
+     * @param  {...any} args 
+     * @returns 
+     */
+    exports.createOverload = function (...args) {
+        const fnMap = new Map()
+        function overload(...args) {
+            const key = args.map((it) => {
+                return typeof it
+            }).join(',')
+            const fn = fnMap.get(key)
+            if (!fn) {
+                throw new TypeError('没有找到对应的实现方法')
+            }
+            return fn.apply(this, args)
+        }
+        overload.addFn = function (...args) {
+            const fn = args.pop()
+            if (typeof fn !== 'function') {
+                throw new TypeError('最后一个参数不是function')
+            }
+            const key = args.join(',')
+            fnMap.set(key, fn)
+        }
+        return overload
+    }
+
+    /**
+     * 按照度列[queueKey][queueName] 添加 请求队列
+     * @param {用户标志 比如 uid} queueUserSignName 
+     * @param {用户行为 比如 查看 完成 什么} queueUserActionName 
+     * @param {*} caller 
+     * @param {*} fn 
+     * @param {参数 arguments } __arguments 
+     * @param {是否队列请求 0 直接执行 1 等待队列执行 } isQueue 
+     * @returns 
+     */
+    exports.queuePromise = async function qp(queueUserSignName, queueUserActionName, caller, fn, __arguments, isQueue = 1, overTime = 3000) {
+        let r = await queueLogic.add(queueUserSignName, queueUserActionName, caller, fn, [...__arguments], isQueue, overTime)
+        return r;
+    }
+    let queueLogic = {
+        hash_uid: {},
+        uid_key: {},
+        add: function (uid, key, caller, fn, params, isQueue, overTime) {
+            var t = this;
+            return new Promise(async function (res, rej) {
+                var o = {
+                    uid,
+                    key,
+                    caller,
+                    fn,
+                    params,
+                    callback: res,
+                    overTime,
+                    otcfn: null,
+                    start_overTimeCal(otcfn) {
+                        this.otcfn = otcfn
+                        Laya.timer.once(this.overTime, this, this.overTimeFn)
+                    },
+                    clear_overTimeCal() {
+                        Laya.timer.clearAll(this)
+                    },
+                    overTimeFn() {
+                        console.error('队列 超时', this.uid, this.key, this.caller, this.fn.name, this.params)
+                        this.callback(null)
+                        this.otcfn && this.otcfn();
+                    }
+                }
+                if (isQueue) {
+                    t.hash_uid[uid] = t.hash_uid[uid] || [];
+                    t.hash_uid[uid][key] = t.hash_uid[uid][key] || [];
+                    t.hash_uid[uid][key].push(o);
+                    t.execNext(uid, key);
+                } else {
+                    let r = 0
+                    try {
+                        o.start_overTimeCal()
+                        r = await fn.apply(caller, params)
+                        o.clear_overTimeCal()
+                    } catch (e) {
+                        console.error('queue不走队列 错误：', uid, key, caller, fn.name, params, isQueue = 1)
+                    }
+                    res(r)
+                }
+            })
+        },
+        async execNext(uid, key) {
+            if (this.uid_key[uid + '_' + key]) {
+                let fff = this.uid_key[uid + '_' + key]
+                trace('队列promise', fff.name, uid, key)
+            } else {
+                if (this.hash_uid[uid][key].length) {
+                    var o = this.hash_uid[uid][key].shift();
+                    this.uid_key[uid + '_' + key] = o.fn;
+                    await this.excO(o)
+                    delete this.uid_key[uid + '_' + key];
+                    this.execNext(uid, key)
+                }
+            }
+        },
+        excO(o) {
+            return new Promise(async (res, rej) => {
+                try {
+                    o.start_overTimeCal(() => {
+                        res(null)
+                    })
+                    let r = await o.fn.apply(o.caller, o.params)
+                    o.callback(r)
+                    o.clear_overTimeCal()
+                    res(r)
+                } catch (error) {
+                    res(null)
+                    console.error('', error)
+                }
+            });
+        }
+    }
+    /**
+     * label容器里面各种label设置坐标 并且容器居中
+     * @param {各种label容器} labelParent 
+     * @param {label容器相对于居中的x坐标} centerX 
+     * @param {子元素间隔} dis 
+     */
+    exports.labelParentCenterAndSetXY = function (labelParent, centerX = 0, dis = 0, updateLabelParentXY = true) {
+        let childs = [];
+        for (let index = 0, length = labelParent.numChildren; index < length; index++) {
+            const element = labelParent.getChildAt(index)
+            if (element.visible)
+                childs.push(element)
+        };
+        childs.sort((a, b) => {
+            return a.x - b.x;
+        })
+        let w = 0;
+        childs.forEach((e, index) => {
+            if (e.textField) {
+                e.x = w;
+                w += e.textField.textWidth + dis
+            } else {
+                e.x = w + e.width * e.scaleX * (e.anchorX || 0);
+                w += e.width * e.scaleX + dis
+            }
+        });
+        w -= dis;
+        if (updateLabelParentXY)
+            labelParent.x = centerX - w / 2;
+        labelParent.width = w;
+    }
+
+    // 二次贝塞尔曲线
+    // const P0 = { x: 0, y: 0 };
+    // const P1 = { x: 50, y: 100 };
+    // const P2 = { x: 100, y: 0 };
+    // const t = 0.5; // 进度
+    exports.quadraticBezier = function (P0, P1, P2, t) {
+        const x = Math.pow(1 - t, 2) * P0.x + 2 * (1 - t) * t * P1.x + Math.pow(t, 2) * P2.x;
+        const y = Math.pow(1 - t, 2) * P0.y + 2 * (1 - t) * t * P1.y + Math.pow(t, 2) * P2.y;
+        return { x, y };
+    }
+    // 对于三次贝塞尔曲线
+    // const P0 = { x: 0, y: 0 };
+    // const P1 = { x: 50, y: 150 };
+    // const P2 = { x: 150, y: 150 };
+    // const P3 = { x: 200, y: 0 };
+    // const t = 0.5; // 进度
+    exports.cubicBezier = function (P0, P1, P2, P3, t) {
+        const x = Math.pow(1 - t, 3) * P0.x + 3 * Math.pow(1 - t, 2) * t * P1.x + 3 * (1 - t) * Math.pow(t, 2) * P2.x + Math.pow(t, 3) * P3.x;
+        const y = Math.pow(1 - t, 3) * P0.y + 3 * Math.pow(1 - t, 2) * t * P1.y + 3 * (1 - t) * Math.pow(t, 2) * P2.y + Math.pow(t, 3) * P3.y;
+        return { x, y };
+    }
+
+    exports.arraySamePart = function (arr1 = [], arr2 = []) {
+        let SamePart = arr1.filter(item => arr2.includes(item))
+        return SamePart;
+    }
+    exports.arrayDiffPart = function (arr1 = [], arr2 = []) {
+        let RemoveSame = [...new Set([...arr1, ...arr2])]
+        let SamePart = exports.arraySamePart(arr1, arr2)
+        let Difference = RemoveSame.filter(item => !SamePart.includes(item))
+        return Difference
+    }
+    // var pointX = 3;
+    // var pointY = 3;
+    // var polygon = [[0, 0], [5, 0], [5, 5], [0, 5]];
+    // var result = isPointInPolygon(pointX, pointY, polygon);
+    // console.log(result); // 输出：true
+    exports.isPointInPolygon = function (x, y, polygon) {
+        // polygon是一个数组，包含多边形顶点的坐标，格式为[[x1, y1], [x2, y2], ..., [xn, yn]]
+        var i, j, n = polygon.length;
+        var inside = false;
+
+        for (i = 0, j = n - 1; i < n; j = i++) {
+            var xi = polygon[i][0], yi = polygon[i][1];
+            var xj = polygon[j][0], yj = polygon[j][1];
+
+            var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+    // value -1,1
+    exports.setBrightness = function (filter, value) {
+        // 定义亮度设置函数
+        filter.setByMatrix([
+            1, 0, 0, 0, value * 255,   // R
+            0, 1, 0, 0, value * 255,   // G
+            0, 0, 1, 0, value * 255,   // B
+            0, 0, 0, 1, 0
+        ])
+    }
+    // let a12 = { b: { c: [{ d: 1 }] } };
+    // let aa = getDeepProperty(a12, `['b'].c[0].d`)
+    // console.log(aa);
+
+    // let a123 = [{ a: 2 }];
+    // let ncd = 0
+    // let aa3 = getDeepProperty(a123, `[${ncd}].a`);
+    // console.log(aa3);
+    exports.getDeepProperty = function (obj, path) {
+        // 解析路径字符串，支持点分路径、方括号语法和数组索引
+        const keys = path
+            .replace(/\['(.*?)'\]/g, '.$1') // 将 ['key'] 转换为 .key
+            .replace(/\[(\d+)\]/g, '.$1')   // 将 [0] 转换为 .0
+            .split('.')
+            .filter(key => key !== '');     // 过滤掉空字符串
+
+        return keys.reduce((acc, key) => {
+            // 如果当前对象存在且有该属性，则返回该属性的值，否则返回 undefined
+            return acc && acc[key] !== undefined ? acc[key] : undefined;
+        }, obj);
+    }
+    exports.gdp = exports.getDeepProperty
+    // let [err, data] = __tool.to(promiseFunc())
+    exports.to = (promise) => {
+        return promise.then(data => [null, data]).catch(err => [err, undefined])
+    }
+    exports.canSee = (e) => {
+        if (e.visible) {
+            if (e.parent == game.stage) return true;
+            if (!e.parent) return false
+            return exports.canSee(e.parent)
+        } else {
+            return false
+        }
+    }
+
+    // ... existing code ...
+
+    // 数组 at() 方法兼容处理 - 为不支持的浏览器提供 polyfill
+    if (!Array.prototype.at) {
+        Object.defineProperty(Array.prototype, 'at', {
+            value: function (index) {
+                const len = this.length;
+
+                // 处理负数索引
+                if (index < 0) {
+                    index = len + index;
+                }
+
+                // 检查索引是否在有效范围内
+                if (index < 0 || index >= len) {
+                    return undefined;
+                }
+
+                return this[index];
+            },
+            writable: true,
+            enumerable: false,  // 🔑 关键：设置为不可枚举
+            configurable: true
+        });
+    }
+
+    // 字符串 at() 方法兼容处理
+    if (!String.prototype.at) {
+        Object.defineProperty(String.prototype, 'at', {
+            value: function (index) {
+                const len = this.length;
+
+                // 处理负数索引
+                if (index < 0) {
+                    index = len + index;
+                }
+
+                // 检查索引是否在有效范围内
+                if (index < 0 || index >= len) {
+                    return '';
+                }
+
+                return this[index];
+            },
+            writable: true,
+            enumerable: false,  // 🔑 关键：设置为不可枚举
+            configurable: true
+        });
+    }
+
+    // ... existing code ...
+    return exports
+}({}))

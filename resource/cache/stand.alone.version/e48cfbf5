@@ -1,0 +1,111 @@
+class FriendRoomRedIcon extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_redIcon',
+            module: false
+        })
+        this.addComponent(S_friendRoomRedIcon_show)
+    }
+    async onEnable() {
+        if (!__data.redPacket.canShowFriendRedIcon()) return;
+        if (this.name == 'result') {
+            await __tool.await(50)
+        }
+        game.server.send(18019, __data.uid, this.name == 'result' ? 3 : 1)
+    }
+    onDisable() {
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_friendRoom.friendRoom_redIconUI', FriendRoomRedIcon);
+
+class S_friendRoomRedIcon_show extends Laya.Script {
+    onAwake() {
+        this.img_tips = this.owner.img_tips;
+        this.txt_tips = this.owner.txt_tips;
+        this.ix = this.img_tips.x;
+    }
+    onEnable() {
+        effectUtils.stopBreathe(this.owner.btn_red)
+        this.updateShowRedIcon()
+        this.update_friend_red_data()
+        game.cb.on('update_friend_red_data', this, this.update_friend_red_data)
+        game.cb.on('update_friend_red_data', this, this.updateShowRedIcon)
+        game.cb.on('update_hallPlay_firend_ruleItemView', this, this.updateShowRedIcon)
+    }
+    onDisable() {
+        game.cb.off('update_friend_red_data', this, this.update_friend_red_data)
+        game.cb.off('update_friend_red_data', this, this.updateShowRedIcon)
+        game.cb.off('update_hallPlay_firend_ruleItemView', this, this.updateShowRedIcon)
+        this.tweening = false;
+        this.img_tips.clearAwait && this.img_tips.clearAwait();
+        Laya.Tween.clearAll(this.img_tips)
+    }
+    onClick(e) {
+        __showScene.show_friendRoom_redPanel()
+    }
+    update_friend_red_data() {
+        let imgRed = this.owner.btn_red.getChildByName('img_red');
+        // 优化红包状态显示逻辑
+        const statusConfig = {
+            // 0无红包（未领取任务）；
+            // 1有未开启红包（任务已完成）；
+            // 2红包已领取（任务已完成）；
+            // 3任务已领取（未完成）；
+            // 4任务失败（未完成） ；
+            0: { visible: false, text: '好友红包' },
+            1: { visible: true, text: '挑战成功' },
+            2: { visible: false, text: '挑战成功' },
+            3: { visible: false, text: '挑战中' },
+            4: { visible: false, text: '挑战失败' },
+            "-1": { visible: false, text: '好友红包' },     // 活动未开始或已结束
+            "-2": { visible: false, text: '好友红包' }      // 红包已抢光
+        };
+        // 或者检查 s 属性是否有值
+        let s = __data.friendRoom.red.status;
+        const config = statusConfig[s]
+        imgRed.visible = config.visible;
+        this.owner.txt_time.text = config.text;
+
+        this.img_tips.visible = s == 4;
+        if (s == 4) {
+            this.txt_tips.text = `还剩\n${__data.friendRoom.red.surplusRedNum}个`
+            this.effect_tips()
+        }
+        // if (__showScene.sceneType == 'hallPlay') {
+        if (s != 1 && s != 2 && s != 3) {
+            if (__data.friendRoom.red.isTimeIn() && __data.friendRoom.red.surplusRedNum > 0) {
+                effectUtils.breathe(this.owner.btn_red, 1, 1.1, 300)
+                imgRed.visible = true;
+
+
+                return
+            }
+        }
+        // }
+
+        effectUtils.stopBreathe(this.owner.btn_red)
+    }
+    async effect_tips() {
+        if (this.tweening) return
+        this.tweening = true
+        this.img_tips.x = this.ix;
+        await __tool.tweenp(this.img_tips, { x: this.ix - 5 }, 500)
+        await __tool.tweenp(this.img_tips, { x: this.ix + 10 }, 1000)
+        await __tool.tweenp(this.img_tips, { x: this.ix }, 500)
+        this.tweening = false;
+        this.effect_tips()
+    }
+    updateShowRedIcon() {
+        this.owner.visible = false
+        if (!__data.friendRoom.red.isHaveData) return;
+        if (__data.deskData.roomVo.isRecordPlaying) return
+        this.owner.visible = true;
+
+        if (__showScene.sceneType != 'hallPlay') {
+            if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND) return this.owner.visible = false;
+        }
+        if (!__data.redPacket.canShowFriendRedIcon()) return this.owner.visible = false;
+        let b = __data.excelConfig.hashCityIdVO[__data.myCityId].Red == 1
+        this.owner.visible = b
+    }
+}

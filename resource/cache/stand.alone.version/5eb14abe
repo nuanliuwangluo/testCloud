@@ -1,0 +1,82 @@
+// class GameMainCardShare extends game.ModuleBase {
+//     constructor() {
+//         super({
+//             map: 'scene_hall/gameMain_cardShare',
+//             layer: 'panel'
+//         })
+//         this.btn_look.addComponent(S_hall_collect).init('card')
+//         this.btn_share.addComponent(S_GameMainCardShare_share)
+//     }
+//     added(shareCardId) {
+//         this.img_card.skin = `cdn/card/${shareCardId}.png`;
+//         this.rate = __tool.randomRange(1, 9)
+//         this.shareCardId = shareCardId;
+//         this.txt_over.text = this.rate + '%'
+//         this.txt_over.x = this.txt_1.x + this.txt_1.textField.textWidth + 10;
+//         this.txt_2.x = this.txt_over.x + this.txt_over.textField.textWidth + 10;
+//         let w = this.txt_2.x + this.txt_1.textField.textWidth;
+//         this.sp_have.x = this.width / 2 - w / 2;
+//     }
+//     // clickMask() { }
+// }
+// class S_GameMainCardShare_share extends Laya.Script {
+//     onClick() {
+//         game.scene.remove(GameMainCardShare)
+//         miniApi.share({
+//             imgId: 1,
+//             title: `黄金${cardShareName[this.owner.parent.shareCardId]}到手！全国仅${this.owner.parent.rate}%的人拥有`,
+//             params: `uid=${__data.uid}&myCityId=${__data.myCityId}`,
+//         })
+//     }
+// }
+// let cardShareName = {
+//     7000: '一万',
+//     7001: '二万',
+//     7002: '三万',
+//     7003: '四万',
+//     7004: '五万',
+//     7005: '六万',
+//     7006: '七万',
+//     7007: '八万',
+//     7008: '九万',
+
+//     7010: '一饼',
+//     7011: '二饼',
+//     7012: '三饼',
+//     7013: '四饼',
+//     7014: '五饼',
+//     7015: '六饼',
+//     7016: '七饼',
+//     7017: '八饼',
+//     7018: '九饼',
+
+//     7020: '幺鸡',
+//     7021: '二条',
+//     7022: '三条',
+//     7023: '四条',
+//     7024: '五条',
+//     7025: '六条',
+//     7026: '七条',
+//     7027: '八条',
+//     7028: '九条',
+
+//     7030: '东风',
+//     7031: '南风',
+//     7032: '西风',
+//     7033: '北风',
+
+//     7040: '红中',
+//     7041: '发财',
+//     7042: '白板',
+
+//     7050: '春',
+//     7051: '夏',
+//     7052: '秋',
+//     7053: '冬',
+
+//     7054: '梅',
+//     7055: '兰',
+//     7056: '竹',
+//     7057: '菊',
+// }
+console.log('giveup card share module');

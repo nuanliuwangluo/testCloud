@@ -1,0 +1,97 @@
+class FriendRoom_input_roomId extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_friendRoom/friendRoom_input_roomId',
+            layer: 'panel'
+        })
+        this.comp = this.addComponent(S_input_id_6).init('roomId').listen(this.joinRoom.bind(this));
+    }
+
+    onDisable() {
+        ResUtils.clearAtlas('res/atlas/cdn/friendRoom_input.atlas')
+    }
+
+    joinRoom(roomId) {
+        if (String(roomId).length >= 6) {
+            game.server.send(14006, roomId);
+        }
+    }
+}
+class S_input_id_6 extends Laya.Script {
+    onRightClick(e) {
+        miniApi.paste((e) => {
+            this.input_id = e;
+            this.updateId()
+            this.askForInput();
+        })
+    }
+
+    listen(todo) {
+        this.todo = todo;
+    }
+
+    init(type) {
+        this.type = type
+        return this;
+    }
+    onAwake() {
+        for (let index = 0; index < 10; index++) {
+            this.owner['btn' + index].addComponent(S_friendRoom_input).init(index, this)
+        }
+        this.owner.btn_clear.addComponent(S_friendRoom_input).init('clear', this)
+        this.owner.btn_delete.addComponent(S_friendRoom_input).init('delete', this)
+        this.input_idArray = [this.owner.id1, this.owner.id2, this.owner.id3, this.owner.id4, this.owner.id5, this.owner.id6]
+    }
+    onEnable() {
+        this.input_id = ''
+        this.updateId()
+    }
+    onDisable() {
+
+    }
+    updateId() {
+        if (this.type == 'roomId') {
+            let a = String(this.input_id).toArray('');
+            for (const iterator of this.input_idArray) {
+                iterator.text = ''
+            }
+            for (let index = 0; index < a.length; index++) {
+                this.input_idArray[index] && (this.input_idArray[index].text = a[index])
+            }
+        } else {
+            this.input_idArray[0].text = String(this.input_id)
+        }
+    }
+    add_order(type) {
+        if (type == 'clear') {
+            this.input_id = ''
+        } else if (type == 'delete') {
+            if (this.input_id.length)
+                this.input_id = this.input_id.slice(0, this.input_id.length - 1)
+        } else {
+            this.input_id += String(type)
+            if (this.type == 'roomId') {
+                this.input_id = this.input_id.slice(0, 6)
+            } else if (this.type == 'replayId') {
+                this.input_id = this.input_id.slice(0, 10)
+            }
+        }
+        this.updateId();
+        this.askForInput();
+    }
+
+    askForInput() {
+        this.todo && this.todo(this.input_id);
+    }
+
+    getInputId() { return this.input_id; }
+}
+class S_friendRoom_input extends Laya.Script {
+    init(type, s6) {
+        this.type = type
+        this.s6 = s6
+    }
+    onClick(e) {
+        this.s6.add_order(this.type)
+    }
+}

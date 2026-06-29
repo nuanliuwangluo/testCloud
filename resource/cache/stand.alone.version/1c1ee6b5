@@ -1,0 +1,114 @@
+class GameMainPropGet_vip extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_propGet_vip',
+            layer: 'panel'
+        })
+        this.btn_sure.addComponent(S_click_prop_get_sure_vip);
+        this.btn_select.addComponent(S_click_single_select_box)
+        this.allProps = [];
+
+        this.container_inity = this.__container.y;
+    }
+
+    added(props) {
+        __sound.gameSound('get');
+        for (let index = 0, length = this.allProps.length; index < length; index++) {
+            const e = this.allProps[index];
+            e.visible = false;
+        };
+        let w = 0;
+        let h = 0
+
+        let isHaveStar;
+        // this.img_title.skin = 'ab/a_panel_prop_get/img_gxhd1.png'
+        // let testHaveCard = 1
+        for (let index = 0, length = props.length; index < length; index++) {
+            const e = props[index];
+            let pp = this.allProps[index] || new gameMainPropGetItem_vip()
+            this.allProps[index] = pp;
+            this.__container.addChild(pp)
+            pp.visible = true;
+            pp.dataSource = e;
+            if (e.propId == 5) {
+                isHaveStar = true;
+            }
+            pp.x = index % 5 * (pp.width + 0)
+            pp.y = Math.floor(index / 5) * (pp.height - 20)
+            w = Math.max(pp.x + pp.width, w);
+            h = Math.max(pp.y + (pp.height - 20), h)
+        };
+        this.__container.x = (this.width - w) / 2
+        this.__container.y = this.container_inity - h / 2;
+
+        if (__data.sub.isSubActivity) {
+            this.btn_select.visible = false;
+            this.txt_select.visible = false;
+            this.btn_select.isSelect = false;
+        } else {
+            this.btn_select.visible = miniApi.clientType != 'app';
+            this.txt_select.visible = miniApi.clientType != 'app';
+        }
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['ab.a_panel_prop_get'])
+        ResUtils.clearTextureRes(['cdn.getPropAd'])
+        ResUtils.clearTextureRes(['cdn.cupAndMedal'])
+        ResUtils.clearTextureRes(['bag_icon'])
+    }
+}
+class S_click_prop_get_sure_vip extends Laya.Script {
+    async onClick() {
+        if (!this.owner.parent.btn_select.visible || !this.owner.parent.btn_select.isSelect) {
+            game.scene.remove(GameMainPropGet_vip)
+        } else {
+            if (!__data.sub.isSubActivity) {
+                let a = await miniApi.activitySubscribe()
+                if (a == 1) {
+                    game.server.send(16006, 1)
+                    game.scene.remove(GameMainPropGet_vip)
+                }
+            }
+        }
+    }
+}
+class gameMainPropGetItem_vip extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_propGetItem_vip',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_prop_show_des)
+        this.addComponent(S_getProp_click_noRemoveParent)
+        this.img_prop.skin = ''
+    }
+    set dataSource(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        let p;
+        if (!PropIcon.icon[vo.propId]) {
+            p = PropIcon.icon[1];
+            try {
+                throw new Error('物品不存在 ' + vo.propId)
+            } catch (error) {
+                console.error(error.stack)
+                miniApi.uploadError(error.stack)
+            }
+        } else {
+            p = PropIcon.icon[vo.propId]
+        }
+        this.img_prop.skin = ''
+        this.txt_name.text = p.name;
+        this.img_prop.skin = p.skin;
+
+        let a = 155 / fileWHConfig[p.skin].width
+        let b = 153 / fileWHConfig[p.skin].height
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_propGetItem_vipUI', gameMainPropGetItem_vip);

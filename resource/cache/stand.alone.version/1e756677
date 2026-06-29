@@ -1,0 +1,47 @@
+class TestBtn extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestBtn',
+            module: false
+        })
+        this.addComponent(S_TestBtn)
+    }
+    onEnable() {
+        this.dragRegion = new Laya.Rectangle(0, 0, game.width - this.width, game.height - this.height)
+        this.x = parseInt(miniApi.getItem('testbtn_x')) || 0
+        this.y = parseInt(miniApi.getItem('testbtn_y')) || 0
+        if (this.x < 0) this.x = 0
+        if (this.y < 0) this.y = 0
+        if (this.x > game.width - this.width) this.x = game.width - this.width
+        if (this.y > game.height - this.height) this.y = game.height - this.height
+    }
+}
+window.TestBtn = TestBtn;
+class S_TestBtn extends Laya.Script {
+    onClick(e) {
+        if (this.lastMouseX != game.stage.mouseX || this.lastMouseY != game.stage.mouseY) return;
+        let p = game.scene.get(TestPanel)
+        if (!p || !p.parent) {
+            game.scene.add(TestPanel)
+        }
+        else {
+            game.scene.remove(TestPanel)
+        }
+    }
+    onMouseDown(e) {
+        this.lastMouseX = game.stage.mouseX
+        this.lastMouseY = game.stage.mouseY
+        this.owner.startDrag(this.owner.dragRegion);
+    }
+    onMouseUp(e) {
+        miniApi.setItem('testbtn_x', this.owner.x)
+        miniApi.setItem('testbtn_y', this.owner.y)
+    }
+}
+TestBtn.create = () => {
+    if (!TestBtn.btn) {
+        TestBtn.btn = new TestBtn();
+        TestBtn.btn.zOrder = 1000;
+    }
+    game.stage.addChild(TestBtn.btn)
+}

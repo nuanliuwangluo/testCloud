@@ -1,0 +1,139 @@
+
+// Object.defineProperty(HallPlay, "roomType", {
+//     get: function () {
+//         return HallPlay._roomType;
+//     },
+//     set: function (value) {
+//         HallPlay._roomType = value;
+//     },
+// });
+class S_look_queShen_red extends Laya.Script {
+    onEnable() {
+        gtool.query([13002], 1)
+        game.cb.on('update_queShenRoad_data', this, this.updateRed)
+        this.updateRed()
+    }
+    onDisable() {
+        game.cb.off('update_queShenRoad_data', this, this.updateRed)
+    }
+    updateRed() {
+        let red = this.owner.getChildByName('img_red')
+        red.visible = __data.queShenRoad.isRed;
+    }
+}
+class S_hall_play_show_friendRoom extends Laya.Script {
+    onClick(e) {
+        __data.lastSceneQueue.push(() => {
+            __showScene.show_hall_play(HallPlay.lastCityId, 'normal')
+        })
+        __showScene.show_hall_play(HallPlay.lastCityId, 'friend', false, false)
+    }
+}
+class S_click_HallPlay_friendRoom_question extends Laya.Script {
+    onClick(e) {
+        trace('S_click_HallPlay_friendRoom_question')
+        __showScene.show_friendRoom_explain()
+    }
+}
+class S_click_show_mingRen extends Laya.Script {
+    onClick(e) {
+        __showScene.show_personage();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '名人堂界面' })
+    }
+}
+class S_click_HallPlay_rank extends Laya.Script {
+    onClick(e) {
+        game.scene.add(HallPlayRank)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '单玩法排名界面' })
+    }
+}
+class S_hall_match extends Laya.Script {
+    init(type) {
+        this.type = type
+        this.owner.img_bg.skin = `local/hall_play/1/img_match${type}.png`
+    }
+    async onClick() {
+        S_hall_match__click(this.type);
+    }
+}
+class S_hall_play_quick_start extends Laya.Script {
+    async onClick() {
+        S_hall_play_quick_start__click()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '快速开始按钮' })
+    }
+    onEnable() {
+        this.update_quick_txt()
+        game.cb.on('updateMathInfo', this, this.update_quick_txt);
+    }
+    onDisable() {
+        game.cb.off('updateMathInfo', this, this.update_quick_txt);
+    }
+    update_quick_txt() {
+        let txt_quickPlay = this.owner.getChildByName('txt_quickPlay')
+        txt_quickPlay.text = '新手场'
+        let arrData = excelUtils.getModelByCityIdRuleId(HallPlay.lastCityId, HallPlay.curRuleId)
+        if (!arrData) return;
+        // for (let index = arrData.length - 1; index >= 0; index--) {
+        for (let index = 0, length = arrData.length; index < length; index++) {
+            const e = arrData[index];
+            if (e.maxGold != -1) {
+                if (__bigNumberCal.gte(__data.gold, e.minGold) && __bigNumberCal.lte(__data.gold, e.maxGold)) {
+                    txt_quickPlay.text = __data.hashMatchModelTypeName[e.matchModelType]
+                    break;
+                }
+            } else if (__bigNumberCal.gte(__data.gold, e.minGold)) {
+                txt_quickPlay.text = __data.hashMatchModelTypeName[e.matchModelType]
+                break;
+            }
+        };
+    }
+
+}
+let S_hall_match__click = async (thisType) => {
+
+    if (!__data.playNumbers) {
+        __data.d_match.startMatch(thisType, HallPlay.curRuleId, HallPlay.lastCityId, 0);
+    } else {
+        __data.d_match.preMatch(thisType, HallPlay.curRuleId, HallPlay.lastCityId, 0);
+    }
+}
+
+let S_hall_play_quick_start__click = async (use_d_match_preMatch) => {
+    let type = 1;
+    let arrData = excelUtils.getModelByCityIdRuleId(HallPlay.lastCityId, HallPlay.curRuleId)
+    // for (let index = arrData.length - 1; index >= 0; index--) {
+    for (let index = 0, length = arrData.length; index < length; index++) {
+        const e = arrData[index];
+        if (e.maxGold != -1) {
+            if (__bigNumberCal.gte(__data.gold, e.minGold) && __bigNumberCal.lte(__data.gold, e.maxGold)) {
+                type = e.matchModelType
+                break;
+            }
+        } else if (__bigNumberCal.gte(__data.gold, e.minGold)) {
+            type = e.matchModelType
+            break;
+        }
+    };
+    if (use_d_match_preMatch == 1) {
+        __data.d_match.preMatch(type, HallPlay.curRuleId, HallPlay.lastCityId, 0);
+        return
+    }
+    if (!__data.playNumbers) {
+        __data.d_match.startMatch(type, HallPlay.curRuleId, HallPlay.lastCityId, 0);
+    } else {
+        __data.d_match.preMatch(type, HallPlay.curRuleId, HallPlay.lastCityId, 0);
+    }
+
+}
+// class S_hall_lvInfo extends Laya.Script {
+//     onClick() {
+//         __showScene.show_gameMain_lvInfo();
+//         miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '段位规则界面' })
+//     }
+// }
+class S_hall_queShenRoad extends Laya.Script {
+    onClick() {
+        __showScene.show_queShenRoad();
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '雀神之路界面' })
+    }
+}

@@ -1,0 +1,84 @@
+__data.newPlayerRedChallenge = {
+    isHaveData: false,
+    endTime: Date.now() + 0.5 * 3600 * 1000,
+    taskIndex: 0,
+    taskStatus: 0, // 1可以领取 0未完成 -1任务失败
+    // server18001Num: 0,
+    // lastActivityStatus: 0, // 0默认 1进行中 2结束 3移除
+    get taskName() {
+        return this.taskData[this.taskIndex] && this.taskData[this.taskIndex].name || ''
+    },
+    pro: 13,
+    get need() {
+        return this.taskData[this.taskIndex] && this.taskData[this.taskIndex].need || 0
+    },
+    get testRedTaskFailBombBox() {
+        let a = miniApi.getItem(__data.uid + ':red_fail_bomb_box')
+        if (a == '1') return false;
+        return !this.isEnd() && this.taskStatus == -1
+    },
+    isFail() {
+        // 挑战失败
+        return this.taskStatus === -1 ? 1 : 0;
+    },
+    isRed() {
+        return this.isFail() || (this.pro >= this.need)
+    },
+    isRemove() {
+        if (!__data.redPacket.canShowNewPlayerRedIcon()) return true;
+
+        let is_newPlayerRed_ani_remove = miniApi.getItem(__data.uid + ':newPlayerRed_ani_remove')
+        if (is_newPlayerRed_ani_remove === '1') {
+            return true;
+        }
+        let a = new Date(__data.newPlayerRedChallenge.endTime + 24 * 3600 * 1000)
+        a.setHours(0, 0, 0, 0)
+        if (Date.now() >= a.getTime()) return true
+        return false;
+    },
+    isEnd() {
+        let dis = Date.now() - this.endTime
+        // if (dis >= 0 && dis <= 24 * 3600 * 1000) {
+        if (dis >= 0) {
+            return true
+        }
+        let end1 = this.rewards.every((e) => {
+            return e.hasGet === 1
+        })
+        if (end1) return true;
+        return false;
+    },
+    isShowAddTime() {
+        let a = this.endTime - Date.now()
+        if (a <= 10 * 60 * 1000) {
+            if (!__data.vip.isVip && __data.newPlayerRedChallenge.get_addTimeCount() < 10) {
+                return true
+            } else if (__data.vip.isVip && __data.newPlayerRedChallenge.get_addTimeCount() < 5) {
+                return true;
+            }
+        }
+        return false;
+    },
+    rewards: [
+        { type: 1, num: 888, hasGet: 0 }, // type 1金币 2普通红包 3拼手气红包
+        { type: 2, num: 0.1, hasGet: 0 }, // type 1金币 2普通红包 3拼手气红包
+        { type: 1, num: 2888, hasGet: 0 },
+        { type: 3, num: 8.8, hasGet: 0 },
+    ],
+    taskData: [
+        { name: '赢得1场胜利', need: 1, type: 1 },
+        { name: '完成2场对局', need: 2, type: 2 },
+        { name: '赢得2场胜利', need: 2, type: 1 },
+        { name: '接下来2场全胜', need: 2, type: 3 },
+    ],
+    total_addTimeCount() {
+        let c = this.get_addTimeCount()
+        miniApi.setItem(__data.uid + '-newPlayerRedChallenge_addTimeCount', c + 1)
+    },
+    get_addTimeCount() {
+        let a = miniApi.getItem(__data.uid + '-newPlayerRedChallenge_addTimeCount')
+        if (parseInt(a) >= 0) {
+            return parseInt(a)
+        } else return 0
+    },
+}

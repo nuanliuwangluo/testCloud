@@ -1,0 +1,75 @@
+__data.mjSmallGame = {
+    start_game_need_stone: 5,
+    level: 1,
+    maxFreeCount: 3,
+    set todayFreeCount(v) {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':mjSmallGame:gameCount', v)
+    },
+    get todayFreeCount() {
+        let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':mjSmallGame:gameCount')
+        let d1 = parseInt(a)
+        let d2 = Number.isFinite(d1) ? d1 : this.maxFreeCount;
+        return d2;
+    },
+
+    // 是否可以通过看视频增加挑战次数
+    set canVideoAddCount(v) {
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':mjSmallGame:canVideoAddCount', v)
+    },
+    get canVideoAddCount() {
+        let a = miniApi.getItem(__data.uid + ':' + new Date().toDateString() + ':mjSmallGame:canVideoAddCount')
+        let d1 = parseInt(a)
+        let d2 = Number.isFinite(d1) ? d1 : 1;
+        return d2;
+    },
+
+    initTime: 50,
+    starRewardNum: 5,
+    //     // 卡组数量
+    cardGroupNum: 50,
+    //     // 卡组种类
+    cardGroupTypeNum: 30,
+    chiPro: 0,
+    pengPro: 0,
+    gangPro: 0,
+
+    maxUsePropCount_stone: 4,
+    curUsePropCount_stone: 0,
+    maxUsePropCount_video: 4,
+    curUsePropCount_video: 0,
+
+    buyPropNeedStoneCount: 1,
+    placeCardDis: 0,
+    maxPlaceCardCount: 6,
+
+    comebacklife_stone: 1,
+    comebacklife_video: 1,
+
+    get getComebacklifeCount() {
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     return __data.mjSmallGame.comebacklife_video > 0
+        // } else {
+        let a = __data.mjSmallGame.comebacklife_stone > 0
+        let b = __data.mjSmallGame.comebacklife_video > 0
+        return a || b
+        // }
+    },
+    rankData: {
+        // 1: [{ rank: 1, name: 2, mjName: 3, level: 4 }, { rank: 2, name: 22, mjName: 32, level: 14 }],
+        // 2: [{ rank: 3, name: 2, mjName: 3, level: 4 }, { rank: 4, name: 22, mjName: 32, level: 14 }],
+        // my: {
+        //     rank: 3, name: 2, mjName: 3, level: 4
+        // }
+    },
+    vibrate() {
+        if (this.isvibrate) {
+            miniApi.vibrate()
+        }
+    },
+    get isvibrate() {
+        let a = miniApi.getItem(__data.uid + '-vibrate')
+        if (a == '0') return false;
+        else return true
+    }
+}

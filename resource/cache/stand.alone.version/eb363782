@@ -1,0 +1,44 @@
+__data.dailyTask = {
+    des: '',
+    pro: 0,
+    need: 0,
+    reward: [],
+    refreshStone: 0,
+    today_comNum: 0,
+    today_limitNum: 0,
+    // isHasReceive: 1,
+    // curCount: 12,
+    // maxCount: 12,
+    // todayRefreshCount: 0,
+    get isFinalTask() {
+        return this.today_comNum >= this.today_limitNum;
+    },
+    send_msg_aKeyCom() {
+        // game.server.send(10007)
+    },
+    send_msg_receive() {
+        // game.server.send(10003)
+    },
+
+
+    get simpleDes() {
+        // 已完成
+        if(this.today_comNum >= this.today_limitNum){
+            return "今日已完成";
+        }else if (this.pro >= this.need) {
+            return "已完成";
+        } else if (this.des.includes('连胜')) {
+            return `${this.need}连胜`;
+        } else if (this.des.includes('胜利')) {
+            return `再赢${this.need - this.pro}场`;
+        } else if (this.des.includes('完成')) {
+            return `再玩${this.need - this.pro}场`;
+        } else if (this.des.includes('奖杯')) {
+            return `再赢${this.need - this.pro}奖杯`;
+        } else if (this.des.includes('金币')) {
+            return `再赢${this.need - this.pro}金币`;
+        } else {
+            return "";
+        }
+    }
+}

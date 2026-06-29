@@ -1,0 +1,13 @@
+var gtool = window.gtool || {};
+window.gtool = gtool;
+gtool.cityRank = {
+    sortByWeight(rankDataArray) {
+        // rankDataArray.sort((a, b) => {
+        //     return (b.score * 10000 + __data.excelConfig.hashCityIdWeight[b.cityId]) - (a.score * 10000 + __data.excelConfig.hashCityIdWeight[a.cityId])
+        // })
+        // for (let index = 0, length = rankDataArray.length; index < length; index++) {
+        //     const e = rankDataArray[index];
+        //     e.rank = index + 1;
+        // };
+    }
+}

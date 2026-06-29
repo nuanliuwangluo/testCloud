@@ -1,0 +1,45 @@
+class MM_ui_res extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_ui_res',
+            left: true,
+            up: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.txt_star.addComponent(S_hall_tween_star)
+        this.img_star.addComponent(S_click_show_des_set).init('雀神之星：可通过每日挑战、日常任务、吃碰消消乐获得。')
+
+        this.txt_stone.addComponent(S_update_stone)
+        this.img_stone_bg.addComponent(S_click_main_stone)
+        this.img_stone_bg1.visible = false
+        this.btn_add_stone.addComponent(S_show_shop).init(3, 0)
+    }
+    async added(showStarFlyAni) {
+        if (showStarFlyAni) {
+            let img = new Laya.Image('bag_icon/img_hyzx.png')
+            game.scene.layer['tips'].c.addChild(img)
+            img.width = 75
+            img.height = 75
+            img.anchorX = 0.5
+            img.anchorY = 0.5
+            img.scaleX = game.scale
+            img.scaleY = game.scale
+
+            let img_star1 = this.img_star
+            let a1 = new Laya.Point(img_star1.x + img_star1.width / 2, img_star1.y + img_star1.height / 2)
+            let b1 = img_star1.parent.localToGlobal(a1);
+            let b2 = showStarFlyAni
+
+            // 示例使用
+            const P0 = b1;
+            const P1 = { x: b2.x + 100, y: b1.y - 100 };
+            const P2 = b2;
+            __sound.playGameYx("usestar");
+            await gardenEffect.addAEffect(img, P2, P1, P0, 0.05, 2, 0.05)
+            __data.addMoney(5, 5)
+            game.cb.event('update_star')
+        }
+    }
+}

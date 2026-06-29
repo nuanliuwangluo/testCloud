@@ -1,0 +1,15 @@
+class HallPlayLeftDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_playLeftDown',
+            down: true,
+            left: true,
+            offx: () => {
+                return miniApi.statusBarRatio() * Laya.stage.width;
+            },
+        })
+        this.btn_rank.addComponent(S_click_HallPlay_rank)
+        this.btn_MingRen.addComponent(S_click_show_mingRen)
+        this.btn_seasonRule.addComponent(S_season_record_rule)
+    }
+}

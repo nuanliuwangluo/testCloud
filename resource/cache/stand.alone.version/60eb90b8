@@ -1,0 +1,1853 @@
+/* 
+ * @Author: 相濡以沫
+ * @Date:   2020-02-11 13:23:56
+ * @Last Modified by:   轻飘时刻
+ * @Last Modified time: 2024-01-29 18:41:50
+ */
+
+'use strict';
+
+
+
+class MahjongBG extends Laya.Image {
+    constructor() {
+        super()
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+
+        this.skin = ''
+        this.width = config.gameW
+        this.height = config.gameH
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'save_set_data', this, this.updateBackGround)
+
+        this.updateBackGround();
+    }
+
+    onDisable() {
+        game.cb.off(__eh + 'save_set_data', this, this.updateBackGround)
+    }
+
+    updateBackGround() {
+        //2D版本
+        if (__data.mahjong_set.modelIndex == 0) {
+            //本地存储的桌面颜色
+            let __skin = 'bigImg/' + __data.mahjong_set.bgIndex + '_desk.png'
+            this.skin = __skin
+        }
+        //3D版本
+        else if (__data.mahjong_set.modelIndex == 1) {
+            //本地存储的桌面颜色  暂时使用2D 界面替代后期修改
+            let __skin = 'bigImg/' + __data.mahjong_set.bgIndex + '_desk.png'
+            this.skin = __skin
+        }
+    }
+}
+
+
+class Mahjong3DBG extends Laya.Sprite {
+    constructor() {
+        super();
+
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+        this.width = config.gameW
+        this.height = config.gameH
+
+        this.uScene = null;
+        this.wallArr = [];
+
+        this.addComponent(AITalkingComponent);
+    }
+
+    onEnable() {
+        game.cb.on(__eh + 'save_set_data', this, this.updateBackGround)
+        this.init();
+        clear_hall_hallPlay_garden_scene_res()
+    }
+
+    onDisable() {
+        __data.deskData.roomVo.isOut = false;
+        game.cb.off(__eh + 'save_set_data', this, this.updateBackGround)
+        this.clear();
+        this.reset();
+    }
+
+    init() {
+        this.uScene = this.uScene || Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/MahjongTilePack.ls');
+        this.addChild(this.uScene);
+
+        // if (this.uScene.getChildByName('Main Camera').transform.rotationEuler.z !== 180) {
+        //     let tempRotationZ = game.scene.c.rotation === 180 ? 180 : 0
+        //     this.uScene.getChildByName('Main Camera').transform.rotationEuler = new Laya.Vector3(this.uScene.getChildByName('Main Camera').transform.localRotationEulerX, this.uScene.getChildByName('Main Camera').transform.localRotationEulerY, tempRotationZ)
+        // }
+
+        // this.uScene.getChildByName('Main Camera').aspectRatio = 16 / 9
+
+        __data.deskData.roomVo.material = __data.mahjong_set.cardIndex.toString() === '0' ? Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile_Mobile_Legacy.lmat') : Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/MahjongTile02.lmat')
+
+        __data.deskData.roomVo.scene = this.uScene;
+
+        this.clear();
+
+        this.wallNameArr = ['upWall', 'rightWall', 'downWall', 'leftWall']
+
+        for (let name = 0; name < this.wallNameArr.length; name++) {
+            for (let i = 1; i <= 28; i++) { this.wallArr.push(this.uScene.getChildByName('wall').getChildByName(this.wallNameArr[name]).getChildByName(i.toString())) }
+        }
+
+        this.updateBackGround();
+        this.fixCamera();
+    }
+
+    fixCamera() {
+        let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+        let orgin = this.cameraInitPosition;
+        let xs = Math.abs(orgin.y / orgin.z);
+        let pull = 50;
+
+        let isPad = false;
+        let isPc = false;
+        try {
+            var u = navigator.userAgent;
+            isPad = u.indexOf('Pad') > -1 || u.indexOf('Macintosh') > -1 || game.scale < 1; //pad终端
+            const systemInfo = wx.getSystemInfoSync();
+            if (systemInfo.platform === 'windows' || systemInfo.platform === 'mac') { isPc = true; }
+        } catch (e) { }
+        if (isPad && !isPc) {
+            camera.fieldOfView = 23;
+        }
+        // let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+        // let orgin = this.cameraInitPosition;
+        // let xs = Math.abs(orgin.y / orgin.z);
+        // let pull = 50;
+
+        // let isPad = false;
+        // try {
+        //     var u = navigator.userAgent;
+        //     isPad = u.indexOf('Pad') > -1 || u.indexOf('Macintosh') > -1 || game.scale < 1; //pad终端
+        // } catch (e) {}
+        // if (isPad) {
+        //     camera.transform.localPosition = new Laya.Vector3(orgin.x, orgin.y + pull, orgin.z - pull / xs);
+        // }
+        // trace('test--------->', camera.transform.localPosition)
+        // trace(pull, pull / xs)
+    }
+
+    clear() {
+        while (__data.deskData.roomVo.scene && __data.deskData.roomVo.scene.getChildByName('container').numChildren) {
+            let ele = __data.deskData.roomVo.scene.getChildByName('container').getChildAt(0)
+            if (ele && 'active' in ele) {
+                ele.active = false;
+                ele.destroy();
+            }
+            __data.deskData.roomVo.scene.getChildByName('container').removeChildAt(0);
+        }
+
+        for (let i = 0; i < this.wallArr.length; i++) { this.wallArr[i].active = true; }
+    }
+
+    reset() {
+        game.utils.remove(this.uScene);
+        this.uScene = null;
+        __data.deskData.roomVo.scene = null;
+    }
+
+    updateBackGround() {
+        this.uScene.getChildByName('Desk').getChildByName('table').meshRenderer.material = __data.mahjong_set.bgIndex.toString() === '0' ? Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/desk1.lmat') : Laya.loader.getRes(MahjongConfig.resHead + 'unityScenes/LayaScene_MahjongTilePack/Conventional/Assets/MahjongTiles/Materials/desk2.lmat')
+    }
+
+    get cameraInitPosition() {
+        if (!this._cameraInitPosition) {
+            let camera = __data.deskData.roomVo.scene.getChildByName('Main Camera');
+            this._cameraInitPosition = new Laya.Vector3(camera.transform.localPosition.x, camera.transform.localPosition.y, camera.transform.localPosition.z)
+        }
+        return this._cameraInitPosition;
+    }
+}
+
+
+class MahjongJxMondayPiece extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongJxMondayPiece',
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+    }
+
+    added(code, doNext) {
+        code = parseInt(code);
+        __sound.gameSound("kanbao");
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('own', code);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('own', code);
+
+        let score = 0;
+        if(code % 10 == 0) score = 10;
+        else score = (code + 1) % 10;
+        this.txt_score.text = `+${score.toString()}`;
+
+        this.addComponent(Mahjong_Disappear_Script).start(2000, doNext);
+    }
+}
+
+
+class MahjongLxPanel extends game.ModuleBase {
+    constructor() {
+        super();
+        this.size(config.gameW, config.gameH)
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+
+        this.otherImg = new Laya.Image();
+        this.otherImg.skin = 'local/mahjong_common/1/wait_others.png'
+        this.addChild(this.otherImg)
+
+        this.mineImg = new Laya.Image();
+        this.mineImg.skin = 'local/mahjong_common/1/wait_mine.png'
+        this.addChild(this.mineImg)
+
+        this.otherImg.x = this.width - this.otherImg.width >> 1
+        this.otherImg.y = this.height * .25 - this.otherImg.height / 2
+        this.mineImg.x = this.width - this.mineImg.width >> 1
+        this.mineImg.y = this.height * .55 - this.mineImg.height / 2
+
+        this.btn_lx = new MahjongBlueImageButton('亮喜')
+        this.btn_lx.x = this.width - this.btn_lx.width >> 1
+
+
+        this.scale(game.scale, game.scale)
+
+        this.mouseThrough = true
+    }
+
+    onEnable() {
+        game.utils.remove(this.mineImg)
+        game.cb.on(__eh + 'show_lx_mine_tips', this, this.showLxHandler)
+        game.cb.on(__eh + 'hide_lx_mine_tips', this, this.hideLxHandler)
+        game.cb.on('show_lx_btn_guide', this, this.showGuideHand);
+        game.cb.on('remove_lx_btn_guide', this, this.removeGuideHand);
+        this.btn_lx.on('click', this, this.decideLxGroup)
+    }
+
+    onDisable() {
+        game.utils.remove(this.btn_lx)
+        game.utils.remove(this.guideHand)
+        game.cb.off(__eh + 'show_lx_mine_tips', this, this.showLxHandler)
+        game.cb.off(__eh + 'hide_lx_mine_tips', this, this.hideLxHandler)
+        game.cb.off('show_lx_btn_guide', this, this.showGuideHand);
+        game.cb.off('remove_lx_btn_guide', this, this.removeGuideHand);
+        this.btn_lx.on('click', this, this.decideLxGroup)
+    }
+
+    fixPosition() {
+        let isPad = false;
+        try {
+            var u = navigator.userAgent;
+            isPad = u.indexOf('Pad') > -1 || u.indexOf('Macintosh') > -1 || game.scale < 1; //pad终端
+        } catch (e) { }
+        if (isPad) {
+            this.btn_lx.y = this.height * .75
+        } else {
+            this.btn_lx.y = this.height * .68
+        }
+    }
+
+    decideLxGroup(e) {
+        __sound && __sound.gameSound();
+        game.cb.event(__eh + 'decide_lx_group')
+    }
+
+    who(isMine) {
+        isMine && this.showLxHandler()
+        //亮喜阶段已经结束  那么就不在需要显示 等待其他玩家亮喜的UI
+        if (!__data.deskData.roomVo.islx) game.utils.remove(this.otherImg)
+        else this.addChild(this.otherImg)
+    }
+
+    showLxHandler() {
+        this.addChild(this.btn_lx)
+        this.addChild(this.mineImg)
+        this.fixPosition();
+    }
+
+    hideLxHandler() {
+        game.utils.remove(this.btn_lx)
+        game.utils.remove(this.mineImg)
+        game.utils.remove(this.guideHand);
+    }
+
+    showGuideHand() {
+        this.guideHand = this.guideHand || new GuideHand();
+        this.addChild(this.guideHand).pos(this.btn_lx.x - (this.guideHand.width) / 2, this.btn_lx.y - (this.guideHand.height) / 2);
+    }
+    removeGuideHand() {
+        game.utils.remove(this.guideHand);
+    }
+}
+
+
+class MahjongLxPanel1 extends MahjongLxPanel {
+    constructor() {
+        super();
+
+        this.explainImg = new Laya.Image();
+        this.explainImg.skin = 'local/mahjong_common/1/img_lxyd.png'
+
+        this.explainImg.x = this.width - this.explainImg.width >> 1
+        this.explainImg.y = this.height * .55 - this.explainImg.height / 2
+    }
+
+    onEnable() {
+        super.onEnable();
+        game.cb.on('disabled_lx_button', this, this._disabledButton)
+        game.cb.on('allow_lx_button', this, this._allowButton)
+    }
+
+    onDisable() {
+        super.onDisable();
+        game.cb.off('disabled_lx_button', this, this._disabledButton)
+        game.cb.off('allow_lx_button', this, this._allowButton)
+    }
+
+    _disabledButton() {
+        this._buttonDisabled = true;
+        SkinUtils.gray(this.btn_lx, true, true);
+    }
+
+    _allowButton() {
+        this._buttonDisabled = false;
+        SkinUtils.gray(this.btn_lx, false);
+    }
+
+    decideLxGroup(e) {
+        if (this._buttonDisabled) { __tips('请选择3张不同花色的幺或九'); return; }
+        super.decideLxGroup();
+    }
+
+    fixPosition() {
+        let isPad = false;
+        try {
+            var u = navigator.userAgent;
+            isPad = u.indexOf('Pad') > -1 || u.indexOf('Macintosh') > -1 || game.scale < 1; //pad终端
+        } catch (e) { }
+
+        let uniqueId = MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId);
+        let scene = window['MahjongDesk' + uniqueId + '3D'];
+        let desk = game.scene.get(scene);
+        let lp = desk.downlist.parent.localToGlobal(new Laya.Point(desk.downlist.x, desk.downlist.y));
+        let ip = this.localToGlobal(new Laya.Point(this.explainImg.x, this.explainImg.y + this.explainImg.height));
+        let areaH = (lp.y - ip.y) / 2;
+        // if (isPad) {
+        // this.btn_lx.y = this.explainImg.y + this.explainImg.height + this.btn_lx.height / 2 + this.btn_lx.height / 3;
+        // } else {
+        this.btn_lx.y = this.explainImg.y + this.explainImg.height + areaH - 15;
+        // }
+    }
+
+    who(isMine) {
+        if (isMine) {
+            if (this.isExplain) {
+                this.addChild(this.btn_lx)
+                this.addChild(this.explainImg)
+                game.utils.remove(this.mineImg)
+            } else {
+                this.addChild(this.btn_lx)
+                this.addChild(this.mineImg)
+            }
+            this.fixPosition();
+        }
+        //亮喜阶段已经结束  那么就不在需要显示 等待其他玩家亮喜的UI
+        if (!__data.deskData.roomVo.islx) game.utils.remove(this.otherImg)
+        else this.addChild(this.otherImg)
+    }
+
+    showLxHandler() {
+        this.who(true);
+    }
+
+    hideLxHandler() {
+        game.utils.remove(this.btn_lx)
+        game.utils.remove(this.mineImg)
+        game.utils.remove(this.guideHand);
+        game.utils.remove(this.explainImg)
+    }
+
+    get isExplain() {
+        let cup = __data.hashCityLevelCup[HallPlay.lastCityId].cup;
+        let localNumber = LocalUtils.get('liangxi_show_times' + __data.uid) || 1;
+        // 不是好友房  在大众玩法  黄铜以下  显示次数没有超出限制
+        if (__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND && HallPlay.curRuleId == -2 && cup < 260 && localNumber <= 5) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class MahjongHuIcon extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuIcon']);
+        // this.scale(game.scale, game.scale);
+        this.scripts = this.btn_info.addComponent(HuIconComponent);
+    }
+
+    onEnable(){
+        PrayStatistics.instance.setTing(true);
+    }
+
+    onDisable() { 
+        PrayStatistics.instance.setTing(false);
+        game.utils.remove(this.panel); 
+    }
+
+    bind(panel) {
+        this.panel = panel;
+        this.scripts.bind(this, panel);
+    }
+}
+
+class HuIconComponent extends Laya.Script {
+
+    bind(origin, panel) {
+        this.origin = origin;
+        this.panel = panel;
+    }
+
+    onClick(e) {
+        e && e.stopPropagation();
+        Laya.timer.callLater(this, this._onUpdate)
+    }
+
+    onStageClick() {
+        game.utils.remove(this.panel);
+    }
+
+    _onUpdate() {
+        if (this.origin && this.panel && !this.panel.parent) {
+            game.cb.event(__eh + 'show_hu_preview'); // 3.1.18.1需求，红中赖子
+            this.origin.parent.addChild(this.panel);
+            let __vo = __data.deskData.roomVo.getPlayerBySeat(0);
+            game.cb.event(__eh + "update_hu_number", [FriendRoomPlays.copyObject(__vo.hupai)])
+            Laya.timer.callLater(this, ()=>{
+                if(RateOpenRules.indexOf(HallPlay.curRuleId) >= 0){
+                    this.panel.pos(this.origin.parent.width - this.panel.width >> 1, this.origin.parent.height - this.panel.height >> 1);
+                }else{
+                    this.panel.pos(this.origin.x, this.origin.y - this.panel.height - 15);
+                }
+            })
+        } else {
+            game.utils.remove(this.panel);
+        }
+    }
+}
+
+
+
+
+
+class MahjongTingMenu extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/TingMenu']);
+        this.scale(game.scale, game.scale)
+        this.scripts = this.btn_menu.addComponent(MahjongTingMenuComponent);
+    }
+
+    onEnable() {
+        game.cb.on('update_ting_auto_status', this, this._update);
+    }
+
+    onDisable() {
+        game.cb.off('update_ting_auto_status', this, this._update);
+    }
+
+    _update() {
+        let myVo = __data.deskData.roomVo.getPlayerBySeat(0);
+        if (myVo) { this.status = myVo.tingAutoStatus; };
+        this._updateBtn();
+    }
+
+    set status(value) {
+        this._status = value;
+        this._updateBtn();
+    }
+    get status() { return this._status; }
+
+    _updateBtn() { this.btn_menu.selected = this.status; }
+}
+class MahjongTingMenuComponent extends Laya.Script {
+    onClick() {
+        // 当前为选中状态， 点击后取消选中
+        if (this.status) {
+            game.server.send(14022, 0);
+        } else { // 当前为未选中， 点后后勾选
+            game.server.send(14022, 1);
+            game.cb.event(__eh + 'show_choice_ot')
+        }
+        game.server.send(14023);
+    }
+
+    get status() {
+        let myVo = __data.deskData.roomVo.getPlayerBySeat(0);
+        if (myVo) { return myVo.tingAutoStatus; };
+        return 0;
+    }
+}
+
+
+
+
+
+class MahjongHuTips extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuTips']);
+
+        this.scale(game.scale, game.scale)
+
+        this.list = new Laya.List();
+        this.list.itemRender = MahjongHuItem;
+        this.list.repeatX = 10;
+        this.list.spaceX = 5;
+        this.list.repeatY = 1;
+        this.addChild(this.list)
+        // 使用但隐藏滚动条
+        this.list.x = 135
+        this.list.y = 0
+    }
+
+    onEnable() {
+        PrayStatistics.instance.setTing(true);
+        game.cb.on(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    onDisable() {
+        PrayStatistics.instance.setTing(false);
+        game.cb.off(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    updateHandler(value) {
+        trace('胡牌：', value)
+        let tempArr = [];
+        for (let i = 0; i < value.length; i++) {
+            let __r = tempArr.some(function (old) { return old.view == value[i].view })
+            trace(tempArr.some(function (old) { return old.view == value[i].view }))
+            if (!__r) tempArr.push(value[i])
+        }
+        SortUtils.sort(tempArr, false, 'view');
+        this.list.array = tempArr
+        this.width = this.bg.width = this.list.x + (tempArr.length - 1) * this.list.spaceX + tempArr.length * 81 + 45
+    }
+}
+
+class MahjongHuItem extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuItem']);
+
+        // this.scale(game.scale, game.scale)
+    }
+
+    set dataSource(value) {
+        if (!value) return
+        this.__value = value
+
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('udo', value.view);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('udo', value.view);
+
+        //如果当前的胡牌和宝相同  再扣除掉一个
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+        if (this.__value.view == __data.deskData.roomVo.baoCode) { 
+            this.__value.num += 1;
+            if(this.areaInfo && this.areaInfo.haveNb && this.areaInfo.haveNb.checkIgnore)this.__value.num -= 1;
+        }
+
+        let tempNumber = 4 - this.__value.num <= 0 ? 0 : 4 - this.__value.num
+        this.txt_num.text = tempNumber.toString()
+        this.txt_num.color = tempNumber <= 0 ? '#8d8d8d' : '#ffffff'
+
+        this.mark.visible = tempNumber <= 0 ? true : false
+    }
+
+    get dataSource() {
+        return
+    }
+}
+
+
+
+
+
+
+
+class MahjongResultHand extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongUpHand']);
+
+        this.sign = this.sign || new Laya.Image();
+        this.sign.skin = 'local/mahjong_common/1/hun.png';
+        this.sign.x = 40;
+        this.sign.y = 8;
+        this.sign.scaleX = this.sign.scaleY = 0.7;
+    }
+
+    onEnable() {
+        if (__data.deskData.roomVo.isRecordPlaying) return
+        if ('texture' in this.view) this.view.texture = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_up.png'
+        else if ('skin' in this.view) this.view.skin = 'local/mahjong_common/1/' + __data.mahjong_set.cardIndex % 2 + '_up.png'
+        this.resetSign();
+    }
+
+    onDisable() { game.utils.remove(this.sign) }
+
+    resetSign(){
+        if (HallPlay.curRuleId == FriendRoomPlays.AREA.GUANGDONG) {
+            this.sign = this.sign || new Laya.Image();
+            this.sign.skin = 'local/mahjong_common/1/gui.png';
+            this.sign.x = 0;
+            this.sign.y = 8;
+        }else if (HallPlay.curRuleId == FriendRoomPlays.AREA.HONGZHONGLAIZI) {
+            this.sign = this.sign || new Laya.Image();
+            this.sign.skin = 'local/mahjong_common/1/lai.png';
+            this.sign.x = 0;
+            this.sign.y = 8;
+        }else {
+            this.sign = this.sign || new Laya.Image();
+            this.sign.skin = 'local/mahjong_common/1/hun.png';
+            this.sign.x = 40;
+            this.sign.y = 8;
+        }
+    }
+
+    //结算特殊处理
+    set skin(value) {
+
+        if (parseInt(value) >= 0) {
+            if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('ud', value);
+            else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('ud', value);
+        }
+
+        this.card = value
+        let __c = this.card;
+        let __r = __data.deskData.roomVo.mixedArr ? __data.deskData.roomVo.mixedArr.some(function (value) { return parseInt(value) == parseInt(__c) }) : false
+        if (__r) this.addChild(this.sign)
+        else game.utils.remove(this.sign)
+    }
+}
+
+
+
+class MahjongResultDoor extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongUpDoor']);
+    }
+
+    set open(value) { this.__open = value }
+
+    set group(value) {
+        value = value.split(',');
+        this.__value = value.shift(); //提取数组中的第一个元素  判断吃碰杠啥的
+        this.__group = []; //门前牌集合
+        this.__position = 0;
+        switch (parseInt(this.__value)) {
+            case 2: //吃  例如 2,21,22,2   2 value 21 打头的牌  22  吃的牌    2  吃的谁的牌
+                //如果头牌和吃的一样后一位在前
+                if (value[0] == value[1]) {
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的少一位  顺子形式 
+                else if (parseInt(value[0]) + 1 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                //如果头牌和吃的一样后一位在前
+                else if (parseInt(value[0]) + 2 == parseInt(value[1])) {
+                    this.__group.push(parseInt(value[0]));
+                    this.__group.push(parseInt(value[0]) + 2);
+                    this.__group.push(parseInt(value[0]) + 1);
+                    this.__position = value[2] //吃牌来源的位置
+                }
+                break;
+            case 1: //碰  例如  1,6,1    1 value   6 碰的牌    1  碰的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 3: //粘   例如  1,6,1    1 value   6 粘的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 5: //杠   例如  5,0,5  5,1,2    5 value   0 杠的牌    5  杠的谁的牌  5 为自己   即为暗杠
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                this.__position = value[1] //吃牌来源的位置
+                break;
+            case 81: //亮掌   例如  1,6,1    1 value   6 亮掌的牌    1  粘的谁的牌
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[0]));
+                break;
+            case 82: //亮喜   例如  82,40,40,40
+                this.__group.push(parseInt(value[0]));
+                this.__group.push(parseInt(value[1]));
+                this.__group.push(parseInt(value[2]));
+                break;
+        }
+        this.showView();
+    }
+
+
+    showView() {
+        this.url = (__data.mahjong_set.modelIndex.toString() === '0') ? __data.mahjong_set.cardIndex : __data.mahjong_set.cardIndex + 2
+
+        let __width = this.__group.length == 0 ? 0 : this.__group.length == 2 ? 132 : 196
+
+        this.size(__width, this.height)
+        //全部移除掉
+        game.utils.remove(this.door_1, this.door_2, this.door_3, this.door_4)
+        let __len = 4
+        for (let i = 0; i < __len; i++) {
+            if (this.__group[i] >= 0) {
+                //把应该显示的显示出来
+                this.addChild(this['door_' + (i + 1)])
+
+                //暗杠特殊处理一下
+                if (this.__position == 5 && this.__open && i == 3) {
+                    this['door_' + (i + 1)].texture = Mahjong2DRes.getRes('ud', this.__group[i])
+                } else if (this.__position == 5) { this['door_' + (i + 1)].texture = 'local/mahjong_common/1/' + this.url % 2 + '_uag.png' } else {
+                    this['door_' + (i + 1)].texture = Mahjong2DRes.getRes('ud', this.__group[i])
+                }
+                //指向标志 改变方向
+                let __vo = __data.deskData.roomVo.getPlayer(this.__position)
+                if (__vo) {
+                    this.dir.visible = true
+                    if (__vo.seat_tag == 'down') { this.dir.rotation = 180 } else if (__vo.seat_tag == 'left') { this.dir.rotation = 270 } else if (__vo.seat_tag == 'up') { this.dir.rotation = 0 } else if (__vo.seat_tag == 'right') { this.dir.rotation = 90 }
+                }
+
+                if (parseInt(this.__value) == 81 || parseInt(this.__value) == 82 || (parseInt(this.__value) == 5 && this.__position == 5) || __data.deskData.roomVo.phase == 'result') { this.dir.visible = false }
+                //指向标志 改变位置
+                this.dir.y = parseInt(this.__value) == 5 ? this.door_4.y + this.door_4.height - this.dir.height / 2 : this.door_2.y + this.door_2.height - this.dir.height / 2
+
+                //如果是暗杠  或者 亮掌啥的  跟别人没关系 不显示这个
+                if (this.__position == 5) game.utils.remove(this.dir)
+                // else { this.addChild(this.dir) }
+            }
+        }
+    }
+
+    get position() { return this.__position; }
+
+    get type() { return this.__value; }
+
+    onEnable() { }
+
+    onDisable() { }
+}
+
+
+
+class MahjongHuList extends game.ModuleBase {
+    constructor(receiveEvent = true) {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuList']);
+        this.receiveEvent = receiveEvent;
+    }
+
+    onEnable() {
+        if (this.receiveEvent) game.cb.on(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    onDisable() {
+        if (this.receiveEvent) game.cb.off(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    updateHandler(value) {
+        this.tiplist = value;
+    }
+
+    set tiplist(value) {
+        this.list.array = value || [];
+        let max_x = 15;
+        if (this.list.array.length > max_x) {
+            this.list.repeatX = max_x;
+            this.list.repeatY = Math.ceil(this.list.array.length / max_x);
+        } else {
+            this.list.repeatX = this.list.array.length;
+            this.list.repeatY = 1;
+        }
+
+        this.width = this.bg.width = this.list.x * 2 + this.list.width;
+        this.height = this.bg.height = this.list.y * 2 + this.list.height;
+    }
+}
+
+class MahjongHuListItem extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuListItem']);
+
+        this.txtSpace = 0;
+    }
+
+    set dataSource(value) {
+        if (!value) return;
+        this.__value = value
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('udo', value.view);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('udo', value.view);
+
+        //如果当前的胡牌和宝相同  再扣除掉一个
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+        if (this.__value.view == __data.deskData.roomVo.baoCode) { 
+            this.__value.num += 1;
+            if(this.areaInfo && this.areaInfo.haveNb && this.areaInfo.haveNb.checkIgnore)this.__value.num -= 1;
+        }
+        let tempNumber = 4 - this.__value.num <= 0 ? 0 : 4 - this.__value.num
+        this.txt_num.text = tempNumber.toString()
+        // this.txt_num.color = tempNumber <= 0 ? '#8d8d8d' : '#ffffff'
+        this.mark.visible = tempNumber <= 0 ? true : false
+
+        this.txt_rate.text = this.__value.rate;
+
+        this.txt_rate.x = (this.width - (this.txt_rate.width + this.rate_tail.width + this.txtSpace)) / 2;
+        this.rate_tail.x = this.txt_rate.x + this.txt_rate.width + this.txtSpace;
+
+        this.txt_num.x = (this.width - (this.txt_num.width + this.num_tail.width + this.txtSpace)) / 2;
+        this.num_tail.x = this.txt_num.x + this.txt_num.width + this.txtSpace;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongHuListItemUI', MahjongHuListItem)
+
+
+
+
+
+class MahjongHuListA extends game.ModuleBase {
+    constructor(receiveEvent = true) {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuListA']);
+        this.receiveEvent = receiveEvent;
+        // this.addComponent(Click_Stage_Remove);
+    }
+
+    onEnable() {
+        if (this.receiveEvent) game.cb.on(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    onDisable() {
+        if (this.receiveEvent) game.cb.off(__eh + "update_hu_number", this, this.updateHandler)
+    }
+
+    updateHandler(value, code, relocation) {
+        this.code = code;
+        this.tiplist = value;
+        this.relocation = relocation;
+    }
+
+    set tiplist(value) {
+        this.list.array = value ? FriendRoomPlays.copyObject(value) : [];
+        this.list.height = 0;
+        if (this.list.array.length > 6) {
+            let Y = Math.ceil(this.list.array.length / 6);
+            this.list.repeatX = 6;
+            this.list.repeatY = Y > 3 ? 3 : Y;
+            this.list.height = Math.min(430, this.list.height);
+            this.list.vScrollBarSkin = (Y > 3) ? '' : null;
+        } else {
+            this.list.repeatX = this.list.array.length;
+            this.list.repeatY = 1;
+            this.list.vScrollBarSkin = null;
+        }
+        this.list.array = value ? FriendRoomPlays.copyObject(value) : [];
+
+        let args = [
+            this.html, 
+            { align: 'center', valign: 'top', fontSize: 48, bold: false, leading: 25, width: this.width, color: '#000000' },
+            "最高&nbsp;", {color:'#2f3c52'},
+            this.getMaxRate(), { fontSize:'60px', color:'#ff683a', bold:true },
+            "&nbsp;倍,&nbsp;总计&nbsp;", {color:'#2f3c52'},
+            this.getMaxNumber(), {color:'#5782c8', bold:true },
+            "&nbsp;张", {color:'#2f3c52'}
+        ]
+        HtmlTextUtils.text.apply(null, args);
+
+        let _descriptions = [{ description:'自摸', score:2 }, ...ScoreSeparator.separator(this.getDetails())];
+        trace('可听牌番数明细：', _descriptions);
+        this.details.array = _descriptions;
+        if (this.details.array.length > 7) {
+            this.details.repeatX = 7;
+            this.details.repeatY = Math.ceil(this.details.array.length / 7);
+        } else {
+            this.details.repeatX = this.details.array.length;
+            this.details.repeatY = 1;
+        }
+        
+        this.details.y = this.list.y + this.list.height + 100;// 先确定描述的y位置
+        
+        Laya.timer.callLater(this, this._relocationHtml);
+    }
+
+    getDetails(){
+        if(this.code >= 0){
+            return MahjongBeforeTingDetailsData.getDetails(this.code);
+        }else{
+            return MahjongAfterTingDetailsData.getDetails();
+        }
+    }
+
+    getMaxRate(){
+        let rate = 0;
+        for(let i = 0;i < this.list.array.length;i++){
+            rate = Math.max(this.list.array[i].rate);
+        }
+        return rate;
+    }
+
+    getMaxNumber(){
+        let number = 0;
+        for(let i = 0;i < this.list.array.length;i++){
+            let suprs = Math.max(4 - this.list.array[i].num, 0);
+            number += suprs;
+        }
+        return number;
+    }
+
+    _relocationHtml(){
+        let width = Math.max(this.list.width, this.details.width, this.html.displayWidth + 30);// 确定界面的整体宽度
+        this.width = this.bg.width = 45 * 2 + width;
+        this.height = this.bg.height = 35 * 1.75 + this.details.y + this.details.height;
+        this.list.x = this.width - this.list.width >> 1;
+        this.details.x = this.width - this.details.width >> 1;
+
+        this.html.x = this.width - this.html.displayWidth >> 1;
+        this.html.y = this.list.y + this.list.height + 20;
+        console.log("%c" + this.details.height, "color:#ff0000")
+        this.relocation && this.relocation();
+    }
+
+    set relocation(func){ this._relocation = func; }
+    get relocation(){ return this._relocation; }
+}
+
+class MahjongHuListItemA extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuListItemA']);
+
+        this.txtSpace = 5;
+    }
+
+    set dataSource(value) {
+        if (!value) return;
+        this.__value = value
+        if ('texture' in this.view) this.view.texture = Mahjong2DRes.getRes('udo', value.view);
+        else if ('skin' in this.view) this.view.skin = Mahjong2DRes.getRes('udo', value.view);
+
+        //如果当前的胡牌和宝相同  再扣除掉一个
+        this.areaInfo = gameConfig['create_room_' + MahjongConfig.getUniqueId(__data.gameId.curId, HallPlay.curRuleId)];
+        if (this.__value.view == __data.deskData.roomVo.baoCode) { 
+            this.__value.num += 1;
+            if(this.areaInfo && this.areaInfo.haveNb && this.areaInfo.haveNb.checkIgnore)this.__value.num -= 1;
+        }
+        let tempNumber = 4 - this.__value.num <= 0 ? 0 : 4 - this.__value.num
+        this.txt_num.text = tempNumber.toString()
+        // this.txt_num.color = tempNumber <= 0 ? '#8d8d8d' : '#ffffff'
+        this.mark.visible = tempNumber <= 0 ? true : false
+
+        this.txt_rate.text = this.__value.rate;
+
+        this.txt_rate.x = (this.box.width - (this.txt_rate.width + this.rate_tail.width + this.txtSpace)) / 2;
+        this.rate_tail.x = this.txt_rate.x + this.txt_rate.width + this.txtSpace;
+
+        this.txt_num.x = (this.box.width - (this.txt_num.width + this.num_tail.width + this.txtSpace)) / 2;
+        this.num_tail.x = this.txt_num.x + this.txt_num.width + this.txtSpace;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongHuListItemAUI', MahjongHuListItemA)
+class MahjongHuListDetailsItemA extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/MahjongHuListDetailsItemA']);
+        this.rule = {
+            '自摸' : '#f65f42',
+            '庄': '#e33953',
+            '边张':'#3c87e4',
+            '坎张':'#5570e3',
+            '单钓将':'#ee8b23',
+            '暗刻':'#d02e2c',
+            '明杠':'#30abe6',
+            '碰碰胡':'#f8603b',
+            '清一色':'#f65f42',
+            '不求人':'#b2c10e',
+            '红中杠':'#e33953',
+            '七对':'#f65f42',
+            '三明刻':'#3caaf1'
+        }
+    }
+
+    set dataSource(value) {
+        this.clear();
+        if(value){
+            this.bg = game.utils.RoundRect(this.width, this.height, this.width / 15, this.getColor(value.description));
+            this.addChildAt(this.bg, 0);
+            this.label.text = value.description;
+        }
+    }
+
+    getColor(value){
+        for (const key in this.rule) {
+            let includes = String(value).includes(key);
+            if(includes)return this.rule[key];
+        }
+        return '#f65f42';
+    }
+
+    clear(){
+        if(this.bg){
+            game.utils.remove(this.bg);
+            this.bg.destroy();
+            this.bg = null;
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongHuListDetailsItemAUI', MahjongHuListDetailsItemA)
+
+
+
+class MahjongRate extends game.ModuleBase {
+    constructor(path) {
+        super()
+        this.createView(game.uiMap[path]);
+    }
+    init() {
+        game.cb.event('init_rate_numbers');
+    }
+}
+class MahjongRateSelfTips extends MahjongRate {
+    constructor(seatName) {
+        super('scene_game/mahjong/MahjongRateSelfTips')
+        this.c.addComponent(RateScaleAni).setSeatName(seatName)
+        this.addComponent(RateDynamicAni).setSeatName(seatName)
+        this.addComponent(RateExplain);
+        this.addComponent(Click_Rate_Self);
+    }
+
+    setDetails(){
+        this.updateDetails();
+        this.list.array = this.details.array;
+        this.list.repeatY = this.details.array.length;
+        this.line.y = this.list.y + this.list.height + 10;
+        this.txt_all.y = this.line.y + this.line.height + 10; 
+        this.txt_all.text = `合计：最高${this.details.rate}倍`;
+        this.tips.height = this.txt_all.y + this.txt_all.height * 2;
+    }
+    updateDetails(){
+        let _descriptions = ScoreSeparator.separator(MahjongAfterTingDetailsData.getDetails());
+        this.details = { rate:0, array:[{ description:'自摸', score:2 }, ..._descriptions] };
+        trace('听牌数据：', this.details);
+        let __vo = __data.deskData.roomVo.getPlayerBySeat(0);
+        if(__vo && __vo.hupai){
+            this.details.rate = Math.max(...__vo.hupai.map(item => item.rate));
+        }
+    }
+    showTips(){ this.setDetails();this.addChild(this.tips).y = -this.tips.height; }
+    removeTips(){ game.utils.remove(this.tips); }
+}
+class MahjongOthersRateTips extends MahjongRate {
+    constructor(seatName) {
+        super('scene_game/mahjong/MahjongRateOthersTips')
+        this.c.addComponent(RateScaleAni).setSeatName(seatName)
+        this.addComponent(RateDynamicAni).setSeatName(seatName)
+    }
+}
+class MahjongRateSelfTipsItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongRateSelfTipsItem',
+            module: false
+        });
+
+        this.signRules = [{ rule:FriendRoomPlays.AREA.FUJIN, name:'混分', sign:'+' }];
+        this.sign = 'x';
+        this.middle_space = 5;
+    }
+    set dataSource(value){
+        if(value){
+            this.signHandle(value);
+            this.txt_name.text = value.description;
+            this.txt_rate.text = `${this.sign}${value.score}`;
+            this.txt_middle.text = '--------------------------------------------------';
+            this.txt_middle.x = this.txt_name.x + this.txt_name.width + this.middle_space;
+            this.txt_middle.width = this.width - this.txt_rate.textField.textWidth - this.txt_middle.x - this.middle_space;
+        }
+    }
+
+    signHandle(value){
+        if (!value || !value.description) return;
+        // 遍历 signRules 数组，查找匹配的规则
+        for (let i = 0; i < this.signRules.length; i++) {
+            let ruleObj = this.signRules[i];
+            // 如果 description 和 name 相同，且 HallPlay.curRuleId 和 rule 相同
+            if (value.description == ruleObj.name && HallPlay.curRuleId == ruleObj.rule) {
+                this.sign = ruleObj.sign;
+                return;
+            }
+        }
+        // 如果没有找到匹配的规则，使用默认符号
+        this.sign = 'x';
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.mahjong.MahjongRateSelfTipsItemUI', MahjongRateSelfTipsItem);
+let RateOpenRules = [FriendRoomPlays.AREA.HONGZHONGLAIZI, FriendRoomPlays.AREA.FUJIN];
+class Click_Rate_Self extends Laya.Script{
+    constructor(){
+        super();
+    }
+    onClick(){ 
+        if(RateOpenRules.indexOf(HallPlay.curRuleId) >= 0){
+            this.owner.showTips();
+        }
+    }
+    onStageMouseDown(){
+        this.owner.removeTips();
+    }
+}
+class RateExplain extends Laya.Script {
+    onEnable() {
+        game.utils.remove(this.owner.tips);
+    }
+
+    onClick(e) {
+        // e && e.stopPropagation();
+        // if(!this.owner.tips.parent){ this.owner.addChild(this.owner.tips); }
+    }
+}
+class RateScaleAni extends Laya.Script {
+    constructor() {
+        super();
+        this.tween = new Laya.Tween();
+    }
+    onEnable() {
+        this.update();
+        game.cb.on('init_rate_numbers', this, this.update);
+        game.cb.on('rate_recount', this, this.recount);
+    }
+
+    onDisable() {
+        game.cb.off('init_rate_numbers', this, this.update);
+        game.cb.off('rate_recount', this, this.recount);
+    }
+
+    recount(seatName) {
+        if (seatName != this._seatName) return;
+        if (!this.rate) this.update();
+        else {
+            let __vo = __data.deskData.roomVo.getPlayer(this._seatName);
+            let rate = 0;
+            if (__vo && __vo.hupai && __vo.hupai.length > 0) {
+                for (var i = 0; i < __vo.hupai.length; i++) { rate = Math.max(__vo.hupai[i].rate, rate); }
+            }
+            if (this.rate != rate) { this.start(rate); }
+        }
+    }
+
+    update() {
+        // let vo = __data.deskData.roomVo.getPlayer(this._seatName);
+        // this.rate = MahjongCollectUtils.rate(vo);
+        this.rate = 0;
+        let __vo = __data.deskData.roomVo.getPlayer(this._seatName);
+        if (__vo && __vo.hupai && __vo.hupai.length > 0) {
+            for (var i = 0; i < __vo.hupai.length; i++) { this.rate = Math.max(__vo.hupai[i].rate, this.rate); }
+            this.txt_rate.text = this.rate;
+        }
+    }
+
+    setSeatName(name) { this._seatName = name; }
+
+    start(rate) {
+        this.tween.clear();
+        this.tween.to(this.owner, { scaleX: 1.35, scaleY: 1.35 }, 300, null, Laya.Handler.create(this, this._toBigDone));
+        let t = Laya.Tween.to(this, { rate: rate }, 300)
+        t.update = new Laya.Handler(this, function () { this.txt_rate.text = Math.floor(this.rate) })
+    }
+
+    _toBigDone() {
+        // this.update();
+        this.tween.to(this.owner, { scaleX: 1, scaleY: 1 }, 300, null);
+        game.cb.event('update_rate_fires', [this._seatName]);
+    }
+
+    get txt_rate() {
+        if (!this._txt_rate) {
+            this._txt_rate = this.owner.getChildByName('txt_rate');
+        }
+        return this._txt_rate;
+    }
+}
+class RateDynamicAni extends Laya.Script {
+    constructor() { 
+        super();
+        this.isHotPlaying = false;
+    }
+
+    update(listen) {
+        // let vo = __data.deskData.roomVo.getPlayer(this._seatName);
+        // let rate = MahjongCollectUtils.rate(vo);
+        // if(rate > 10){ this.dynamicUI(); }
+        // else this.commonUI();
+        let __vo = __data.deskData.roomVo.getPlayerBySeat(0)
+        if (__vo && __vo.hupai && __vo.hupai.length > 0) {
+            let maxRate = 0;
+            for (var i = 0; i < __vo.hupai.length; i++) { maxRate = Math.max(__vo.hupai[i].rate, maxRate); }
+            if (maxRate > 10) { 
+                this.dynamicUI(); 
+            }
+            else this.commonUI();
+        }
+    }
+
+    listen(){
+        this.update(true);
+    }
+
+    onEnable() {
+        this.update();
+        game.cb.on(__eh + "update_player_result", this, this.resetState);
+        game.cb.on('init_rate_numbers', this, this.update);
+        game.cb.on('update_rate_fires', this, this.listen);
+    }
+    onDisable() {
+        game.cb.off(__eh + "update_player_result", this, this.resetState);
+        game.cb.off('init_rate_numbers', this, this.update);
+        game.cb.off('update_rate_fires', this, this.listen);
+        this._clearTimer();
+    }
+
+    resetState(){
+        this.isHotPlaying = false;
+    }
+
+    commonUI() {
+        this._clearTimer();
+        this.owner.fire.visible = true;
+        this.owner.dyfire.visible = false;
+    }
+
+    dynamicUI() {
+        this._changeMusic();
+        this._clearTimer();
+        this.owner.fire.visible = false;
+        this.owner.dyfire.visible = true;
+        this.index = 1;
+        this.max = 20;
+        this._setSkin();
+        Laya.timer.frameLoop(4, this, this._onLoop);
+    }
+
+    _changeMusic(){
+        if(!this.isHotPlaying){ __sound.playGameMusic("bgm_hot"); }
+        this.isHotPlaying = true;
+    }
+
+    _clearTimer() {
+        Laya.timer.clear(this, this._onLoop);
+    }
+
+    _onLoop() {
+        this.index++;
+        this.index = this.index > this.max ? 1 : this.index;
+        this._setSkin();
+    }
+
+    _setSkin() {
+        SkinUtils.setSkin(this.owner.dyfire, `cdn/fire/fire/hm${this.index}.png`);
+    }
+
+    setSeatName(seatName) { this._seatName = seatName; this.update(); }
+}
+
+
+
+class GuideHand extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/mahjong/GuideHand']);
+    }
+
+    onEnable() {
+        this.init();
+        this._startAni();
+    }
+
+    onDisable() {
+        this._stopAni();
+    }
+
+    init() {
+        this.index = 1;
+        this.maxIndex = 12;
+    }
+
+    _startAni() {
+        this._updateSkin();
+        Laya.timer.loop(100, this, this._changeSkin);
+    }
+
+    _changeSkin() {
+        this.index++;
+        if (this.index > this.maxIndex) this.index = this.index % this.maxIndex;
+        this._updateSkin();
+    }
+
+    _stopAni() {
+        Laya.timer.clear(this, this._changeSkin);
+    }
+
+    _updateSkin() {
+        SkinUtils.setSkin(this.icon, `cdn/a_seven_hand/${this.index}.png`);
+    }
+}
+
+/**
+ * 运势相关界面组件
+ */
+class MahjongPrayIcon extends game.ModuleBase {
+    constructor() {
+        super();
+        this.createView(game.uiMap['scene_game/mahjong/MahjongPrayIcon']);
+    }
+
+    onEnable() {
+        this.start();
+        this.icon.on(Laya.Event.CLICK, this, this.onClick);
+    }
+
+    onDisable() {
+        this.stop();
+        this.icon.off(Laya.Event.CLICK, this, this.onClick);
+    }
+
+    onClick() {
+        __showScene.show_bless();
+    }
+
+    start() {
+        this.stop();
+        this.index = 0;
+        Laya.timer.loop(50, this, this.onLoop);
+    }
+
+    onLoop() {
+        this.index++;
+        this.index = this.index > 30 ? this.index % 30 : this.index;
+        this.updateSkin();
+    }
+
+    updateSkin() {
+        SkinUtils.setSkin(this.icon, `cdn/bless_mj/bt_qf${this.index}.png`);
+    }
+
+    stop() {
+        Laya.timer.clearAll(this);
+    }
+}
+
+class MahjongFortuneIcon extends game.ModuleBase {
+    constructor(clickEvent = true) {
+        super()
+        this.clickEvent = clickEvent;
+        this.createView(game.uiMap['scene_game/mahjong/MahjongFortuneIcon']);
+    }
+
+    onAwake() {
+        this.clickEvent && this.addComponent(FortuneTipsScript).tips(this.tips);
+    }
+    onEnable() {
+        this._syncText();
+        game.cb.on('show_grow_animation', this, this._showAni);
+        game.utils.remove(this.tips);
+    }
+
+    onDisable() {
+        game.cb.off('show_grow_animation', this, this._showAni);
+    }
+
+    animation(callback){
+        this.callback = callback;
+        this._showAni(this.value);
+    }
+
+    _showAni(value) {
+        this.value = value;
+        let image = new FrameAnimationImage(1, 12, 50, 'cdn/bless_panel/img_d', '.png', 1, { frame: 6, todo: this._updateTxt.bind(this), once: 'destroy' });
+        this.addChild(image).pos(this.width / 2, this.height / 2 - 10);
+        image.start();
+    }
+
+    _syncText() {
+        this.value = MahjongBless.data.luckValue;
+        this._updateTxt();
+    }
+
+    _updateTxt() {
+        this.txt.text = `+${this.value}%`;
+        this.callback && this.callback();
+    }
+}
+
+class FortuneTipsScript extends Laya.Script {
+    tips(view) {
+        this.view = view;
+    }
+
+    onClick() {
+        this.showAndRemove();
+    }
+
+    onStageMouseDown() {
+        this.remove();
+    }
+
+    onEnable() {
+        this.remove();
+    }
+
+    onDisable() {
+        this.remove();
+    }
+
+    showAndRemove() {
+        if (this.status) {
+            this.remove();
+        } else {
+            this.show();
+        }
+    }
+
+    show() {
+        this.status = true;
+        this.view && this.owner.addChild(this.view);
+    }
+
+    remove() {
+        this.status = false;
+        this.view && game.utils.remove(this.view);
+    }
+}
+
+class PrayAnimationComponent extends Laya.Script {
+    onAwake() {
+        this.layer = new Laya.Sprite();
+        this.bottom = new Laya.Sprite();
+        this.middle = new Laya.Sprite();
+        this.top = new Laya.Sprite();
+        this.layer.mouseEnabled = false;
+        this.bottom.mouseEnabled = false;
+        this.middle.mouseEnabled = false;
+        this.top.mouseEnabled = false;
+        this.layer.addChild(this.bottom);
+        this.layer.addChild(this.middle);
+        this.layer.addChild(this.top);
+        this.fortuneIcon = new MahjongFortuneIcon(false);
+    }
+    onEnable() {
+        game.cb.on('show_pray_dragon', this, this._showDragon);
+    }
+
+    onDisable() {
+        this.clearLayer();
+        game.cb.off('show_pray_dragon', this, this._showDragon);
+    }
+
+    initLayer() {
+        this.layer.size(this.owner.width * game.scale, this.owner.height * game.scale);
+        game.scene.layer['tips'].c.addChild(this.layer).pos(this.owner.x, this.owner.y);
+        
+        // this.owner.addChild(this.layer);
+    }
+
+    clearLayer() {
+        game.utils.remove(this.layer);
+    }
+
+    _showDragon(type, value) {
+        this._type = type;
+        this._value = value;
+        this.initLayer();
+        this._showAni0();
+    }
+
+    _getDragonRes(type) {
+        switch (type) {
+            case 1:
+                return 'cdn/bless_panel/Jinchan.sk';
+            case 2:
+                return 'cdn/bless_panel/Facaishu.sk';
+            case 3:
+                return 'cdn/bless_panel/Long.sk';
+            case 4:
+                return 'cdn/bless_panel/Caishen.sk';
+        }
+    }   
+
+    _showAni0() {
+        let dragon = new game.Dragon(this._getDragonRes(this._type), 0, 'Pray', false);
+        this.top.addChild(dragon).pos(this.layer.width / 2, this.layer.height * .75);
+        __sound.gameSound("pray");
+        dragon.play('Pray', false, () => { dragon.clear(); this._showAni1(); });
+    }
+
+    _showAni1() {
+        let image = new FrameAnimationImage(0, 10, 50, 'cdn/redPacket_light/tx_cl', '.png', 2, { frame: 8, todo: this._showAni2.bind(this), once: 'destroy' });
+        this.middle.addChild(image).pos(this.layer.width / 2, this.layer.height / 2);
+        image.start();
+    }
+
+    _showAni2() {
+        let image = new FrameAnimationImage(1, 9, 75, 'cdn/bless_panel/img_a', '.png', 1);
+        this.bottom.addChild(image).pos(this.layer.width / 2, this.layer.height / 2);
+        image.start();
+        Laya.timer.once(300, this, this._showAni3, [image], false);
+    }
+
+    _showAni3(image) {
+        image && image.clearSelf();
+        //  正在结算界面展示
+        if(FriendMahjongSmallResult.isShow){
+            this._showAni5();
+        }else if(MahjongSmallResult.isShow){
+            this._showAni5();
+        }else if(__data.deskData.roomVo.roomModel != __data.deskData.roomVo.FRIEND){
+            this._showAni5();
+        } else if (this.target) {
+            let point = this.convertLocalToLocal(this.target, this.bottom);
+            this.targetPoint = { x:point.x, y:point.y, width:this.target.width, height:this.target.height };
+            image = new FrameAnimationImage(1, 6, 75, 'cdn/bless_panel/img_b', '.png', 1);
+            this.bottom.addChild(image).pos(this.layer.width / 2, this.layer.height / 2);
+            image.start();
+            Laya.Tween.to(image, { x: this.targetPoint.x + this.targetPoint.width * game.scale / 2, y: this.targetPoint.y + this.targetPoint.height * game.scale / 2 }, 300, Laya.Ease.QuadIn, Laya.Handler.create(this, this._showAni4, [image]));
+        } else {
+            this._showAni5();
+        }
+    }
+
+    _showAni4(image) {
+        image && image.clearSelf();
+        image = new FrameAnimationImage(1, 18, 25, 'cdn/bless_panel/img_c', '.png', 1, { frame: 8, todo: this.__complete.bind(this), once: 'destroy' });
+        this.bottom.addChild(image).pos(this.targetPoint.x + this.targetPoint.width * game.scale / 2, this.targetPoint.y + this.targetPoint.height * game.scale / 2);
+        image.start();
+    }
+
+    _showAni5(){
+        this.layer.addChild(this.fortuneIcon).pos(this.layer.width - this.fortuneIcon.width >> 1, this.layer.height - this.fortuneIcon.height >> 1);
+        this.fortuneIcon.animation(()=>{ Laya.timer.once(1000, this, this.__delayToRemoveFortune) });
+    }
+
+    __complete() {
+        this.clearLayer();
+        game.cb.event('show_grow_animation', [this._value]);
+    }
+
+    __delayToRemoveFortune(){
+        game.utils.remove(this.fortuneIcon);
+        this.__complete();
+    }
+
+    /**
+     * 将A对象的本地坐标转换到B对象的本地坐标
+     * @param aObj 源对象
+     * @param bObj 目标对象
+     * @returns 目标对象的本地坐标
+     */
+    convertLocalToLocal(aObj, bObj) {
+        // 1. A的本地坐标 -> 全局坐标
+        const globalPos = aObj.localToGlobal(new Laya.Point());
+        // 2. 全局坐标 -> B的本地坐标
+        const bLocalPos = bObj.globalToLocal(globalPos);
+        return bLocalPos;
+    }
+
+    get target() {
+        if (this.owner.ready.parent) {
+            return this.owner.ready.getChildByName('player_down')
+        } else if (this.owner.game.parent) {
+            return this.owner.game.getChildByName('player_down')
+        } else {
+            return null;
+        }
+    }
+}
+
+class FrameAnimationImage extends Laya.Image {
+    constructor(__min, __max, __time, __prefix, __tail, __scale, __data) {
+        super();
+        this.__min = __min;
+        this.__max = __max;
+        this.__time = __time;
+        this.__prefix = __prefix;
+        this.__tail = __tail;
+        this.__scale = __scale;
+        this.__data = __data;
+        this.__index = __min;
+        this.anchorX = this.anchorY = 0.5;
+        this.scale(this.__scale, this.__scale);
+
+        this._updateSkin();
+    }
+
+    start() {
+        Laya.timer.loop(this.__time, this, this._updateSkin);
+    }
+
+    _updateSkin() {
+        SkinUtils.setSkin(this, this.__prefix + this.__index + this.__tail);
+        this.__index++;
+        if (this.__index > this.__max) {
+            this.__index = this.__min;
+            this._once();
+        }
+        if (this.__data) {
+            if (this.__index == this.__data.frame && this.__data.todo) {
+                this._todo();
+            } else if (this.__index == this.__max && this.__data.todo) {
+                this._todo();
+            }
+        }
+    }
+
+    _once() {
+        if (this.__data) {
+            if (typeof this.__data.once === 'function') {
+                this.__data.once();
+            } else if (typeof this.__data.once === 'string') {
+                if (this.__data.once == 'destroy') {
+                    this.clearSelf();
+                }
+            }
+        }
+    }
+
+    _todo() {
+        this.__data.todo && this.__data.todo();
+        this.__data.todo = null;
+        delete this.__data.todo;
+    }
+
+    clearSelf() {
+        Laya.timer.clearAll(this);
+        game.utils.remove(this);
+    }
+}
+
+
+
+/**
+ * 钓鱼特效
+ */
+class MahjongTyFish extends game.ModuleBase {
+    constructor() {
+        super();
+        this.createView(game.uiMap['scene_game/result/MahjongTyFish']);
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+        this.scale(game.scale, game.scale)
+        this.fishAni.addLabel('Fish_Done_Label', 95);
+        this.fishAni.on(Laya.Event.LABEL, this, this.fishDoneComplete)
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+
+    fishDoneComplete(){
+        __sound.gameSound("fish2");
+    }
+
+    added(fishArr, doNext) {
+        __sound.gameSound("fish1");
+        this.list.array = fishArr;
+        this.list.repeatX = this.list.array.length;
+        this.list.x = this.list.parent.width - this.list.width >> 1;
+        this.fishAni.play(0, false);
+
+        this.doNext = doNext;
+        this.startTimer();
+    }
+
+    startTimer(){
+        Laya.timer.once(__data.deskData.roomVo.fish_time, this, this.todoNext);
+    }
+
+    todoNext(){
+        this.doNext && this.doNext();
+    }
+}
+
+/**
+ * 抚远鱼特效
+ */
+ class MahjongFyFish extends game.ModuleBase {
+    constructor() {
+        super();
+        this.createView(game.uiMap['scene_game/result/MahjongFyFish']);
+        this.params = {
+            "layer": 'bottom',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        }
+        this.scale(game.scale, game.scale)
+    }
+
+    onAwake() {
+        this.list.renderHandler = new Laya.Handler(this, this.updateItem);
+    }
+
+    onEnable() {}
+
+    onDisable() {}
+
+    added(fishArr, doNext) {
+        __sound.gameSound("fish2");
+
+        if(HallPlay.curRuleId == FriendRoomPlays.AREA.SHUANGYASHAN){
+            this.title.skin = 'local/mahjong_effect/1/img_hyy.png';
+        }else{
+            // 是否为数字鱼
+            if (__data.deskData.roomVo.getIncludeRule(Play_fuyuan.NUMBER_FISH)) {
+                this.title.skin = 'local/mahjong_effect/1/img_szy.png';
+            } else { // 是否为海洋鱼
+                this.title.skin = 'local/mahjong_effect/1/img_hyy.png';
+            }
+        }
+
+        this.list.array = fishArr;
+        this.list.repeatX = this.list.array.length;
+        this.list.x = this.list.parent.width - this.list.width >> 1;
+
+        this.doNext = doNext;
+        this.startTimer();
+    }
+
+    updateItem(cell) {
+        // cell.lightAni.play(0, true);
+    }
+
+    startTimer(){
+        Laya.timer.once(__data.deskData.roomVo.fish_time, this, this.todoNext);
+    }
+
+    todoNext(){
+        this.doNext && this.doNext();
+    }
+}
+/**
+ * 鱼item
+ */
+ class MahjongTyFishItem extends Laya.Scene {
+    constructor() {
+        super()
+        this.createView(game.uiMap['scene_game/result/MahjongTyFishItem']);
+    }
+
+    onDisable() {
+        this.lightAni.gotoAndStop(0);
+        this.light.visible = false;
+    }
+
+
+    set dataSource(value) {
+        if ('texture' in this.view) this.view.texture = this.getSkin(value);
+        else if ('skin' in this.view) this.view.skin = this.getSkin(value);
+    }
+
+    /**
+     * [getSkin description]
+     * @param  {[type]} value [description]
+     * @return {[type]}       [description]
+     */
+    getSkin(value) {
+        if (value == 255)
+            return `local/mahjong_common/1/${__data.mahjong_set.cardIndex}_ag.png`;
+        else {
+            return Mahjong2DRes.getRes('own', value);
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_game.result.MahjongTyFishItemUI', MahjongTyFishItem);

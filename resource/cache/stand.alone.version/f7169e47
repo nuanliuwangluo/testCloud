@@ -1,0 +1,37 @@
+class S_show_mjSmallGame extends Laya.Script {
+    init(isHall) {
+        this.isHall = isHall;
+        return this;
+    }
+    onClick(e) {
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        __showScene.show_mjSmallGame()
+    }
+    onEnable() {
+        if (!this.isHall) return
+        game.cb.on('update_myCityId', this, this.update)
+        Laya.timer.frameOnce(1, this, () => {
+            this.update()
+        })
+    }
+    onDisable() {
+        game.cb.on('update_myCityId', this, this.update)
+    }
+    update() {
+        let img = this.owner.getChildByName('img_fire')
+        img.visible = false;
+        img.clipStop();
+
+        if (!__data.redPacket.canShowFriendRedIcon()) {
+            img.visible = true;
+            img.clipPlay(0)
+            return
+        }
+
+        let b = __data.excelConfig.hashCityIdVO[__data.myCityId].Red == 1
+        if (!b) {
+            img.visible = true;
+            img.clipPlay(0)
+        }
+    }
+}

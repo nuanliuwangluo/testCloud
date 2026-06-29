@@ -1,0 +1,331 @@
+class PosterCloseTodo{
+    static do(){
+        trace('海报关闭触发其它面板检测.');
+        this._todo && this._todo();
+        this._todo = null;
+    }
+
+    static set todo(todo){
+        this._todo = todo;
+    }
+    static get todo(){
+        return this._todo;
+    }
+}
+
+class Panel_imageShare_pre extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_imageShare_pre',
+            layer:'panel'
+        })
+    }
+
+    onAwake(){
+        this.btn_do.on(Laya.Event.CLICK, this, this._showImageShare);
+        this.btn_close.on(Laya.Event.CLICK, this, this._closeSelf);
+    }
+
+    onEnable(){
+        LocalUtils.saveByToday('show_poster_page', 1);
+    }
+
+    _closeSelf(){
+        PosterCloseTodo.do();
+    }
+
+    _showImageShare(){
+        game.scene.remove(Panel_imageShare_pre);
+        game.scene.add(Panel_imageShare);
+    }
+}
+
+
+class Panel_imageShare extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/Panel_imageShare',
+            layer:'panel'
+        })
+        this.mouseThrough = true;
+        this._qrcodeBase64 = null;
+
+        this._cdnPosterPath = `https://cdn.snyngame.com/mahjong/${config.resFolderVersion}/cdn/poster/`;
+    }
+
+    onEnable(){
+        game.cb.on('panel_imageShare_draw', this, this.draw);
+        this.btn_share_friend.on(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报分享好友']);
+        this.btn_share_space.on(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报分享朋友圈']);
+        this.btn_share_save.on(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报保存相册']);
+        this.btn_close.on(Laya.Event.CLICK, this, this._closeSelf);
+        this.init();
+        this.drawLine();
+        this.create();
+    }
+
+    onDisable(){
+        game.cb.off('panel_imageShare_draw', this, this.draw);
+        this.btn_share_friend.off(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报分享好友']);
+        this.btn_share_space.off(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报分享朋友圈']);
+        this.btn_share_save.off(Laya.Event.CLICK, this, this._showWxImageMenu, ['海报保存相册']);
+        this.btn_close.off(Laya.Event.CLICK, this, this._closeSelf);
+        this.clear();
+    }
+
+    clickMask(){}
+
+    init(){
+        this.qrbg.visible = false;
+    }
+
+    clear(){
+        this.code.texture = '';
+    }
+
+    drawLine(){
+        let lw = 6;
+        this.img_line.pos(this.img.x - lw / 2, this.img.y - lw / 2);
+        this.img_line.graphics.clear();
+        this.img_line.graphics.drawRect(0, 0, this.img.width + lw, this.img.height + lw, null, '#ffffff', lw);
+    }
+
+    create(){
+        this.drawCode = false;
+        this._setRank();
+        this._getQrcode();
+    }
+
+    _setRank(){
+        this.rankLevelData = RankUtils.getRankLvDataByScore(__data.hashCityLevelCup[__data.myCityId].cup, __data.uid, __data.myCityId);
+        this.txt_name.text = this.rankLevelData.name;
+        this.txt_rankLevel.text = this.rankLevelData.toNextLevelNeedCup == 0 ? '' : this.rankLevelData.level;
+        this.crown.visible = this.rankLevelData.toNextLevelNeedCup == 0 ? true : false;
+        this.img_lv_bg.skin = `local/lvNameBg/1/rank_${this.rankLevelData.iconIndex}.png`;
+        this.img_sign.skin = `cdn/rank_sign/img_rank_sign_${this.rankLevelData.iconIndex}.png`;
+    }
+
+    /**
+     * 绘制二维码
+     */
+    draw(base64Str){
+        console.log(base64Str);
+        this._qrcodeBase64 = base64Str;
+        this.code.loadImage(base64Str, Laya.Handler.create(this, () => {
+            this.drawCode = true;
+            this.qrbg.visible = true;
+        }));
+    }
+
+    /**
+     * 获取二维码base64字符串
+     */
+    _getQrcode(){
+        game.server.send(19009, `uuid=${__data.uid}&channel=poster`);
+    }
+
+    // ========== 图片分享 ==========
+
+    /**
+     * 图片绘制项：sprite 提供位置/尺寸，加载后要有 src 和绘制信息
+     * @typedef {{sprite: Laya.Sprite, src: Image|null, ready: boolean}} ImgItem
+     */
+
+    /** 从 sprite/image 纹理中解析 CDN 地址 */
+    _getCdnUrl(sprite) {
+        if (!sprite) return null;
+        let tex = sprite.texture;
+        let path = '';
+        if (tex) {
+            path = tex.url || (tex.bitmap && tex.bitmap.url) || '';
+        }
+        // Image 组件的 skin 作为兜底
+        if (!path && sprite.skin) {
+            path = sprite.skin;
+        }
+        if (!path) return null;
+        return this._cdnPosterPath + path.replace(/^.*[\\\/]/, '');
+    }
+
+    /** 加载单张 CDN 图片 */
+    _loadCdnImage(sprite, item, onDone) {
+        let url = this._getCdnUrl(sprite);
+        if (!url) { item.ready = true; onDone(); return; }
+        let img = wx.createImage();
+        img.onload = () => { console.log('加载成功:', url, img.width, img.height); item.src = img; item.ready = true; onDone(); };
+        img.onerror = (e) => { console.error('加载失败:', url, e); item.ready = true; onDone(); };
+        img.src = url;
+    }
+
+    _getCanvas(w, h, callback) {
+        let canvas = wx.createCanvas();
+        canvas.width = w;
+        canvas.height = h;
+        let ctx = canvas.getContext('2d');
+
+        // ---- 图片元素（跳过不可见的） ----
+        let imageSprites = [
+            this.img, this.img_sign, this.img_lv_bg, this.circle, this.crown, this.qrbg
+        ].filter(s => s && s.visible !== false);
+        let imgItems = imageSprites.map(s => ({ sprite: s, src: null, ready: false }));
+
+        // 二维码（base64）
+        let qrItem = { sprite: this.code, src: null, ready: false };
+
+        // ---- 文本元素 ----
+        let textItems = [
+            { label: this.txt_name },
+            { label: this.txt_rankLevel },
+        ];
+
+        let allImagesReady = () => imgItems.every(i => i.ready) && qrItem.ready;
+
+        let tryDraw = () => {
+            if (!allImagesReady()) return;
+            console.log('全部就绪，开始合成...');
+
+            // 1) 绘制所有图片（img 固定 0,0，子元素用自身坐标，支持 scale）
+            for (let item of imgItems) {
+                if (!item.src) continue;
+                let sp = item.sprite;
+                if (sp.visible === false) continue;
+                let isBg = sp === this.img;
+                let dx = isBg ? 0 : (sp.x || 0);
+                let dy = isBg ? 0 : (sp.y || 0);
+                let sx = sp.scaleX || 1, sy = sp.scaleY || 1;
+                ctx.save();
+                ctx.translate(dx, dy);
+                ctx.scale(sx, sy);
+                ctx.drawImage(item.src, 0, 0, sp.width || item.src.width, sp.height || item.src.height);
+                ctx.restore();
+            }
+
+            // 2) 绘制二维码
+            if (qrItem.src && this.code.visible !== false) {
+                let sp = qrItem.sprite;
+                ctx.drawImage(qrItem.src, sp.x || 0, sp.y || 0, sp.width || qrItem.src.width, sp.height || qrItem.src.height);
+            }
+
+            // 3) 绘制文本（尊重 visible 属性）
+            for (let t of textItems) {
+                if (!t.label || t.label.visible === false) continue;
+                this._drawLabel(ctx, t.label, t.label.text);
+            }
+
+            callback(canvas);
+        };
+
+        // 并行加载所有 CDN 图片
+        let pending = imgItems.length;
+        if (pending === 0) tryDraw();
+        for (let i = 0; i < imgItems.length; i++) {
+            this._loadCdnImage(imgItems[i].sprite, imgItems[i], () => { if (--pending === 0) tryDraw(); });
+        }
+
+        // 加载二维码
+        if (this._qrcodeBase64) {
+            let qr = wx.createImage();
+            qr.onload = () => { qrItem.src = qr; qrItem.ready = true; tryDraw(); };
+            qr.onerror = () => { qrItem.ready = true; tryDraw(); };
+            qr.src = this._qrcodeBase64;
+        } else {
+            qrItem.ready = true;
+        }
+    }
+
+    /** 在 2D canvas 上绘制 Laya Label */
+    _drawLabel(ctx, label, defText) {
+        if (!label) return;
+        let text = label.text || defText || '';
+        let x = label.x || 0;
+        let y = label.y || 0;
+        let w = label.width || 0;
+        let h = label.height || 0;
+        let fontSize = label.fontSize || 30;
+        let color = label.color || '#ffffff';
+        let bold = label.bold;
+        let align = label.align || 'left';
+        let valign = label.valign || 'top';
+        let stroke = label.stroke || 0;
+        let strokeColor = label.strokeColor || '#000000';
+
+        ctx.save();
+        ctx.font = `${bold ? 'bold ' : ''}${fontSize}px sans-serif`;
+        ctx.fillStyle = color;
+
+        // 垂直对齐
+        let textY = y;
+        if (valign === 'middle') {
+            textY = y + h / 2 + fontSize * 0.35;
+        } else if (valign === 'bottom') {
+            textY = y + h;
+        } else {
+            textY = y + fontSize * 0.8;
+        }
+
+        // 水平对齐
+        let textX = x;
+        if (align === 'center') {
+            ctx.textAlign = 'center';
+            textX = x + w / 2;
+        } else if (align === 'right') {
+            ctx.textAlign = 'right';
+            textX = x + w;
+        } else {
+            ctx.textAlign = 'left';
+        }
+
+        // 描边
+        if (stroke > 0) {
+            ctx.lineWidth = stroke;
+            ctx.strokeStyle = strokeColor;
+            ctx.strokeText(text, textX, textY);
+        }
+
+        // 填充
+        ctx.fillText(text, textX, textY);
+        ctx.restore();
+    }
+
+    _closeSelf(){
+        PosterCloseTodo.do();
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': '海报关闭', 'Mj_UserID':String(__data.uid) });
+        game.scene.remove(Panel_imageShare);
+    }
+
+    _showWxImageMenu(content) {
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': content, 'Mj_UserID':String(__data.uid) });
+        // 等待二维码加载完成
+        if(!this.drawCode){ console.warn('二维码未加载完成.'); return false; }
+        try {
+            let bounds = this.img.getBounds();
+            let w = bounds.width, h = bounds.height;
+
+            this._getCanvas(w, h, (canvas) => {
+                if (!canvas) { console.error('获取 Canvas 失败'); return; }
+                canvas.toTempFilePath({
+                    x: 0, y: 0,
+                    width: w, height: h,
+                    destWidth: w, destHeight: h,
+                    fileType: 'png', quality: 1,
+                    success: (res) => {
+                        console.log('导出成功:', res.tempFilePath);
+                        wx.showShareImageMenu({ path: res.tempFilePath });
+                    },
+                    fail: (err) => {
+                        console.error('导出失败:', err);
+                    }
+                });
+            });
+        } catch (e) {
+            console.error('显示微信分享菜单异常:', e);
+        }
+    }
+
+    static get instance() {
+        if (!this._instance) {
+            this._instance = new Panel_imageShare();
+        }
+        return this._instance;
+    }
+}

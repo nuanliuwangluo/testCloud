@@ -1,0 +1,41 @@
+let __lang = {
+    content_very_little: '填写的内容过短',
+    complaint_content_too_length: `内容太长`,
+    complaint_contact_too_length: `联系方式太长`,
+    complaint_content_too_less: `请填写内容`,
+    complaint_contact_too_less: `请填写联系方式`,
+    complaint_fail: `提交失败`,
+    complaint_success: `提交成功`,
+    copy_success: `复制成功`,
+    receive_fail: '领取失败',
+    receive_success: '领取成功',
+    buy_success: '购买成功',
+    match_success: '匹配成功',
+    match_fail: '匹配失败',
+    need_auth_goin_game: '请授权进入游戏',
+    share_default_title: '不是我吹，麻将这一块从来不服谁！',
+    share_uplv_title: '上分如喝水，轻轻松松就',
+    loseWinMaxTips: `每日金币输赢已达上限，休息一下明日再战吧~`,
+    goldLtTips: `金币不足啦！先去其他等级场试试吧~`,
+    goldGtTips: `您的金币太多啦！前往更高级场进行游戏吧！`,
+
+    // 邀请描述
+    invite_des: `邀请测试`,
+
+    connecting_server: '正在连接服务器',
+    geting_data: '正在获取用户数据',
+    pay_over_max: '每日充值已达上限，休息一下明日再战吧~',
+    server_close_please_reConnect: '网络已断开，请重新连接...',
+    stone_no_enough: '钻石不足',
+    star_no_enough: '雀神之星不足',
+    submit_gray: '您今日已提交过反馈，客服正在加紧受理',
+    tree_noHarvest: '今日贡献需要明日收获哦~',
+    des_goldBox: '宝箱奖励：必得星星×3',
+    des_goldBox_full: '宝箱奖励：必得星星×3',
+    des_dailyMatchVipNeed: '开通VIP特权可以一键完成每日挑战哦~',
+
+    loading_tips_join_room: '正在进入房间',
+    loading_tips_load_res: '加载资源',
+    nocan_pay: '系统故障，请稍后再试',
+}
+window.__lang = __lang;

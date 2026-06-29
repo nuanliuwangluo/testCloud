@@ -1,0 +1,371 @@
+class S_mm_ray_cast extends Laya.Script3D {
+    onAwake() {
+        //射线初始化（必须初始化）
+        this.ray = new Laya.Ray(new Laya.Vector3(0, 0, 0), new Laya.Vector3(0, 0, 0));
+        //初始化变量
+        this.point = new Laya.Vector2();
+        this.outHitResult = new Laya.HitResult();
+        S_mm_ray_cast.playOjbect = S_3D_mjMatch.scene.getChildByName('plance1')
+    }
+    onEnable() {
+        // 监听全局鼠标点击
+        Laya.stage.on('click', this, this.onMouseClick1);
+    }
+    onDisable() {
+        Laya.stage.off('click', this, this.onMouseClick1);
+    }
+    onMouseClick1(e) {
+        let mainCamera = S_3D_mjMatch.camera
+        if (!mainCamera) return;
+
+        let a = game.scene.layer['panel'].c
+        let b = game.scene.layer['panel0'].c
+        let c = game.scene.layer['panel1'].c
+        if (a.numChildren || b.numChildren || c.numChildren) return
+
+        // 屏幕坐标转射线
+        this.point.x = Laya.stage.mouseX;
+        this.point.y = Laya.stage.mouseY;
+        //产生射线
+        S_3D_mjMatch.camera.viewportPointToRay(this.point, this.ray);
+        //拿到射线碰撞的物体
+        S_3D_mjMatch.scene.physicsSimulation.rayCast(this.ray, this.outHitResult);
+        //如果碰撞到物体
+        if (this.outHitResult.succeeded) {
+            if (!MjMatch_ui.isGameing) return
+            let gb = this.outHitResult.collider.owner;
+            s_mm_selectCardGroup(gb)
+            trace("碰撞到物体！！002")
+        }
+    }
+}
+let s_mm_selectCardGroup = (gb) => {
+    if (S_3D_mjMatch.selectCard.includes(gb)) return;
+    if (gb && gb.type == 'card') {
+        trace('点击的是麻将')
+        __sound.playGameYx('usecard')
+        __data.mjSmallGame.vibrate()
+        let allowAddCardNum = s_mm_get_allowCardNum()
+        if (gb.cardNum > allowAddCardNum) {
+            return __tips('这组牌太长了，找个短些的吧~')
+        }
+
+        let startx = S_mm_ray_cast.playOjbect.transform.position.x + 7.34 / 2;
+        for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+            let e = S_3D_mjMatch.selectCard[index];
+            startx -= e.cardW + __data.mjSmallGame.placeCardDis;
+        };
+        startx -= gb.cardW / 2;
+
+        gb.transform.position = new Laya.Vector3(
+            gb.transform.position.x,
+            gb.transform.position.y + 20,
+            gb.transform.position.z
+        )
+
+        let r1 = gb.getComponent(Laya.Rigidbody3D)
+        r1.clearForces()
+        r1.enabled = false
+
+        let toPosition = new Laya.Vector3();
+        toPosition.x = startx
+        toPosition.y = S_mm_ray_cast.playOjbect.transform.position.y
+        toPosition.z = S_mm_ray_cast.playOjbect.transform.position.z
+        // 从桌面卡组移除
+        for (let index = 0, length = S_3D_mjMatch.deskCard.length; index < length; index++) {
+            const e = S_3D_mjMatch.deskCard[index];
+            if (e == gb) {
+                S_3D_mjMatch.deskCard.splice(index, 1)
+                break;
+            }
+        };
+        // 添加到选牌卡组
+        S_3D_mjMatch.selectCard.push(gb)
+        game.cb.event('mm_update_prop_use_count')
+        gb.transform.rotation = new Laya.Vector3()
+        s_mm_tweenToPosition(gb, toPosition, 200, Laya.Ease.linearNone, s_mm_testMatch)
+    }
+}
+let s_mm_tweenToPosition = (sprite3D, target, duration = 200, ease = Laya.Ease.linearNone, completeCallback = null) => {
+    let pos = sprite3D.transform.position;
+    let proxy = { x: pos.x, y: pos.y, z: pos.z };
+
+    Laya.Tween.to(proxy, {
+        x: target.x,
+        y: target.y,
+        z: target.z,
+        update: new Laya.Handler(this, () => {
+            sprite3D.transform.position = new Laya.Vector3(proxy.x, proxy.y, proxy.z);
+        }),
+        complete: new Laya.Handler(this, completeCallback),
+        ease,
+    },
+        duration
+    );
+}
+let s_mm_testMatch = async () => {
+    let a = S_3D_mjMatch.selectCard.at(-1);
+    // let a = S_3D_mjMatch.selectCard[S_3D_mjMatch.selectCard.length - 1];
+    let remove1
+    let remove2
+    let isCorrectCardGroup
+    for (let index = 0, length = S_3D_mjMatch.selectCard.length - 1; index < length; index++) {
+        let e = S_3D_mjMatch.selectCard[index]
+        isCorrectCardGroup = s_mm_test_cardGroup_flower_correct(a, e)
+        if (isCorrectCardGroup) {
+            // __tips('有可以消除的卡牌组合');
+            remove1 = e;
+            remove2 = a
+            break;
+        }
+    };
+    if (remove1 && remove2) {
+        __sound.playGameYx('collect')
+        for (let index = S_3D_mjMatch.selectCard.length - 1; index >= 0; index--) {
+            const e = S_3D_mjMatch.selectCard[index];
+            if (e == remove1 || e == remove2) {
+                S_3D_mjMatch.selectCard.splice(index, 1)
+            }
+        };
+        game.cb.event('mm_update_prop_use_count')
+        let startx = S_mm_ray_cast.playOjbect.transform.position.x + 7.34 / 2;
+        for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+            let e = S_3D_mjMatch.selectCard[index];
+
+            let toPosition = new Laya.Vector3();
+            toPosition.x = startx - e.cardW / 2;
+            toPosition.y = S_mm_ray_cast.playOjbect.transform.position.y
+            toPosition.z = S_mm_ray_cast.playOjbect.transform.position.z
+            s_mm_tweenToPosition(e, toPosition, 200, Laya.Ease.linearNone, null)
+            startx -= e.cardW + __data.mjSmallGame.placeCardDis;
+        };
+        await __tool.await(50)
+        // 移动2个匹配的卡牌 进行特效
+        s_mm_tweenToPosition(remove1, new Laya.Vector3(remove1.rx + 20, 50, -25))
+        s_mm_tweenToPosition(remove2, new Laya.Vector3(-remove2.lx - 20, 50, -25))
+        await __tool.await(200)
+        s_mm_tweenToPosition(remove1, new Laya.Vector3(remove1.rx, 50, -25))
+        s_mm_tweenToPosition(remove2, new Laya.Vector3(-remove2.lx, 50, -25))
+        await __tool.await(200)
+        // 缩小移除
+        s_mm_shrinkAndRemove(remove1)
+        s_mm_shrinkAndRemove(remove2)
+        // 使用对象映射优化音效播放逻辑
+        const soundMap = {
+            1: 's1/2/chi1',
+            2: 's1/2/peng1',
+            3: 's1/2/gang1'
+        };
+        if (soundMap[isCorrectCardGroup]) {
+            __sound.playGameYx(soundMap[isCorrectCardGroup]);
+        }
+        game.scene.get(MjMatch_ui).startFontEffect(isCorrectCardGroup)
+        game.scene.get(MjMatch_ui_left).update_surplusCardGroupNumber()
+
+        let a = S_3D_mjMatch.selectCard.length + S_3D_mjMatch.deskCard.length / 2
+        if (a <= 0 && MjMatch_ui.isGameing) {
+            // 游戏结束胜利
+            MjMatch_ui.isGameing = false;
+            game.scene.get(MjMatch_ui_left).removeTimer()
+            await __tool.await(500)
+            game.server.send(70003, __data.mjSmallGame.winLevel)
+        }
+        mm_test_have_no_remove_change_card()
+    } else {
+        let cm = 0
+        S_3D_mjMatch.selectCard.forEach(e => {
+            cm += e.cardNum;
+        });
+        if (cm == __data.mjSmallGame.maxPlaceCardCount) {
+            // 游戏结束失败
+            MjMatch_ui.isGameing = false;
+            game.scene.get(MjMatch_ui_left).removeTimer()
+            await __tool.await(200)
+            if (__data.mjSmallGame.getComebacklifeCount)
+                game.scene.add(MM_comebacklife, ['放置栏已满', '复活并移出所有牌', () => {
+                    MjMatch_ui.isGameing = true;
+                    game.scene.get(MjMatch_ui_left).resumeTimer()
+                    s_mm_remove_select_card()
+                }, 1])
+            else {
+                game.scene.add(MM_fail)
+            }
+        }
+    }
+}
+let s_mm_shrinkAndRemove = (gameObject) => {
+    // 为每个 Cube 创建代理对象（用于 Tween）
+    const createProxy = (cube) => {
+        const pos = cube.transform.position;
+        const scale = cube.transform.localScale;
+        return {
+            x: pos.x,
+            y: pos.y,
+            z: pos.z,
+            sx: scale.x,
+            sy: scale.y,
+            sz: scale.z
+        };
+    };
+    let proxy = createProxy(gameObject)
+
+    Laya.Tween.to(proxy, {
+        x: 0,
+        sx: 0,
+        sy: 0,
+        sz: 0,
+        update: new Laya.Handler(this, () => {
+            gameObject.transform.position = new Laya.Vector3(proxy.x, proxy.y, proxy.z);
+            gameObject.transform.localScale = new Laya.Vector3(proxy.sx, proxy.sy, proxy.sz);
+        }),
+        complete: new Laya.Handler(this, () => {
+            gameObject.destroy()
+        }),
+        ease: Laya.Ease.linearNone,
+    },
+        200
+    );
+}
+let s_mm_get_allowCardNum = () => {
+    let cardNum = 0
+    for (let index = 0, length = S_3D_mjMatch.selectCard.length; index < length; index++) {
+        let e = S_3D_mjMatch.selectCard[index];
+        cardNum += e.cardNum;
+    };
+
+    let allowAddCardNum = __data.mjSmallGame.maxPlaceCardCount - cardNum
+    return allowAddCardNum
+}
+let s_mm_test_cardGroup_flower_correct = (e, e2) => {
+    return s_mm_test_cardGroup_flower_correct__cardNumber(e.card_number, e2.card_number);
+}
+let s_mm_test_cardGroup_flower_correct__cardNumber = (f1, f2) => {
+    let fa1 = (f1 + '.' + f2).toArray('.').sort()
+    let f_new1 = fa1.join('.')
+    let getType = () => {
+        if (fa1.length == 4) {
+            return 3;
+        }
+        if (fa1.length == 3) {
+            if (fa1[0] == fa1[2]) return 2
+            else return 1
+        }
+        return 0
+    }
+    if (mm_cardGroup.chi.includes(f_new1)) {
+        return getType()
+    }
+    if (mm_cardGroup.peng.includes(f_new1)) {
+        return getType()
+    }
+    if (mm_cardGroup.gang.includes(f_new1)) {
+        return getType()
+    }
+    return 0;
+}
+let mm_test_have_no_remove_change_card = () => {
+    // 偷摸吧无法匹配的牌更换
+    let cxxx = [...S_3D_mjMatch.selectCard, ...S_3D_mjMatch.deskCard];
+
+    cxxx.forEach(e => {
+        e.preCanRemove = false;
+    });
+
+    let test110 = (isMatchGang) => {
+        for (let i = cxxx.length - 1; i >= 0; i--) {
+            for (let j = cxxx.length - 1; j >= 0; j--) {
+                let e1 = cxxx[i]
+                let e2 = cxxx[j]
+                if (e1 == e2) continue;
+                if (e1.preCanRemove) continue;
+                if (e2.preCanRemove) continue;
+                // 优先匹配 2+1组合 杠组合放在最后
+                if (!isMatchGang && e1.cardNum == 2 && e2.cardNum == 2) continue;
+                isHaveCanRemoveGroup = s_mm_test_cardGroup_flower_correct(e1, e2)
+                if (isHaveCanRemoveGroup) {
+                    e1.preCanRemove = true
+                    e2.preCanRemove = true
+                    break;
+                }
+            };
+        };
+    }
+    test110(false)
+    test110(true)
+
+    let cyyy = cxxx.filter((e) => {
+        return !e.preCanRemove
+    })
+
+    if (cyyy.length) {
+
+        cyyy.sort((a, b) => {
+            return b.cardNum - a.cardNum
+        })
+        cyyy.sort((a, b) => {
+            let c1 = 0
+            let c2 = 0
+            if (S_3D_mjMatch.selectCard.includes(a)) c1 = 1;
+            else c1 = 2;
+            if (S_3D_mjMatch.selectCard.includes(b)) c2 = 1;
+            else c2 = 2;
+            return c1 - c2;
+        })
+
+        let changeSon = (card, new_card_flower) => {
+            // __tips('🌀变换卡牌')
+            let pos = card.transform.position;
+            let new_card;
+            new_card_flower = String(new_card_flower)
+            let n = new_card_flower.toArray('.')
+            if (n.length == 1) {
+                new_card = S_3D_mjMatch.$this.s_create_card.create_cardOfOneSon(new_card_flower)
+            } else if (n.length == 2) {
+                new_card = S_3D_mjMatch.$this.s_create_card.create_cardOfTwoSon(...n)
+            }
+            card.parent.addChild(new_card)
+            new_card.transform.position = pos
+            let nsa = [S_3D_mjMatch.selectCard, S_3D_mjMatch.deskCard];
+            nsa.forEach(e => {
+                for (let index = 0, length = e.length; index < length; index++) {
+                    const e1 = e[index];
+                    if (e1 == card) {
+                        e.splice(index, 1)
+                        e.push(new_card)
+                        break
+                    }
+                };
+            });
+            card.parent && card.parent.removeChild(card)
+            card.destroy()
+        }
+
+        for (let index = 0, tailIndex = cyyy.length - 1, length = cyyy.length / 2; index < length; index++, tailIndex--) {
+            cyyy[index]
+            cyyy[tailIndex]
+            if (cyyy[index].cardNum == 1) {
+                changeSon(cyyy[tailIndex], cyyy[index].card_number + '.' + cyyy[index].card_number);
+            }
+            else if (cyyy[index].cardNum == 2) {
+                let a = cyyy[index].card_number.toArray('.');
+                // 如果是顺子
+                if (a[0] != a[1]) {
+                    if (parseInt(a[0]) % 10 == 1) {
+                        let f = parseInt(a[1]) + 1;
+                        changeSon(cyyy[tailIndex], f)
+                    } else {
+                        let f = parseInt(a[0]) - 1;
+                        changeSon(cyyy[tailIndex], f)
+                    }
+                } else {
+                    // 是对子
+                    if (cyyy[tailIndex].cardNum == 1) {
+                        changeSon(cyyy[tailIndex], a[0])
+                    } else {
+                        changeSon(cyyy[tailIndex], cyyy[index].card_number)
+                    }
+                }
+            }
+        };
+    }
+}

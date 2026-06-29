@@ -1,0 +1,170 @@
+/* 
+ * @Author: 轻飘时刻
+ * @Date:   2020-01-09 11:43:54
+ * @Last Modified by:   相濡以沫
+ * @Last Modified time: 2020-03-20 10:11:01
+ */
+class Chat extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/Chat',
+            "layer": 'panel',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.btn_word.addComponent(Chat_Script_btn_word)
+        this.btn_face.addComponent(Chat_Script_btn_face)
+        for (var i = 1; i <= 18; i++) {
+            this['img_face_' + i].addComponent(Chat_Script_select_send_face)
+        }
+    }
+    onAwake() {
+        this.sp_face.visible = false;
+        this.list_word.vScrollBarSkin = ''
+            // this.list_word.array = Chat.wordConfig
+        this.list_word.mouseHandler = new Laya.Handler(this, this.onMouse);
+        // this.list_word.renderHandler = new Laya.Handler(this, this.updateItem);
+    }
+    onEnable() {
+        if (DeskCommonUI.scene == 1) {
+            this.list_word.array = Chat.wordConfig
+        } else if (DeskCommonUI.scene == 3) {
+            this.list_word.array = __runConfig.wordConfig
+        }
+    }
+    onMouse(e, index) {
+        if (e.type != 'click') return
+
+        //cd聊天按钮
+        game.cb.event('room_chat_to_player')
+
+        if (DeskCommonUI.scene == 1) {
+            game.server.send(5002, "umrumr" + Chat.wordConfig[index].id)
+        } else if (DeskCommonUI.scene == 3) {
+            game.server.send(25002, "umrumr" + __runConfig.wordConfig[index].id)
+        }
+        game.scene.remove(this)
+
+    }
+    updateItem(cell, index) {
+        if (DeskCommonUI.scene == 1) {
+            cell.getChildByName('txt_word').text = Chat.wordConfig[index].content
+        } else if (DeskCommonUI.scene == 3) {
+            cell.getChildByName('txt_word').text = __runConfig.wordConfig[index].content
+        }
+    }
+
+
+    static get wordConfig(){
+        if(__data.excelConfig.hashPlayIdChat){
+            if(__data.excelConfig.hashPlayIdChat[HallPlay.curRuleId]== 1){
+                return this.SOUTH;
+            }else{
+                return this.NORTH;
+            }
+        }else{
+            return this.SOUTH;
+        }
+    }
+
+    static get NORTH(){
+        if(!this._north){
+            this._north = [
+                {id: 101,content: "哎呀我去！这牌没谁了！"},
+                {id: 104,content: "别点别点！我自己搂啊！"},
+                {id: 105,content: "干啥呀！要打我春天呐！"},
+                {id: 106,content: "好好玩，别下死手"},
+                {id: 107,content: "快点干，早点散"},
+                {id: 108,content: "炮兵注意了！瞄准喽，向我开炮！"},
+                {id: 109,content: "痛快的！打牌得快！"},
+                {id: 114,content: "你这牌打的，也太精彩了吧"},
+                {id: 115,content: "有这样出牌的吗，太让人无语"}
+            ]
+        }
+        return this._north;
+    }
+
+    static get SOUTH(){
+        if(!this._south){
+            this._south = [
+                {id: 101,content: "哎呀我去！这牌没谁了"},
+                {id: 104,content: "我有一百种办法胡你"},
+                {id: 105,content: "你这样以后没朋友"},
+                {id: 106,content: "这谁顶得住啊！"},
+                {id: 107,content: "时间就是金钱我的朋友"},
+                {id: 108,content: "来呀，互相伤害呀"},
+                {id: 109,content: "抓紧时间，打牌得快"},
+                {id: 114,content: "这牌打得也太精彩了吧"},
+                {id: 115,content: "心态崩了呀！"}
+            ]
+        }
+        return this._south;
+    }
+
+    static get INDEX(){
+        if(__data.excelConfig.hashPlayIdChat){
+            return __data.excelConfig.hashPlayIdChat[HallPlay.curRuleId];
+        }else{
+            return 1;
+        }
+    }
+}
+class Chat_Script_btn_word extends Laya.Script {
+    onClick(e) {
+        if (e.currentTarget.selected == false) {
+            e.currentTarget.selected = true;
+            return;
+        }
+        this.owner.parent.btn_face.selected = false;
+        this.owner.parent.sp_face.visible = false
+        this.owner.parent.list_word.visible = true
+    }
+}
+class Chat_Script_btn_face extends Laya.Script {
+    onClick(e) {
+        if (e.currentTarget.selected == false) {
+            e.currentTarget.selected = true;
+            return;
+        }
+        this.owner.parent.btn_word.selected = false;
+        this.owner.parent.sp_face.visible = true
+        this.owner.parent.list_word.visible = false
+    }
+}
+class Chat_Script_select_send_face extends Laya.Script {
+    onClick(e) {
+        //cd聊天按钮
+        game.cb.event('room_chat_to_player')
+
+        if (DeskCommonUI.scene == 1) {
+            game.server.send(5002, "umrumr" + this.owner.name)
+        } else if (DeskCommonUI.scene == 2) {
+            game.server.send(15002, "umrumr" + this.owner.name)
+        } else if (DeskCommonUI.scene == 3) {
+            game.server.send(25002, "umrumr" + this.owner.name)
+        }
+        game.scene.remove(this.owner.parent.parent)
+    }
+}
+
+
+class ChatWordItem extends game.ModuleBase {
+    constructor() {
+        super()
+        this.createView(game.uiMap[`desk_common/ChatWordItem`]);
+    }
+
+    set dataSource(value) {
+        this.value = value;
+        if (value) {
+            this.getChildByName('txt_word').text = value.content;
+        }
+    }
+}
+Laya.ClassUtils.regClass('ui.desk_common.ChatWordItemUI', ChatWordItem);

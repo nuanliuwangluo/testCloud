@@ -1,0 +1,12 @@
+class LoginQRCode extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_app/LoginQRCode',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_close_remove_parent)
+    }
+    onEnable() {
+
+    }
+}

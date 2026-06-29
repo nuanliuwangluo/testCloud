@@ -1,0 +1,8 @@
+__data.shop = {
+    discount: {
+        async query(goodsId) {
+            // 9009,9010
+            await gtool.query([12001, goodsId], 1, 1)
+        },
+    }
+}

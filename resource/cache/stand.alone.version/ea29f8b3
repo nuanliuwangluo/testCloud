@@ -1,0 +1,130 @@
+class GameMainUplv extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_uplv',
+            layer: 'panel'
+        })
+        this.btn_share.addComponent(S_gamemain_uplv_share);
+        this.btn_qs.addComponent(S_gamemain_uplv_qs);
+        this.btn_close.addComponent(S_gamemain_uplv_click_mask);
+        // this.img_mask.addComponent(S_gamemain_uplv_click_mask)
+
+        this.img_hand = new Laya.Image('cdn/a_seven_hand/1.png')
+        game.Clip(this.img_hand, [
+            'cdn/a_seven_hand/1.png',
+            'cdn/a_seven_hand/2.png',
+            'cdn/a_seven_hand/3.png',
+            'cdn/a_seven_hand/4.png',
+            'cdn/a_seven_hand/5.png',
+            'cdn/a_seven_hand/6.png',
+            'cdn/a_seven_hand/7.png',
+            'cdn/a_seven_hand/8.png',
+            'cdn/a_seven_hand/9.png',
+        ], 90, true);
+
+        this.btn_space = 50;
+    }
+    added(rankLevelData, cityId, qs_in) {
+        __sound.gameSound("cheer");
+        // 雀神之路入口
+        this.qs_in = qs_in;
+        // 时间埋点
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '升段炫耀界面' });
+        this.rankLevelData = rankLevelData;
+        // 默认所在的城市
+        cityId = cityId || HallPlay.lastCityId;
+
+        Laya.timer.callLater(this, this.fixBtn);
+        // let rankData = __data[`rankCity${cityId}`] ? __data[`rankCity${cityId}`]['my'] : null;
+        let rankData = __data?.[`rankCity${cityId}`]?.['my']
+        if (rankData) {
+            let titleSkin = rankData.rank <= 200 ? 'cdn/uplv/img_dstc.png' : 'cdn/uplv/img_ndxs.png';
+            let umEventName = excelUtils.getUmEventName(cityId)
+            this.txt_rank.text = `${umEventName}本地榜第${rankData.rank}名`;
+            SkinUtils.setSkin(this.title, titleSkin);
+            GameMainUplv.uplvName = rankLevelData.name;
+            this.ani1.play(0, true);
+            this.txt_name.text = rankLevelData.name;
+            this.txt_rankLevel.text = rankLevelData.toNextLevelNeedCup == 0 ? '' : rankLevelData.level;
+            this.crown.visible = rankLevelData.toNextLevelNeedCup == 0 ? true : false;
+            this.img_lv_bg.skin = `local/lvNameBg/1/rank_${rankLevelData.iconIndex}.png`;
+            this.img_sign.skin = `cdn/rank_sign/img_rank_sign_${rankLevelData.iconIndex}.png`;
+
+            if (rankLevelData.level == 2) {
+                let a = miniApi.getItem(__data.uid + '-adsdk_finish')
+                if (a == 1) return;
+                miniApi.setItem(__data.uid + '-adsdk_finish', 1)
+                miniApi.adsdk_track('TUTORIAL_FINISH')
+            }
+        } else {
+            game.scene.remove(this);
+        }
+    }
+    onDisable() {
+        this.ani1.stop();
+        ResultPanelManager.show();
+        this.clearHand();
+        ResUtils.clearTextureRes(['cdn.effect_light_turn', 'cdn.uplv'])
+    }
+
+    fixBtn() {
+        // 按钮的一半宽度
+        let btn_half_width = this.btn_qs.width ? this.btn_qs.width / 2 : 398 / 2;
+        if (this.qs_in) {
+            this.btn_qs.visible = true;
+            this.btn_qs.x = this.width / 2 - btn_half_width - this.btn_space / 2;
+            this.btn_share.x = this.width / 2 + btn_half_width + this.btn_space / 2;
+
+            if (this.rankLevelData.level == 2) {
+                this.showHand();
+            } else {
+                this.clearHand();
+            }
+
+            GameMainUplv.prototype.clickMask = function () { }
+        } else {
+            this.btn_qs.visible = false;
+            this.btn_share.x = this.width / 2;
+            this.clearHand();
+
+            GameMainUplv.prototype.clickMask = null;
+        }
+    }
+
+    showHand() {
+        this.addChild(this.img_hand).pos(this.btn_qs.x, this.btn_qs.y - this.img_hand.height / 2);
+        this.img_hand.play();
+    }
+
+    clearHand() {
+        game.utils.remove(this.img_hand);
+        this.img_hand.stop();
+    }
+}
+class S_gamemain_uplv_share extends Laya.Script {
+    onClick(e) {
+        // 时间埋点
+        miniApi.trackEvent('Mj_ShareClick', { Mj_ADPreference: miniApi.adUserValueLevel, 'Mj_ShareScene': '升段炫耀', 'Mj_Participation': '参与分享' });
+        let lvName = GameMainUplv.uplvName.slice(0, 2);
+        let a = parseInt(this.owner.parent.rankLevelData.iconIndex) + 1
+        if (a < 1) a = 1
+        if (a > 10) a = 10
+        miniApi.share({
+            titleId: __tool.randomRange(1, 5),
+            imgId: 'uplv' + a,
+            params: `uid=${__data.uid}&myCityId=${__data.myCityId}`
+        }, null,)
+    }
+}
+class S_gamemain_uplv_qs extends Laya.Script {
+    onClick(e) {
+        // 打开雀神之路
+        __showScene.show_queShenRoad();
+        game.scene.remove(GameMainUplv)
+    }
+}
+class S_gamemain_uplv_click_mask extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainUplv)
+    }
+}

@@ -1,0 +1,105 @@
+class GameMainGuideDazhong extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_guideDazhong',
+            layer: 'panel'
+        })
+        this.btn_left.addComponent(S_guide_dazhong_move).init(-1)
+        this.btn_right.addComponent(S_guide_dazhong_move).init(1)
+
+        this.imgArray = [this.img1, this.img2]
+        this.btn_close.addComponent(S_click_GameMainGuideDazhong_close)
+    }
+    added(isClick) {
+        if (HallPlay.curRuleId == -2) {
+            this.urlArray = ['cdn/ruleImage_png/img_dzwf1.png', 'cdn/ruleImage_png/img_dzwf2.png'];
+            this.img_hand.clipStop()
+            this.img_hand.visible = false
+        } else {
+            this.urlArray = ['cdn/ruleImage_png/img_hzlz.png', 'cdn/ruleImage_png/img_hzlz2.png'];
+            if (!isClick) {
+                this.img_hand.clipPlay()
+                this.img_hand.visible = true;
+            } else {
+                this.img_hand.clipStop()
+                this.img_hand.visible = false
+            }
+        }
+
+        this.img_title.skin = `cdn/ruleImage/img_play_title_${HallPlay.curRuleId}.png`
+        this.showIndex = 0;
+        this.imgArray[0].x = 0
+        this.imgArray[0].skin = this.urlArray[0];
+        this.imgArray[1].x = 5000;
+        this.updateArrow()
+    }
+    onDisable() {
+        this.img_hand.clipStop()
+        this.img_hand.visible = false
+        this.clearAwait && this.clearAwait()
+        ResUtils.clearTextureRes(['cdn.ruleImage', 'cdn.ruleImage_png'])
+        game.cb.event('hall_play_show_hand')
+    }
+    async tweenIndex(dir) {
+        if (dir == 1) {
+            this.showIndex++;
+            this.updateArrow()
+            this.imgArray[1].skin = this.urlArray[this.showIndex]
+            this.imgArray[1].x = this.__panel.width;
+            Laya.Tween.to(this.imgArray[1], { x: 0 }, 500)
+            Laya.Tween.to(this.imgArray[0], { x: -this.__panel.width }, 500)
+            await __tool.await(500, this)
+            this.imgArray.push(this.imgArray.shift())
+        } else if (dir == -1) {
+            this.showIndex--;
+            this.updateArrow()
+            this.imgArray[1].skin = this.urlArray[this.showIndex]
+            this.imgArray[1].x = -this.__panel.width;
+            Laya.Tween.to(this.imgArray[1], { x: 0 }, 500)
+            Laya.Tween.to(this.imgArray[0], { x: this.__panel.width }, 500)
+            await __tool.await(500, this)
+            this.imgArray.push(this.imgArray.shift())
+        }
+    }
+    updateArrow() {
+        this.showIndex < 0 && (this.showIndex = 0);
+        this.showIndex >= this.urlArray.length && (this.showIndex = this.urlArray.length - 1);
+        this.btn_left.visible = true
+        this.btn_right.visible = true
+        this.txt1.text = '开始游戏'
+        this.img_page.skin = `cdn/ruleImage/img_${this.showIndex + 1}g2.png`
+        if (this.showIndex <= 0) {
+            this.btn_left.visible = false
+            this.txt1.text = '继续了解'
+        }
+        if (this.showIndex >= this.urlArray.length - 1) {
+            this.btn_right.visible = false
+
+        }
+    }
+}
+class S_click_GameMainGuideDazhong_close extends Laya.Script {
+    onClick(e) {
+        let a = this.owner.parent.txt1;
+        if (a && a.text == '继续了解') {
+            this.owner.parent.tweenIndex(1)
+        } else {
+            game.scene.remove(this.owner.parent)
+        }
+    }
+}
+class S_guide_dazhong_move extends Laya.Script {
+    onEnable() {
+        this.owner.alpha = 1;
+        // this.update();
+    }
+    onDisable() {
+        // this.clearAwait && this.clearAwait();
+    }
+    init(type) {
+        this.type = type;
+    }
+    onClick(e) {
+        game.scene.get(GameMainGuideDazhong).tweenIndex(this.type)
+    }
+}

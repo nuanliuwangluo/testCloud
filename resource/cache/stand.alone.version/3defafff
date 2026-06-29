@@ -1,0 +1,192 @@
+class GameMainRule extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_rule',
+            layer: 'panel'
+        })
+        this.btn_playNoRight.addComponent(S_show_playNoRight)
+    }
+    onAwake() {
+        // this.common_skin = 'button/bt_acity1.png'
+        // this.select_skin = 'button/bt_acity2.png'
+        this.__panel.vScrollBarSkin = '';
+    }
+    async added() {
+        let ud = excelUtils.getPlayOnOff(HallPlay.lastCityId)
+        let ad;
+        if (HallPlay.roomType == 'normal') {
+            ad = ud.allPlay
+        } else {
+            ad = ud.friend_allPlay
+        }
+        for (let index = 0, length = ad.length; index < length; index++) {
+            const e = ad[index];
+            if (e.playId == HallPlay.curRuleId) {
+                this.img_title.text = e.playName;
+                break;
+            }
+        };
+        this.onSelect()
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['cdn.ruleImage', 'cdn.ruleImage_png'])
+    }
+    async onSelect(index) {
+        let playId = HallPlay.curRuleId
+        this.play_content = Laya.loader.getRes(`${config.urlHead}rule/rule_${playId}.txt` + __version.res);
+        this.onSelectTag(index)
+    }
+    /**
+     * 设置选择的玩法列表  更新玩法选项
+     * [onSelectTag description]
+     * @param  {[type]} index [description]
+     * @return {[type]}       [description]
+     */
+    onSelectTag(index) {
+        this.selectedIndex = index
+        trace('游戏玩法：', this.play_content)
+        this.clearPlay();
+        this.createPlay(this.getRules());
+        this.__panel.scrollTo(0);
+    }
+    getRules() {
+        if (this.play_content.startsWith('images')) {
+            let allImages = [];
+            let images = this.play_content.replace('images,', '');
+            images = images.split(',');
+            for (let j = 0; j < images.length; j++) {
+                if (!images[j]) continue;
+                allImages.push({ url: images[j] });
+            }
+            return allImages;
+        } else {
+            return [this.play_content];
+        }
+    }
+
+    createPlay(playArr) {
+        if (!playArr) { return }
+        let __splitArr = playArr
+        let __allH = 0
+        game.utils.removeAll(this.img_container)
+        for (let i = 0; i < __splitArr.length; i++) {
+            //该段文字是文字
+            if (typeof __splitArr[i] === 'string') {
+                game.utils.remove(this.img_container)
+                let __txt = this.createPlayTxt(__splitArr[i]);
+                this.__panel.addChild(__txt).y = __allH + 5
+                __allH += __txt.height;
+
+                this.img_txt_bg.visible = true
+            } else {
+                this.__panel.addChild(this.img_container)
+                let r1 = Laya.Loader.getRes(__splitArr[i].url)
+                let __img = this.createPlayImg(__splitArr[i].url)
+                this.img_container.addChild(__img).y = __allH + (i == 0 ? 0 : 0)
+                __img.x = this.img_container.width / 2 - __img.width / 2;
+                __allH = __img.y + __img.height + 0;
+
+                this.img_txt_bg.visible = false
+                this.img_container.height = __allH;
+            }
+        }
+        this.img_container.height += 30
+        this.__panel.refresh()
+    }
+
+    createPlayTxt(str) {
+        let __label = new Laya.Label();
+        __label.width = this.__panel.width;
+        __label.wordWrap = true;
+        __label.fontSize = 36;
+        __label.leading = 20;
+        __label.color = '#726856'
+        __label.text = str;
+        return __label
+    }
+
+    createPlayImg(__skin) {
+        let __image = new Laya.Image();
+        __image.skin = __skin;
+        return __image
+    }
+
+    clearPlay() {
+        while (this.__panel.numChildren) {
+            let __ele = this.__panel.removeChildAt(0);
+            __ele = null
+        }
+    }
+}
+
+class GameMainPlayNoRight extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_playNoRight',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_GameMainPlayNoRight_close)
+        this.btn_submit.addComponent(S_playnoright_submit)
+    }
+    onEnable() {
+        this.txt_content.text = ''
+        this.txt_contact.text = ''
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': '有奖纠错界面' })
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['cdn.playNoRightAndCollect'])
+    }
+}
+class S_playnoright_submit extends Laya.Script {
+    onClick(e) {
+        let content = this.owner.parent.txt_content.text;
+        let contact = this.owner.parent.txt_contact.text;
+        if (String(content).length < 10) {
+            __tips(__lang.content_very_little)
+            return
+        }
+        game.server.send(3336, 5, content, contact)
+        game.scene.remove(this.owner.parent)
+    }
+}
+class S_click_GameMainPlayNoRight_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainPlayNoRight)
+    }
+}
+class S_show_playNoRight extends Laya.Script {
+    onClick() {
+        __showScene.show_playNoRight()
+    }
+}
+class GameMainPlayCollect extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_playCollect',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_GameMainPlayCollect_close)
+        this.btn_submit.addComponent(S_playcollect_submit)
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['cdn.playNoRightAndCollect'])
+    }
+}
+class S_playcollect_submit extends Laya.Script {
+    onClick(e) {
+        let content = this.owner.parent.txt_content.text;
+        let contact = this.owner.parent.txt_contact.text;
+        if (String(content).length < 10) {
+            __tips(__lang.content_very_little)
+            return
+        }
+        game.server.send(3336, 6, content, contact)
+        game.scene.remove(this.owner.parent)
+    }
+}
+
+class S_click_GameMainPlayCollect_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainPlayCollect)
+    }
+}

@@ -1,0 +1,15 @@
+__data.firstPay = {
+    isHaveData: false,
+    __isHasBuy: true,
+    set isHasBuy(v) {
+        this.isHaveData = true;
+        this.__isHasBuy = v;
+    },
+    get isHasBuy() {
+        return this.__isHasBuy
+    },
+    async send(haveDataSendTest) {
+        await gtool.query([2220], haveDataSendTest)
+        return 1
+    }
+}

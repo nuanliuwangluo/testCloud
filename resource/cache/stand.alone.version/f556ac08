@@ -1,0 +1,433 @@
+/**
+ * 背包界面
+ */
+class GameMainBag extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_bag',
+            layer: 'panel'
+        })
+        this.list.vScrollBarSkin = '';
+    }
+
+    onEnable() {
+        this.queryInfo();
+        this.update_bag();
+        game.cb.on('update_bag', this, this.update_bag)
+        // miniApi.showCustomAd_leftRight('down')
+        // miniApi.showInterstitialAd()
+    }
+    onDisable() {
+        game.cb.on('update_bag', this, this.update_bag)
+    }
+
+    queryInfo() {
+        game.server.send(2224);
+    }
+
+    update_bag() {
+        this.list.array = BagData.list;
+    }
+}
+
+class GameMainBagItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_bagItem',
+            module: false
+        })
+    }
+    onEnable() {
+        this.prop.on('click', this, this.showInformation)
+    }
+    onDisable() {
+        this.prop.off('click', this, this.showInformation)
+    }
+    set dataSource(value) {
+        if (!value) {
+            return
+        }
+        //
+        else {
+            this.__value = value;
+            this.txt_num.text = value.number || '';
+            SkinUtils.setSkin(this.prop, PropIcon.icon[value.type] && PropIcon.icon[value.type].skin || '');
+        }
+    }
+
+    /**
+     * 显示描述信息
+     */
+    showInformation() {
+        if (PropIcon.icon[this.__value.type] && PropIcon.icon[this.__value.type].describe) {
+            BagInfoUtils.init();
+            BagInfoUtils.show(PropIcon.icon[this.__value.type].describe, this.toGlobal(), game.scene.layer['panel'].c);
+        }
+    }
+
+    toGlobal() {
+        return this.localToGlobal(new Laya.Point(this.width / 2, this.height));
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_bagItemUI', GameMainBagItem);
+
+
+class BagInfoUtils {
+
+    static init(name, dynamic = true) {
+        BagInfoUtils.prefabName = name;
+        BagInfoUtils.dynamic = dynamic;
+    }
+
+    static show(tips, data, layer, flag) {
+        BagInfoUtils.tips = tips;
+        BagInfoUtils.data = data;
+        BagInfoUtils.layer = layer || Laya.stage;
+        BagInfoUtils.flag = flag || BagInfoUtils.DOWN;
+        Laya.loader.load(BagInfoUtils.prefabName || 'prefab/BagTips.json', Laya.Handler.create(this, BagInfoUtils._complete))
+    }
+
+    static close() {
+        if (BagInfoUtils.dialog) {
+            game.utils.remove(BagInfoUtils.dialog);
+            BagInfoUtils.dialog.getComponent(BagInfoDialogDownToClose) && BagInfoUtils.dialog.getComponent(BagInfoDialogDownToClose).destroy();
+        }
+    }
+
+    static _complete(json) {
+        this.close();
+        let _prefab = new Laya.Prefab();
+        _prefab.json = json;
+        BagInfoUtils.dialog = Laya.Pool.getItemByCreateFun('BagTips', _prefab.create, _prefab);
+
+
+        if (BagInfoUtils.flag == BagInfoUtils.DOWN) {
+            BagInfoUtils.dialog.getChildByName('up') && (BagInfoUtils.dialog.getChildByName('up').visible = false);
+            BagInfoUtils.dialog.getChildByName('down') && (BagInfoUtils.dialog.getChildByName('down').visible = true);
+            BagInfoUtils.dialog.getChildByName('down') && (BagInfoUtils.dialog.getChildByName('down').getChildByName('txt_tips').text = BagInfoUtils.tips);
+            if (BagInfoUtils.dynamic && BagInfoUtils.dialog.getChildByName('down')) {
+                let height = BagInfoUtils.dialog.getChildByName('down').getChildByName('txt_tips').y + BagInfoUtils.dialog.getChildByName('down').getChildByName('txt_tips').displayHeight + 10;
+                BagInfoUtils.dialog.getChildByName('down').getChildByName('bg').height = height / BagInfoUtils.dialog.getChildByName('down').getChildByName('bg').scaleY;
+            }
+
+            BagInfoUtils.layer.addChild(BagInfoUtils.dialog);
+        } else if (BagInfoUtils.flag == BagInfoUtils.UP) {
+            BagInfoUtils.dialog.getChildByName('up') && (BagInfoUtils.dialog.getChildByName('up').visible = true);
+            BagInfoUtils.dialog.getChildByName('down') && (BagInfoUtils.dialog.getChildByName('down').visible = false);
+            BagInfoUtils.dialog.getChildByName('up') && (BagInfoUtils.dialog.getChildByName('up').getChildByName('txt_tips').text = BagInfoUtils.tips);
+            BagInfoUtils.dynamic && BagInfoUtils.dialog.getChildByName('up') && (BagInfoUtils.dialog.getChildByName('up').getChildByName('bg').height = BagInfoUtils.dialog.getChildByName('up').getChildByName('txt_tips').displayHeight + 75);
+            BagInfoUtils.dynamic && BagInfoUtils.dialog.getChildByName('up') && (BagInfoUtils.dialog.getChildByName('up').getChildByName('txt_tips').y = -BagInfoUtils.dialog.getChildByName('up').getChildByName('bg').height + 25);
+            BagInfoUtils.layer.addChild(BagInfoUtils.dialog);
+        }
+        BagInfoUtils.dialog.pos(BagInfoUtils.data.x, BagInfoUtils.data.y)
+        BagInfoUtils.dialog.addComponent(BagInfoDialogDownToClose);
+    }
+
+    static get DOWN() { return "down"; }
+    static get UP() { return 'up'; }
+}
+
+class BagInfoDialogDownToClose extends Laya.Script {
+    onStageMouseDown() {
+        BagInfoUtils.close();
+    }
+    onEnable() {
+        Laya.stage.on(Laya.Event.MOUSE_WHEEL, this, this.mouseRoll);
+    }
+    onDisable() {
+        Laya.stage.off(Laya.Event.MOUSE_WHEEL, this, this.mouseRoll);
+    }
+    mouseRoll(e) {
+        BagInfoUtils.close();
+    }
+}
+// 每日登录界面道具 邮件道具
+class PropItem1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/propItem1',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_prop_show_des)
+    }
+    onEnable() {
+        game.cb.on('propItem1_mul_tween_num', this, this.propItem1_mul_tween_num)
+    }
+    onDisable() {
+        game.cb.off('propItem1_mul_tween_num', this, this.propItem1_mul_tween_num)
+        this.clearAwait && this.clearAwait()
+    }
+    async propItem1_mul_tween_num(isTween = 0, mul = 1) {
+        if (!isTween) {
+            this.txt_num.text = '×' + bigNumberToCH(this.__vo.num * mul);
+            this.curValue = this.__vo.num * mul
+        } else {
+            let start_ob = {
+                v: Number(this.curValue)
+            };
+            let t = Laya.Tween.to(start_ob, {
+                v: Number(this.__vo.num * mul)
+            }, 200)
+            t.update = new Laya.Handler(this, function () {
+                this.txt_num.text = '×' + Math.floor(start_ob.v)
+            })
+            await __tool.tweenp(this.txt_num, {
+                scaleY: 1.2
+            }, 100)
+            await __tool.tweenp(this.txt_num, {
+                scaleY: 1.0
+            }, 100)
+
+            this.txt_num.text = '×' + bigNumberToCH(this.__vo.num * mul)
+            this.curValue = this.__vo.num * mul
+        }
+    }
+    set vo(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.txt_num.text = '×' + bigNumberToCH(this.__vo.num * 1);
+        this.curValue = vo.num;
+
+        let p;
+        if (PropIcon.icon[vo.propId]) {
+            p = PropIcon.icon[vo.propId]
+        } else {
+            p = PropIcon.icon[1]
+            try {
+                throw new Error('propitem1 物品不存在 ' + vo.propId)
+            } catch (error) {
+                console.error(error.stack)
+                miniApi.uploadError(error.stack)
+            }
+        }
+
+        this.img_prop.skin = p.skin
+
+        let a = (this.width - 10) / fileWHConfig[p.skin].width
+        let b = (this.height - 10) / fileWHConfig[p.skin].height
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.propItem1UI', PropItem1);
+
+class S_click_show_des extends Laya.Script {
+
+    prefab(value) { this._value = value; return this; }
+
+    onClick() {
+        if (this.useDes) {
+            let p = this.toGlobal()
+            let dir = BagInfoUtils.DOWN
+            if (p.y > game.height * 3 / 4) {
+                p = this.toGlobalUp()
+                dir = BagInfoUtils.UP
+            }
+            if (this.set_dir == 'up') {
+                p = this.toGlobalUp()
+                dir = BagInfoUtils.UP
+            }
+            if (this.set_dir == 'down') {
+                p = this.toGlobal()
+                dir = BagInfoUtils.DOWN
+            }
+            BagInfoUtils.init(this._value);
+            BagInfoUtils.show(this.useDes, p, game.scene.layer['tips'].c, dir);
+        }
+    }
+    toGlobal() {
+        let p = this.owner.localToGlobal(new Laya.Point(this.owner.width / 2 + (this.offx || 0), this.owner.height - (this.offy_down || 0)));
+        return p
+    }
+    toGlobalUp() {
+        let p = this.owner.localToGlobal(new Laya.Point(this.owner.width / 2 + (this.offx || 0), (this.offy_up || 0)));
+        return p
+    }
+}
+class S_prop_show_des extends S_click_show_des {
+    onClick() {
+        try {
+            this.useDes = PropIcon.icon[this.owner.vo.propId] && PropIcon.icon[this.owner.vo.propId].describe
+            super.onClick()
+        } catch (error) { }
+    }
+}
+class S_prop_show_des_seasonRule extends S_click_show_des {
+    onClick() {
+        try {
+            this.useDes = PropIcon.icon[this.owner.vo.propId] && PropIcon.icon[this.owner.vo.propId].des1;
+            super.onClick()
+        } catch (error) { }
+    }
+}
+class S_prop_show_name extends S_click_show_des {
+    onClick() {
+        try {
+            this.useDes = PropIcon.icon[this.owner.vo.propId] && PropIcon.icon[this.owner.vo.propId].name;
+            super.onClick()
+        } catch (error) { }
+    }
+}
+class S_click_show_des_set extends S_click_show_des {
+    init(des, offy = 0, offx = 0, dir) {
+        this.useDes = des
+        this.offy_down = offy
+        this.offy_up = offy
+        this.offx = offx;
+        this.set_dir = dir
+        return this
+    }
+}
+// 发财树奖励道具
+class PropItem2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/propItem2',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_prop_show_des)
+
+        this.url = [];
+        for (let index = 0, length = 39; index < length; index++) {
+            this.url.push('cdn/dailyLogin_effect/' + (index + 1) + '.png')
+        };
+        this.img_effect.visible = false
+        this.arr = [];
+    }
+    onEnable() {
+        game.cb.on('tree_reward_prop_item_effect', this, this.tree_reward_prop_item_effect)
+    }
+    onDisable() {
+        game.cb.on('tree_reward_prop_item_effect', this, this.tree_reward_prop_item_effect)
+        this.clearAwait && this.clearAwait()
+        while (this.arr.length) {
+            let a = this.arr.shift();
+            a.stop();
+            game.utils.remove(a)
+        }
+        this.arr = [];
+    }
+    async tree_reward_prop_item_effect() {
+        let img = game.Clip(null, this.url, 45, false, () => {
+            img.stop()
+            img.visible = false
+            game.utils.remove(img)
+        })
+        img.width = this.img_effect.width
+        img.height = this.img_effect.height
+        img.skin = this.url[0]
+        img.x = this.img_effect.x
+        img.y = this.img_effect.y
+        this.addChild(img)
+        img.play(0)
+        this.arr.push(img)
+    }
+    set vo(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.txt_num.text = bigNumberToCH(vo.num);
+        this.img_prop.skin = PropIcon.icon[vo.propId].skin
+
+        let a = this.width / gtool.fileWH.getWHById(vo.propId).w
+        let b = this.height / gtool.fileWH.getWHById(vo.propId).h
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.propItem2UI', PropItem2);
+// 商城购买道具用 没有数量显示
+class PropItem3 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/propItem3',
+            module: false
+        })
+        this.__vo;
+        this.addComponent(S_prop_show_des)
+    }
+    set vo(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.img_prop.skin = PropIcon.icon[vo.propId].skin
+
+        let a = (this.width - 10) / gtool.fileWH.getWHById(vo.propId).w
+        let b = (this.height - 10) / gtool.fileWH.getWHById(vo.propId).h
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.propItem3UI', PropItem3);
+// 发财树界面使用道具
+class PropItem4 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/propItem4',
+            module: false
+        })
+        this.__vo;
+        // this.addComponent(S_prop_show_des)
+    }
+    onEnable() { }
+    onDisable() { }
+    set vo(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.txt_num.text = vo.num;
+        this.txt_waterValue.text = '+' + PropIcon.icon[vo.propId].waterValue;
+        this.img_prop.skin = PropIcon.icon[vo.propId].skin
+
+        let a = 110 / gtool.fileWH.getWHById(vo.propId).w
+        let b = 100 / gtool.fileWH.getWHById(vo.propId).h
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+
+        this.img_prop.disabled = vo.num <= 0
+
+        let w = this.txt_waterValue.x + this.txt_waterValue.textField.textWidth
+        this.sp_w.x = this.img_bg.width / 2 - w / 2;
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.propItem4UI', PropItem4);
+// 赛季结束奖励道具
+class PropItem5 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/propItem5',
+            module: false
+        })
+        this.__vo;
+        // this.addComponent(S_prop_show_des)
+        this.origin_w = fileWHConfig[this.img_prop.skin].width
+        this.origin_h = fileWHConfig[this.img_prop.skin].height
+    }
+    onEnable() { }
+    onDisable() { }
+    set vo(vo) {
+        if (!vo) return;
+        this.__vo = vo;
+        this.txt_num.text = '×' + vo.num;
+        this.img_prop.skin = PropIcon.icon[vo.propId].skin
+        let a = this.origin_w / gtool.fileWH.getWHById(vo.propId).w
+        let b = this.origin_h / gtool.fileWH.getWHById(vo.propId).h
+        this.img_prop.scaleX = Math.min(a, b)
+        this.img_prop.scaleY = Math.min(a, b)
+    }
+    get vo() {
+        return this.__vo;
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.propItem5UI', PropItem5);

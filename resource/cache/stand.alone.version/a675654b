@@ -1,0 +1,87 @@
+class GardenOther_leftUp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_other_leftUp',
+            layer: 'middle',
+            left: true,
+            up: true
+        })
+    }
+    added(vo) {
+        LabelHiddenUtils.getAdapterContent(this.txt_player_name, vo.name)
+        this.img_head.skin = __data.getHeadTestDefault(vo.head);
+        this.txt_buildValue.text = vo.score;
+
+        this.txt_rank.visible = false;
+        this.img_rank.visible = false;
+
+        if (vo.rank == -1) {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = `--`;
+        } else if (vo.rank <= 3) {
+            this.img_rank.visible = true;
+            this.img_rank.skin = `local/rank_ui/1/img_${vo.rank}.png`
+        } else {
+            this.txt_rank.visible = true;
+            this.txt_rank.text = vo.rank;
+        }
+        this.txt_mjName.text = excelUtils.getCityName_mj(vo.cityId);
+
+        this.img_head_frame.skin = PropIcon.icon[vo.headFrameId || 301].skin
+
+        this.toy = this.toy || this.y;
+        this.y -= this.height;
+        Laya.Tween.to(this, { y: this.toy }, 200)
+    }
+    async removeUI() {
+        await __tool.tweenp(this, { y: this.y - this.height }, 200)
+        game.scene.remove(this)
+    }
+}
+class GardenOther_centerDown extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_other_centerDown',
+            layer: 'middle',
+            down: true
+        })
+        // this.btn_return.addComponent(S_garden_other_return)
+        this.btn_return.addComponent(S_scene_return)
+    }
+    added(type) {
+        this.toy = this.toy || this.y;
+        this.y += this.height;
+        Laya.Tween.to(this, { y: this.toy }, 200)
+        this.type = type;
+        if (type == 'themeLook' || type == 'rankLookOther') {
+            this.txt.text = '返回'
+        } else {
+            this.txt.text = '返回我的花园'
+        }
+    }
+    async removeUI() {
+        await __tool.tweenp(this, { y: this.y + this.height }, 200)
+        game.scene.remove(this)
+    }
+}
+
+// class S_garden_other_return extends Laya.Script {
+//     onClick(e) {
+// if (this.owner.parent.type == 'themeLook' || this.owner.parent.type == 'rankLookOther') {
+//     this.owner.parent.lastSceneFunction();
+// } else {
+//     game.cb.event('garden_groud_toOtherGarden', [__data.uid, __data.garden.hashUsePositionIdCompId]);
+
+//     game.scene.add(GardenMainUI_leftUp_return)
+//     game.scene.add(GardenMainUI_leftUp_res)
+//     game.scene.add(GardenMainUI_leftDown)
+//     game.scene.add(GardenMainUI_rightDown)
+
+//     game.scene.get(GardenOther_centerDown).removeUI()
+//     game.scene.get(GardenOther_leftUp).removeUI()
+
+//     __showScene.show_garden_rank()
+// }
+// }
+// }
+console.log('delete S_garden_other_return');

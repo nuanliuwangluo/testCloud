@@ -1,0 +1,49 @@
+class GardenStarNoEnough extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_starNoEnough',
+            layer: 'panel'
+        })
+        this.addComponent(S_GardenStarNoEnough_click)
+        this.btn_go.addComponent(S_garden_tips_go)
+        this.btn_goSmallGame.addComponent(S_garden_tips_goSmallGame)
+    }
+    added() {
+        let t = game.scene.get(GardenTask);
+        t && t.task_hand_remove()
+        this.btn_go.ix = this.btn_go.ix || this.btn_go.x;
+        this.btn_go.ix = this.btn_go.ix || this.btn_go.x;
+        if (__data.game_count_total < 10 && __data.mjSmallGame.level <= 1) {
+            this.bg.skin = `cdn/garden_tips/img_xxbz2.png`
+            this.btn_go.x = this.width / 2;
+            this.btn_goSmallGame.visible = false
+        } else {
+            this.bg.skin = `cdn/garden_tips/img_xxbz.png`
+            this.btn_go.x = this.btn_go.ix
+            this.btn_goSmallGame.visible = true
+        }
+    }
+    onDisable() {
+        let t = game.scene.get(GardenTask);
+        t && t.task_hand_add()
+    }
+}
+class S_garden_tips_go extends Laya.Script {
+    onClick(e) {
+        __data.lastSceneQueue.push(__showScene.show_garden)
+        __showScene.show_hall_play(__data.myCityId)
+        e.stopPropagation()
+    }
+}
+class S_garden_tips_goSmallGame extends Laya.Script {
+    onClick(e) {
+        __data.lastSceneQueue.push(__showScene.show_garden)
+        __showScene.show_mjSmallGame()
+        e.stopPropagation()
+    }
+}
+class S_GardenStarNoEnough_click extends Laya.Script {
+    onClick() {
+        game.scene.remove(this.owner)
+    }
+}

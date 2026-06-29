@@ -1,0 +1,23 @@
+class HallPlay_offlineTips extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall_play/hall_playOffline',
+            layer: 'panel0'
+        })
+        this.btn_sure.addComponent(S_click_close_remove_parent)
+    }
+    added(playId) {
+        // 讷河 17
+        // 芜湖 167
+        // 同江 44
+        // 汤原 43
+        let offlinePlayName = excelUtils.getPlayIdName(playId)
+        if (playId == -2) {
+            this.txt_title.text = `「${offlinePlayName}」下线通知`;
+            this.txt_content.text = `感谢大家长期以来对「${offlinePlayName}」的支持，经过深入的数据分析与玩家调研，我们发现「${offlinePlayName}」的参与度始终未能达到预期。为了优化游戏体验，集中资源为各位带来更精彩的内容，「${offlinePlayName}」现已正式下线。我们会尽快推出更多有趣的新玩法，给您带来不便深表歉意！`
+        } else {
+            this.txt_title.text = `「${offlinePlayName}」暂时下线通知`;
+            this.txt_content.text = `感谢大家长期以来对「${offlinePlayName}」的支持，经过深入的数据分析与玩家调研，我们发现「${offlinePlayName}」的参与度始终未能达到预期。为了优化游戏体验，我们将对「${offlinePlayName}」进行重新开发，现已暂时下线。我们会尽力完成本次重构，给您带来不便深表歉意！`
+        }
+    }
+}

@@ -1,0 +1,104 @@
+let mm_prop_name_to_img_des_url = {
+    '磁铁': 'cdn/mjSmallGame/img_ct.png',
+    '移出': 'cdn/mjSmallGame/img_yc.png',
+    '洗牌': 'cdn/mjSmallGame/img_xp.png',
+    '翻面': 'cdn/mjSmallGame/img_fm.png',
+    '解锁': 'cdn/mjSmallGame/img_js.png',
+}
+let mm_prop_name_to_propId = {
+    '磁铁': 10131,
+    '移出': 10132,
+    '洗牌': 10133,
+    '翻面': 10134,
+    '解锁': 10135,
+}
+class MM_useProp extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_mjMatch/MM_addPropUseCount',
+            layer: 'panel'
+        })
+        this.btn_stone.addComponent(S_mm_use_prop_stone_buy)
+        this.btn_video.addComponent(S_mm_use_prop_video_buy)
+
+        this.ix_stone = this.sp_stone.x;
+        this.ix_video = this.sp_video.x;
+    }
+    added(title, adid, des, func) {
+        this.adid = adid;
+        this.title = title;
+        this.func = func;
+        this.img_des.skin = mm_prop_name_to_img_des_url[title]
+
+        this.txt_canAddPropCount1.text = `本局剩${__data.mjSmallGame.maxUsePropCount_stone - __data.mjSmallGame.curUsePropCount_stone}次`
+        this.txt_canAddPropCount2.text = `本局剩${__data.mjSmallGame.maxUsePropCount_video - __data.mjSmallGame.curUsePropCount_video}次`
+
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     this.sp_stone.visible = false
+        //     this.sp_video.x = this.width / 2 - this.btn_video.width / 2
+        // } else {
+        this.sp_stone.visible = true
+        this.sp_stone.x = this.ix_stone;
+        this.sp_video.x = this.ix_video;
+        // }
+    }
+    clickMask() { }
+}
+class S_mm_use_prop_stone_buy extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        if (__data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone) {
+            return __tips('💫道具使用次数不足')
+        }
+        if (__data.stone < __data.mjSmallGame.buyPropNeedStoneCount) {
+            return __tips(__lang.stone_no_enough)
+        }
+        game.scene.remove(MM_useProp)
+        game.server.send(2404, mm_prop_name_to_propId[this.owner.parent.parent.title])
+        mm_stone_buy_callback = mm_stone_buyPropSuccess
+    }
+}
+class S_mm_use_prop_video_buy extends Laya.Script {
+    async onClick(e) {
+        e && e.stopPropagation();
+        if (__data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video) {
+            return __tips('💫道具使用次数不足')
+        }
+
+        let n = __data.vip.isVip ? 'VIP领取' : '参与广告'
+        miniApi.trackEvent('Mj_ADClick', {
+            Mj_ADPreference: miniApi.adUserValueLevel,
+            'Mj_ADScene': '消消乐' + game.scene.get(MM_useProp).title,
+            'Mj_Participation': n,
+            'Mj_ADNotes': __data.mjSmallGame.level,
+        })
+
+        let adunitId = this.owner.parent.adid;
+        await miniApi.video_ready(adunitId);
+        let a23 = game.scene.get(MjMatch_ui_left)
+        a23 && a23.removeTimer()
+        miniApi.video_show(adunitId, () => {
+            // __tips('📨 发送消息视频购买道具')
+            a23 && a23.resumeTimer()
+            mm_video_buyPropSuccess()
+        }, () => {
+            a23 && a23.resumeTimer()
+            __tips('暂无广告，请稍后再试或开通VIP')
+        }, 0, () => {
+            a23 && a23.resumeTimer()
+        });
+    }
+}
+let mm_stone_buyPropSuccess = () => {
+    game.scene.remove(MM_useProp)
+    __data.mjSmallGame.curUsePropCount_stone++;
+    game.scene.get(MM_useProp).func()
+    game.cb.event('mm_update_prop_use_count')
+}
+let mm_video_buyPropSuccess = () => {
+    game.scene.remove(MM_useProp)
+    __data.mjSmallGame.curUsePropCount_video++;
+    game.scene.get(MM_useProp).func()
+    game.cb.event('mm_update_prop_use_count')
+}

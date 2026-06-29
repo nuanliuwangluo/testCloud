@@ -1,0 +1,12 @@
+class S_progress_bar extends Laya.Script {
+    init() {
+        this.rect = new Laya.Rectangle()
+        this.rect.width = this.owner.width;
+        this.rect.height = this.owner.height;
+        this.owner.scrollRect = this.rect;
+    }
+    set progress(v) {
+        if (!this.rect) this.init()
+        this.rect.width = v * this.owner.width;
+    }
+}

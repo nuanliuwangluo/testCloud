@@ -1,0 +1,123 @@
+export class ImageFont extends Laya.Sprite {
+    constructor(urls__, align, valign, distance) {
+        super();
+        if (urls__) this.init(urls__, align, valign, distance);
+    }
+
+    init(urls__, align, valign, distance) {
+        this.urls__ = urls__;
+        this._text = 0;
+        this._id = Laya.Pool.getItemByClass('ImageFont_Image', Laya.Image);
+        this._distance = distance ? distance : 0;
+        this.align = align || 'left';
+        this.valign = valign || 'top';
+        this.container = new Laya.Sprite();
+        this.addChild(this.container);
+    }
+
+    get text() {
+        return this._text;
+    }
+    set text(value) {
+        this._text = value;
+
+        this.fontContainer = this.__createFont();
+        this.container.addChild(this.fontContainer);
+        this.size(this.fontContainer.width, this.fontContainer.height);
+
+        if (this.align == 'left') this.container.x = 0;
+        else if (this.align == 'right') this.container.x = -this.width;
+        else if (this.align == 'center') { this.container.x = -this.width / 2; }
+
+        if (this.valign == 'top') this.container.y = 0;
+        else if (this.valign == 'bottom') this.container.y = -this.height;
+        else if (this.valign == 'center') { this.container.y = -this.height / 2; }
+    }
+
+
+    set numberText(value) {
+
+    }
+
+    __createFont() {
+        try {
+            this._recoverImage(this.fontContainer);
+        } catch (e) {
+            log('回收容器内Image错误：', e);
+        }
+
+        var str = String(this._text);
+        let isDecimal = str.indexOf('/') > -1;
+        if (isDecimal) {
+            return this._createDecimal(str);
+            // this.__sp.addChild(container).size(container.width, container.height);
+        } else {
+            return this._createCommon(str);
+            // this.__sp.addChild(container).size(container.width, container.height);
+        }
+        // return this.__sp;
+    }
+
+
+    _recoverImage(container) {
+        if (!container) { return } else {
+            while (container instanceof Laya.Sprite && container.numChildren) {
+                let node = container.removeChildAt(0);
+                if (node instanceof Laya.Image) {
+                    node.skin = '';
+                    Laya.Pool.recover('ImageFont_Image', node);
+                } else if (node instanceof Laya.Sprite) {
+                    this._recoverImage(node);
+                }
+            }
+        }
+    }
+
+    /**
+     * 普通位图字体
+     * @param {*} str 
+     * @returns 
+     */
+    _createCommon(str) {
+        var container = new Laya.Sprite();
+        var l = str.length;
+
+        var [_width, _height] = [0, 0];
+        //根据str内容重新排序数字
+        for (var i = 0; i < l; i++) {
+            var a = str.charAt(i);
+            var s = Laya.Pool.getItemByClass('ImageFont_Image', Laya.Image);
+            if (!this.urls__[a]) throw new Error("NumText 字符 " + a + " 没有对应URL");
+            coreUtils.setRes(s, this.urls__[a])
+            container.addChild(s);
+            s.x = _width + this._distance;
+            _width = _width + s.width + this._distance;
+            _height = Math.max(_height, s.height);
+        }
+        container.size(_width, _height);
+        return container;
+    }
+
+    /**
+     * 小数
+     * @param {*} str 
+     */
+    _createDecimal(str) {
+        var l = str.length;
+        var container = new Laya.Sprite();
+        let list = str.split('/');
+        // 分子分母
+        let numerator = this._createCommon(list[0]);
+        let splitor = this._createCommon('/');
+        let denominator = this._createCommon(list[1]);
+        container.addChild(numerator).pos(0, 0);
+        container.addChild(splitor).pos(numerator.x + numerator.width - splitor.width / 2, numerator.y + numerator.height - splitor.height / 2);
+        container.addChild(denominator).pos(splitor.x + splitor.width / 2, splitor.y + splitor.height / 2);
+
+        let _width = denominator.x + denominator.width;
+        let _height = Math.max(denominator.y + denominator.height, numerator.y + numerator.height, splitor.y + splitor.height);
+
+        container.size(_width, _height);
+        return container;
+    }
+}

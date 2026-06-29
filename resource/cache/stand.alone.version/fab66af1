@@ -1,0 +1,65 @@
+class GardenMainScene_bombbox extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'garden/Garden_mainScene_bombbox',
+            layer: 'panel'
+        })
+        this.btn_go.addComponent(S_GardenMainScene_bombbox_click_go)
+        this.img_skip.addComponent(S_GardenMainScene_bombbox_click_skip)
+        // this.scene_reward.dataSource = {
+        //     propId: 'gold9'
+        // }
+        this.s_bar = this.img_bar.addComponent(S_progress_bar)
+        this.img_tips.iy = this.img_tips.y;
+    }
+    added(queshenRoadRewardOpen) {
+        Laya.Tween.clearAll(this.img_tips)
+        this.clearAwait && this.clearAwait()
+
+        this.txt11.text = queshenRoadRewardOpen ? '立即前往' : '去建设'
+        this.img_skip.visible = queshenRoadRewardOpen ? true : false;
+
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_garden_mainScene_bombbox', 1)
+
+        this.txt_pro.text = Math.floor(__data.garden.task.progress * 100) + '%';
+        this.s_bar.progress = __data.garden.task.progress;
+        this.txt_taskName.text = __data.garden.task.getTitle();
+
+        if (__data.garden.task.rewardType_chapter == 1) {
+            this.txt_pro.text = Math.floor(1 * 100) + '%';
+            this.s_bar.progress = 1
+        }
+        if (!__data.garden.task.isNoTask) {
+            if (__data.garden.star >= __data.garden.task.needStar) {
+                this.img_tips.visible = true
+                this.addTween()
+            } else {
+                this.img_tips.visible = false
+            }
+        }
+    }
+    onDisable() {
+        Laya.Tween.clearAll(this.img_tips)
+        this.clearAwait && this.clearAwait()
+        hallTestShowPanel()
+        ResUtils.clearTextureRes(['cdn.garden_mainScene_bombbox'])
+    }
+    async addTween() {
+        this.img_tips.y = this.img_tips.iy;
+        await __tool.tweenp(this.img_tips, { y: this.img_tips.iy + 10 }, 500)
+        await __tool.tweenp(this.img_tips, { y: this.img_tips.iy - 20 }, 1000)
+        await __tool.tweenp(this.img_tips, { y: this.img_tips.iy }, 500)
+        this.addTween()
+    }
+}
+class S_GardenMainScene_bombbox_click_go extends Laya.Script {
+    onClick(e) {
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        __showScene.show_garden(true)
+    }
+}
+class S_GardenMainScene_bombbox_click_skip extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GardenMainScene_bombbox)
+    }
+}

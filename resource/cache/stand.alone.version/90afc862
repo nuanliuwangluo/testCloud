@@ -1,0 +1,271 @@
+class GameMainVipSales extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_vipSales',
+            layer: 'panel0'
+        })
+        this.btn_sure.addComponent(S_click_GameMainVipSales_sure)
+        this.btn_close.addComponent(S_click_close_remove_parent)
+    }
+    added(type) {
+        this.type = type;
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_vip' + type, 1)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': `VIP促销${type}界面` })
+        this.img_title.skin = `cdn/vip_sales/img_vipcx${type}.png`;
+        if (type == 1) {
+            // type1的促销界面有3天期限
+            miniApi.setItem(__data.uid + ':show_panel_vipSale3', Date.now())
+        }
+    }
+    onDisable() {
+        ResUtils.clearTextureRes(['cdn.vip_sales'])
+        hallTestShowPanel()
+    }
+    clickMask() { }
+}
+class S_click_GameMainVipSales_sure extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(GameMainVipSales)
+        __showScene.show_vip()
+        miniApi.trackEvent('Mj_UIClick', { 'Mj_ClickScene': `VIP促销界面${this.owner.parent.type}了解详情` })
+    }
+}
+class S_click_close_remove_parent extends Laya.Script {
+    onClick(e) {
+        game.scene.remove(this.owner.parent)
+    }
+}
+class GameMainVip extends game.ModuleBase {
+    static get loadResFolder() {
+        this._r1 = this._r1 ||
+            ['cdn.a_vip', 'cdn.a_vip_new', 'cdn.vip_bomb_box', 'cdn.vip_buy_btn', 'common', 'bagIcon']
+        return this._r1
+    }
+    static get clearResFolder() {
+        this._r2 = this._r2 ||
+            ['cdn.a_vip', 'cdn.a_vip_new', 'cdn.vip_bomb_box', 'cdn.vip_buy_btn', 'common', 'bagIcon']
+        return this._r2
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_vip',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_GameMainVip_close)
+        this.btn_receive1.addComponent(S_click_GameMainVip_receive)
+        this.btn_3.addComponent(S_icon_marketActivity_firstPay)
+        this.btn_receiveRecord.addComponent(S_vip_receive_record)
+        this.__panel.vScrollBarSkin = ''
+
+        this.img_a_tips1.ix = this.img_a_tips1.x
+        this.img_a_tips2.ix = this.img_a_tips2.x
+
+        this.sp_vip_buy.addComponent(S_vip_buy_btn)
+    }
+    onEnable() {
+        this.isTweening = false
+        // IOS能支付修改
+        // this.img_a_tips1.visible = !miniApi.isIOS;
+        // this.img_a_tips2.visible = !miniApi.isIOS;
+        game.server && game.server.send(2411) // 查询VIP剩余天数
+        game.server && game.server.send(3326, __data.domain) // 查询今天是否领取了
+        miniApi.setItem(__data.uid + ':' + new Date().toDateString() + ':show_panel_vip', 1)
+        this.update_vip_data()
+        game.cb.on('update_vip_data', this, this.update_vip_data)
+        this.update_firstPay_data()
+        game.cb.on('update_firstPay_data', this, this.update_firstPay_data)
+        miniApi.trackEvent('Mj_UIExposure', { 'Mj_ExposureScene': 'VIP月卡界面' })
+    }
+    onDisable() {
+        this.isTweening = false
+        game.cb.off('update_vip_data', this, this.update_vip_data)
+        game.cb.off('update_firstPay_data', this, this.update_firstPay_data)
+        hallTestShowPanel()
+        Laya.timer.clear(this, this.updateTime)
+        this.removeTween()
+        ResUtils.clearClassTextureRes(GameMainVip)
+    }
+    update_firstPay_data() {
+        if (__data.firstPay.isHasBuy || __data.vip.isVip) {
+            this.btn_3.visible = false
+            this.removeTween()
+        } else {
+            // IOS能支付修改
+            // if (miniApi.isIOS) {
+            //     this.btn_3.visible = false;
+            //     this.removeTween()
+            // } else {
+            this.btn_3.visible = true
+            this.addTween()
+            // }
+        }
+    }
+    async addTween() {
+        if (this.isTweening) return
+        this.isTweening = true;
+
+        this.btn_3.scaleX = 1;
+        this.btn_3.scaleY = 1;
+        this.btn_3.rotation = 0;
+        await __tool.tweenp(this.btn_3, { scaleX: 1.2, scaleY: 1.2 }, 400)
+        await __tool.tweenp(this.btn_3, { rotation: 20 }, 400)
+        await __tool.tweenp(this.btn_3, { rotation: -20 }, 800)
+        await __tool.tweenp(this.btn_3, { rotation: 0 }, 400)
+        await __tool.tweenp(this.btn_3, { scaleX: 1, scaleY: 1 }, 400)
+        this.isTweening = false
+        this.addTween()
+    }
+    removeTween() {
+        this.clearAwait && this.clearAwait()
+        Laya.Tween.clearAll(this.btn_3)
+    }
+    update_vip_data() {
+        this.img_viping.visible = false;
+        this.img_receive.visible = false;
+        this.sp_vip_buy.visible = false
+        this.img_des.skin = 'cdn/a_vip/img_bdtq1.png'
+        this.img_title.skin = `cdn/a_vip/img_bdtq2.png`
+
+        this.img_a_tips1.x = this.img_a_tips1.ix
+        this.img_a_tips2.x = this.img_a_tips2.ix
+        if (['year'].includes(__data.vip.vipType)) {
+            this.img_des.skin = 'cdn/a_vip/img_bdtq.png'
+            this.img_title.skin = `cdn/a_vip/img_bdtq3.png`
+
+            this.img_a_tips1.x = this.img_a_tips1.ix - 95
+            this.img_a_tips2.x = this.img_a_tips2.ix - 30
+        }
+        this.btn_receiveRecord.visible = false;
+        if (__data.vip.isVip) {
+            this.btn_receiveRecord.visible = true;
+        }
+        if (__data.vip.isVip) {
+            this.img_viping.visible = true;
+            this.img_receive.visible = true;
+
+            if (__data.vip.vipType.includes('month')) {
+                this.img_receive.skin = 'cdn/a_vip/img_ykykt2.png'
+            } else if (__data.vip.vipType.includes('season')) {
+                this.img_receive.skin = 'cdn/a_vip/img_jkykt2.png'
+            } else if (__data.vip.vipType.includes('year') || __data.vip.vipType.includes('new_year')) {
+                this.img_receive.visible = true;
+                this.img_receive.skin = 'cdn/a_vip/img_nkykt.png'
+            }
+
+            if (__data.vip.vip_todayIsHasReceive) {
+                this.btn_receive1.disabled = true
+            } else {
+                this.btn_receive1.disabled = false
+            }
+            this.updateTime();
+            Laya.timer.loop(1000, this, this.updateTime)
+
+        } else {
+            this.sp_vip_buy.visible = true
+        }
+    }
+    clickMask() { }
+    updateTime() {
+        let ssm = __data.vip.vip_overTime - Date.now()
+        if (ssm < 0) ssm = 0;
+        // ssm = 48 * 3600 * 1000 + 5 * 60 * 1000
+        let t = Math.floor(ssm / (24 * 3600 * 1000))
+        var hour = Math.floor(ssm / 3600 / 1000) % 24;
+        var minute = Math.floor(ssm / 60 / 1000) % 60;
+        let timeStr = '剩余期限:'
+        if (t > 0) {
+            timeStr += t + '天'
+            if (hour > 0) {
+                timeStr += hour + '小时'
+            } else {
+                timeStr += minute + '分'
+            }
+        } else {
+            if (hour > 0) {
+                timeStr += hour + '小时'
+            }
+            timeStr += minute + '分'
+        }
+        this.txt_surplusDayNum1.text = timeStr
+    }
+}
+
+class S_click_GameMainVip_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainVip)
+    }
+}
+class S_click_GameMainVip_receive extends Laya.Script {
+    onClick() {
+        game.server.send(2413)
+        game.scene.remove(GameMainVip)
+    }
+}
+class GameMainMore extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_more',
+            layer: 'panel'
+        })
+        this.btn_close.addComponent(S_click_GameMainMore_close)
+    }
+}
+class S_click_GameMainMore_close extends Laya.Script {
+    onClick() {
+        game.scene.remove(GameMainMore)
+    }
+}
+
+class PanelNotice extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/panel_notice',
+            layer: 'panel'
+        })
+    }
+    added(a) {
+        this.txt_content.text = a
+    }
+}
+class S_vip_receive_record extends Laya.Script {
+    onClick(e) {
+        game.server.send(11008)
+        game.scene.add(GameMainVipReceiveRecord)
+    }
+}
+class GameMainVipReceiveRecord extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_vipReceiveRecord',
+            layer: 'panel'
+        })
+    }
+    onAwake() {
+        this.__list.vScrollBarSkin = ''
+        this.__list.renderHandler = new Laya.Handler(this, this.updateItem);
+    }
+    added() {
+        this.update()
+        game.cb.on('update_vip_receive_record', this, this.update)
+    }
+    onDisable() {
+        game.cb.off('update_vip_receive_record', this, this.update)
+    }
+    update() {
+        this.useData = __data.vip.receiveRecord.map((e) => {
+            return {
+                time: e.dateTime,
+                gold: (e.item && e.item.count || 0),
+            }
+        })
+        this.__list.array = this.useData || [];
+        this.img_noData.visible = this.useData.length == 0;
+        this.title1.visible = this.useData.length > 0
+        this.title2.visible = this.useData.length > 0
+    }
+    clickMask() { }
+    updateItem(cell, index) {
+        cell.getChildByName('time').text = new Date(this.useData[index].time).dateFormat("yyyy.MM.dd hh:mm:ss")
+        cell.getChildByName('gold').text = this.useData[index].gold
+    }
+}

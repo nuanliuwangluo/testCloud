@@ -1,0 +1,22 @@
+class S_mm_prop_shuffle extends Laya.Script {
+    onClick(e) {
+        let a;
+        // IOS能支付修改
+        // if (miniApi.isIOS && miniApi.clientType == 'wx') {
+        //     a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+        // } else {
+        a = __data.mjSmallGame.curUsePropCount_video >= __data.mjSmallGame.maxUsePropCount_video
+            && __data.mjSmallGame.curUsePropCount_stone >= __data.mjSmallGame.maxUsePropCount_stone
+        // }
+        if (a) {
+            return __tips('本局道具使用次数已达上限')
+        }
+        if (!MjMatch_ui.isGameing) return
+        if (S_3D_mjMatch.sendCarding) return __tips('请等待发牌结束')
+        game.scene.add(MM_useProp, ['洗牌', 'adunit-smallGame_shuffle', '将牌池内的牌位置重新打乱',
+            () => {
+                s_mm_sendCardGroup(S_3D_mjMatch.deskCard)
+            }
+        ])
+    }
+}

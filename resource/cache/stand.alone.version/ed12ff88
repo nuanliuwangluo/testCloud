@@ -1,0 +1,19 @@
+class S_garden_groud_change_dress extends Laya.Script {
+    onEnable() {
+        game.cb.on('garden_build_select_comp', this, this.garden_build_select_comp)
+        game.cb.on('garden_build_cancel_select_comp', this, this.garden_build_cancel_select_comp)
+    }
+    onDisable() {
+        game.cb.off('garden_build_select_comp', this, this.garden_build_select_comp)
+        game.cb.off('garden_build_cancel_select_comp', this, this.garden_build_cancel_select_comp)
+    }
+    garden_build_select_comp(compId) {
+        game.cb.event('garden_groud_change_map_compId', [compId])
+    }
+    garden_build_cancel_select_comp() {
+        let t = Garden_groud.get_effective_tileXY_by_positionId(S_garden_groud_change_dress.positionId)
+        t.forEach((e, index) => {
+            this.owner.tileMap.tileChangeTexture(e.layerName, e.x, e.y, S_garden_groud_change_dress.lastDressTextureIdArray[index])
+        });
+    }
+}

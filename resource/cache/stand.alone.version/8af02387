@@ -1,0 +1,291 @@
+class MahjongSet extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_game/mahjong/MahjongSet',
+            layer: 'panel'
+        })
+
+        this.addComponent(MahjongSetScript);
+
+        this.rgc.addComponent(MahjongGiftSetScript).rg(this.rg_gift);
+
+        this.btn_a.addComponent(S_click_set_btn_a);
+        this.btn_b.addComponent(S_click_set_btn_b);
+        this.btn_deleteAccount.addComponent(S_set_delete_account);
+        this.btn_quitLogin.addComponent(S_set_quit_login);
+    }
+
+    onEnable() {
+        this.btn_deleteAccount.visible = true;
+        this.btn_quitLogin.visible = true;
+        if (miniApi.clientType == 'wx') {
+            this.btn_quitLogin.visible = false
+        }
+        let p1 = game.scene.get(Mahjong3DBG)
+        if (p1 && p1.parent) {
+            this.btn_deleteAccount.visible = false
+            this.btn_quitLogin.visible = false
+        }
+        __tool.labelParentCenterAndSetXY(this.sp_txt_btn, this.width / 2, 50)
+
+        this.rg_music.selectedIndex = LocalUtils.music.value;
+        this.rg_sound.selectedIndex = LocalUtils.sound.value;
+
+        this.rg_desk.selectedIndex = LocalUtils.desk.value;
+        this.rg_card.selectedIndex = LocalUtils.card.value;
+        this.rg_sex.selectedIndex = LocalUtils.sex.value;
+
+        // this.rg_wall.selectedIndex = LocalUtils.wall.value;
+        // this.rg_speed.selectedIndex = LocalUtils.speed.value;
+
+        game.cb.on(__eh + 'save_set_data', this, this.updateSet)
+    }
+
+    onDisable() {
+        game.cb.off(__eh + 'save_set_data', this, this.updateSet)
+    }
+
+    updateSet() {
+        miniApi.setItem('music', this.rg_music.selectedIndex == 0 ? 'true' : 'false')
+        config.isMusic = this.rg_music.selectedIndex == 0
+        if (this.rg_music.selectedIndex == 0) {
+            __sound.playAllMusic()
+        } else {
+            __sound.stopAllMusic()
+        }
+
+        miniApi.setItem('sound', this.rg_sound.selectedIndex == 0 ? 'true' : 'false')
+        config.isSound = this.rg_sound.selectedIndex == 0
+        if (this.rg_sound.selectedIndex == 0) {
+
+        } else {
+            Laya.SoundManager.stopAllSound()
+        }
+    }
+}
+
+class GameMainSet1 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_set1',
+            layer: 'panel'
+        })
+    }
+
+    added() {
+        this.content = Laya.loader.getRes(`${config.urlHead}rule/yhxy.txt` + __version.res);
+        this.txt_content.text = this.content || '';
+        // this.txt_content.textField.scrollY = 0
+    }
+}
+
+class GameMainSet2 extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_set2',
+            layer: 'panel'
+        })
+    }
+
+    added() {
+        this.content = Laya.loader.getRes(`${config.urlHead}rule/yszc.txt` + __version.res);
+        this.txt_content.text = this.content || '';
+        // this.txt_content.textField.scrollY = 0
+    }
+}
+
+class S_click_set_btn_a extends Laya.Script {
+    onClick() {
+        let txt = [{
+            "url": `${config.urlHead}rule/yhxy.txt` + __version.res,
+            "type": Laya.Loader.TEXT
+        }]
+        __tool.load(txt, function () {
+            game.scene.remove(LoadingSmall);
+            game.scene.add(GameMainSet1)
+        }, function (v) {
+            game.scene.add(LoadingSmall).progress(v);
+        })
+    }
+}
+
+class S_click_set_btn_b extends Laya.Script {
+    onClick() {
+        let txt = [{
+            "url": `${config.urlHead}rule/yszc.txt` + __version.res,
+            "type": Laya.Loader.TEXT
+        }]
+        __tool.load(txt, function () {
+            game.scene.remove(LoadingSmall);
+            game.scene.add(GameMainSet2)
+        }, function (v) {
+            game.scene.add(LoadingSmall).progress(v);
+        })
+    }
+}
+
+class S_set_delete_account extends Laya.Script {
+    onClick(e) {
+        game.scene.add(AppDeleteAccount)
+    }
+}
+class S_set_quit_login extends Laya.Script {
+    onClick(e) {
+        __showScene.show_prompt_select('是否退出登录', () => {
+            app_quit_login && app_quit_login()
+        })
+    }
+}
+
+// class GameMainSetScript extends Laya.Script {
+//     onAwake() {
+//         this.owner.rg_music.selectHandler = new Laya.Handler(this, this.selectMusicHandler)
+//         this.owner.rg_sound.selectHandler = new Laya.Handler(this, this.selectSoundHandler)
+//     }
+
+//     selectMusicHandler() {
+//         // 设置内容相同  不处理
+//         if (this.owner.rg_music.selectedIndex == LocalUtils.music.value) return
+//         else {
+//             LocalUtils.music.value = this.owner.rg_music.selectedIndex;
+//             LocalUtils.save(LocalUtils.music.key, this.owner.rg_music.selectedIndex)
+//         }
+
+//         miniApi.setItem('music', this.owner.rg_music.selectedIndex == 0 ? 'true' : 'false')
+//         config.isMusic = this.owner.rg_music.selectedIndex == 0
+//         if (this.owner.rg_music.selectedIndex == 0) {
+//             __sound.playAllMusic()
+//         } else {
+//             __sound.stopAllMusic()
+//         }
+//     }
+
+//     selectSoundHandler() {
+//         // 设置内容相同  不处理
+//         if (this.owner.rg_sound.selectedIndex == LocalUtils.sound.value) return
+//         else {
+//             LocalUtils.sound.value = this.owner.rg_sound.selectedIndex;
+//             LocalUtils.save(LocalUtils.sound.key, this.owner.rg_sound.selectedIndex)
+//         }
+
+//         miniApi.setItem('sound', this.owner.rg_sound.selectedIndex == 0 ? 'true' : 'false')
+//         config.isSound = this.owner.rg_sound.selectedIndex == 0
+//         if (this.owner.rg_sound.selectedIndex == 0) {
+            
+//         } else {
+//             Laya.SoundManager.stopAllSound()
+//         }
+//     }
+// }
+
+class MahjongSetScript extends Laya.Script {
+    onAwake() {
+        this.owner.btn_save.on('click', this, this.saveHandler)
+    }
+
+    saveHandler() {
+        // 牌发生变化 需要重新载入游戏
+        if (this.owner.rg_card.selectedIndex != LocalUtils.card.value && (__data.deskData.roomVo.phase == 'game')) {
+            game.scene.add(GameCommonChoicePrompt, ['重新载入后即可生效设置内容', {
+                name: '立即重载',
+                call: this.refreshHandler.bind(this)
+            }])
+        } else {
+            this.save();
+            __tips('保存成功');
+        }
+    }
+
+    async refreshHandler() {
+        this.save();
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        await __showScene.show_hall_play(HallPlay.lastCityId)
+        // await __showScene.load_game_mahjong();
+        // __showScene.show_game_mahjong();
+        __showScene.wait();
+        __reBack_info.read();
+    }
+
+    save() {
+        LocalUtils.music.value = this.owner.rg_music.selectedIndex;
+        LocalUtils.sound.value = this.owner.rg_sound.selectedIndex;
+        LocalUtils.desk.value = this.owner.rg_desk.selectedIndex;
+        LocalUtils.card.value = this.owner.rg_card.selectedIndex;
+        LocalUtils.sex.value = this.owner.rg_sex.selectedIndex;
+        LocalUtils.gift.value = this.owner.rg_gift.selectedIndex;
+        // LocalUtils.wall.value = this.owner.rg_wall.selectedIndex;
+        // LocalUtils.speed.value = this.owner.rg_speed.selectedIndex;
+
+        LocalUtils.save(LocalUtils.music.key, LocalUtils.music.value)
+        LocalUtils.save(LocalUtils.sound.key, LocalUtils.sound.value)
+        LocalUtils.save(LocalUtils.desk.key, LocalUtils.desk.value)
+        LocalUtils.save(LocalUtils.card.key, LocalUtils.card.value)
+        LocalUtils.save(LocalUtils.wall.key, LocalUtils.wall.value)
+        LocalUtils.save(LocalUtils.speed.key, LocalUtils.speed.value)
+        LocalUtils.save(LocalUtils.sex.key, LocalUtils.sex.value)
+        LocalUtils.save(LocalUtils.gift.key, LocalUtils.gift.value)
+
+        __data.mahjong_set.bgIndex = parseInt(LocalUtils.desk.value);
+        __data.mahjong_set.cardIndex = parseInt(LocalUtils.card.value);
+        __data.mahjong_set.wallIndex = parseInt(LocalUtils.wall.value);
+        __data.mahjong_set.speedIndex = parseInt(LocalUtils.speed.value);
+        __data.mahjong_set.sexIndex = parseInt(LocalUtils.sex.value);
+        __data.mahjong_set.giftIndex = parseInt(LocalUtils.gift.value);
+
+        // 性别  需要后端保存
+        game.server.send(2217, LocalUtils.sex.value + 1);
+
+        game.cb.event(__eh + 'save_set_data');
+    }
+}
+
+
+class MahjongGiftSetScript extends Laya.Script {
+
+    rg(_rg) {
+        this._rg = _rg;
+        return this;
+    }
+
+    clickToSave() {
+        this._clickToSave = true;
+        return this;
+    }
+
+    onEnable() {
+        this._rg.selectedIndex = LocalUtils.gift.value;
+        this._rg.on(Laya.Event.CHANGE, this, this._onCompChange);
+        this.init();
+    }
+
+    onDisable() {
+        this._rg.off(Laya.Event.CHANGE, this, this._onCompChange);
+    }
+
+    init() {
+        // IOS能支付修改
+        // if (!__data.vip.isVip && miniApi.isIOS) {
+        //     this.owner.visible = false;
+        // } else {
+        this.owner.visible = true;
+        // }
+    }
+
+    _onCompChange() {
+        if (this._rg.selectedIndex == 1) {
+            if (!__data.vip.isVip) {
+                Laya.timer.callLater(this, this._defaultIndex);
+                __tips('此功能仅限VIP使用');
+            }
+        }
+        if (this._clickToSave) {
+            LocalUtils.gift.value = this._rg.selectedIndex;
+            LocalUtils.save(LocalUtils.gift.key, LocalUtils.gift.value);
+            game.cb.event(__eh + 'save_set_data');
+        }
+    }
+
+    _defaultIndex() {
+        this._rg.selectedIndex = 0;
+    }
+}

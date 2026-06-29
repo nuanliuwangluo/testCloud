@@ -1,0 +1,462 @@
+class AITalkingComponent extends Laya.Script {
+    onEnable() {
+        game.cb.on('AITalking_init', this, this.init);
+        game.cb.on('AITalking_feed', this, this.feed);
+        game.cb.on('AITalking_discard', this, this.discard);
+        game.cb.on('AITalking_ting', this, this.ting);
+        game.cb.on('AITalking_operation', this, this.operation);
+        game.cb.on('AITalking_receive_gift', this, this.receiveGift);
+        game.cb.on('AITalking_stopTimer', this, this.stopTimer);
+    }
+
+    onDisable() {
+        game.cb.off('AITalking_init', this, this.init);
+        game.cb.off('AITalking_feed', this, this.feed);
+        game.cb.off('AITalking_discard', this, this.discard);
+        game.cb.off('AITalking_ting', this, this.ting);
+        game.cb.off('AITalking_operation', this, this.operation);
+        game.cb.off('AITalking_receive_gift', this, this.receiveGift);
+        game.cb.off('AITalking_stopTimer', this, this.stopTimer);
+    }
+
+
+    init() {
+        this.log('开始初始化AI互动规则...');
+        this.spokesmanId = this.getSpokesman();
+        this.reporterId = this.getReporter();
+        this.slowTime = this.createDiscardSlowTime();
+        this.feedMaps = {};
+        this.situation1Status = this.BLANK;
+        this.situation2Status = this.BLANK;
+        this.situation3Status = this.BLANK;
+        this.situation4Status = this.BLANK;
+        this.situation5Status = this.BLANK;
+        this.situation_4_feedPosition = 0;
+        this.situation_passive_numbers = 3;
+        this.situation_passive_giftId = 0;
+        this.situation_passive_uid = 0;
+        this.limit_numbers = 1; // 限制次数
+        this.log('发言人：' + this.spokesmanId);
+        this.log('上报人：' + this.reporterId);
+        this.log('打牌慢规定时间：' + this.slowTime);
+    }
+
+    /**
+     * 终止计时器
+     */
+    stopTimer() {
+        this.log(`终止timer触发.`);
+        Laya.timer.clearAll(this);
+    }
+
+    /**
+     * 开始计时
+     * @param {int} time 时间
+     * @param {string} type 类型
+     */
+    startTimer(time, type) {
+        this.stopTimer();
+        this.log(`${type}[${time}]毫秒后触发`);
+        Laya.timer.once(time, this, this.situation, [type]);
+    }
+
+    /**
+     * 触发
+     */
+    situation(index) {
+        // 不是上报人不处理此类消息
+        if (__data.uid != this.reporterId) { return; }
+        // 没有发言人
+        if (!this.spokesmanId) { return; }
+
+        let spokesman_vo = __data.deskData.roomVo.getPlayer(this.spokesmanId); // 发言人vo
+        if(!spokesman_vo){ return; };
+        
+        let talk = this.createRandomTalk(index, this.situation_passive_giftId);
+        let vo = null;
+        this.log(`${index}执行.`);
+
+        switch (index) {
+            case this.SITUATION_1:
+                let position = this.feedMaps[spokesman_vo.position]; // 给发言人喂牌的位置
+                vo = __data.deskData.roomVo.getPlayer(position); // 给发言人喂牌用户vo
+                if (this.allow) this.sendMessage(talk, vo.id);
+                else this.log(`共用次数：`, this.limit_numbers);
+                this.countLimitNumber();
+                break;
+            case this.SITUATION_2:
+                if (this.allow) this.sendMessage(talk);
+                else this.log(`共用次数：`, this.limit_numbers);
+                this.countLimitNumber();
+                break;
+            case this.SITUATION_3:
+                // 操作慢的是发言人自己   不处理
+                if (spokesman_vo.position == this.operationPosition) { return; }
+                vo = __data.deskData.roomVo.getPlayer(this.operationPosition);
+                if (this.allow) this.sendMessage(talk, vo.id);
+                else this.log(`共用次数：`, this.limit_numbers);
+                this.countLimitNumber();
+                break;
+            case this.SITUATION_4:
+                vo = __data.deskData.roomVo.getPlayer(this.situation_4_feedPosition); // 连续喂牌给别人的人
+                if (vo.id == this.spokesmanId) { return; }
+                if (this.allow) this.sendMessage(talk, vo.id);
+                else this.log(`共用次数：`, this.limit_numbers);
+                this.countLimitNumber();
+                break;
+            case this.SITUATION_5:
+                if (this.allow) this.sendMessage(talk);
+                else this.log(`共用次数：`, this.limit_numbers);
+                this.countLimitNumber();
+                break;
+            case this.SITUATION_PASSIVE:
+                this.situation_passive_numbers--;
+                vo = __data.deskData.roomVo.getPlayer(this.situation_passive_uid); // 送礼物给发言人的人
+                this.sendMessage(talk, vo.id);
+                break;
+        }
+    }
+
+    /**
+     * 减少共用次数
+     */
+    countLimitNumber() {
+        this.limit_numbers--;
+        this.limit_numbers = Math.max(0, this.limit_numbers);
+    }
+
+    /**
+     * 是否允许  如果共用次数超过0则允许 否则不允许
+     */
+    get allow() {
+        if (this.limit_numbers > 0)
+            return true;
+        else
+            return false;
+    }
+
+    /**
+     * 替发言人发消息
+     * @param {object} talk 
+     * @param {int} ruid 接收人id
+     */
+    sendMessage(talk, ruid) {
+        if (talk.type == this.WORD) {
+            this.log(`发言人[${this.getPlayerName(this.spokesmanId)}]发送文字[${this.getWordContent(talk.id)}]`);
+            // 5005 替AI发消息 int 消息Id，int aiId
+            game.server.send(5005, "umrumr" + talk.id, this.spokesmanId);
+        } else if (talk.type == this.GIFT) {
+            this.log(`发言人[${this.getPlayerName(this.spokesmanId)}]给[${this.getPlayerName(ruid)}]发送礼物[${this.getGiftName(talk.id)}]`);
+            // 5006 替AI送礼物 int 接受者id，int 礼物id， int aiId
+            game.server.send(5006, ruid, talk.id, this.spokesmanId);
+        }
+    }
+
+    /**
+     * 生成随机对话或礼物
+     * @param {int} index 
+     * @param {int} giftId 
+     * @returns 
+     */
+    createRandomTalk(index, giftId) {
+        let words = [];
+        let gifts = [];
+        let random_giftName = null;
+        let random_wordId = null;
+
+        let praises = ["啤酒", "鲜花"];
+        let hates = ["炸弹", "鸡蛋", "拖鞋"];
+        switch (index) {
+            case this.SITUATION_1:
+                gifts = ["啤酒", "鲜花"];
+                random_giftName = gifts[Math.floor(Math.random() * gifts.length)];
+                return { type: this.GIFT, id: this.getGiftIdByName(random_giftName) };
+            case this.SITUATION_2:
+                words = [101, 104];
+                random_wordId = words[Math.floor(Math.random() * words.length)];
+                return { type: this.WORD, id: random_wordId };
+            case this.SITUATION_3:
+                words = [107, 109];
+                random_wordId = words[Math.floor(Math.random() * words.length)];
+                gifts = ["拖鞋", "炸弹", "鸡蛋"];
+                random_giftName = gifts[Math.floor(Math.random() * gifts.length)];
+                if (Math.random() < 0.5) {
+                    return { type: this.WORD, id: random_wordId };
+                } else {
+                    return { type: this.GIFT, id: this.getGiftIdByName(random_giftName) };
+                }
+            case this.SITUATION_4:
+                gifts = ["拖鞋", "炸弹", "鸡蛋"];
+                random_giftName = gifts[Math.floor(Math.random() * gifts.length)];
+                return { type: this.GIFT, id: this.getGiftIdByName(random_giftName) };
+            case this.SITUATION_5:
+                words = [106];
+                random_wordId = words[Math.floor(Math.random() * words.length)];
+                return { type: this.WORD, id: random_wordId };
+            case this.SITUATION_PASSIVE:
+                // 收到的是正向的礼物
+                if (praises.indexOf(this.getGiftName(giftId)) != -1) {
+                    random_giftName = praises[Math.floor(Math.random() * praises.length)];
+                } else {
+                    random_giftName = hates[Math.floor(Math.random() * hates.length)];
+                }
+                return { type: this.GIFT, id: this.getGiftIdByName(random_giftName) };
+        }
+    }
+
+    /**
+     * 道具名称
+     * @param {string} name 
+     * @returns 
+     */
+    getGiftIdByName(name) {
+        for (const key in PropIcon.icon) {
+            const object = PropIcon.icon[key];
+            if (object && object.name == name) {
+                return key;
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {int} ruid 接收人id
+     * @param {int} suid 发送人id
+     * @param {int} giftId 礼物id
+     */
+    receiveGift(ruid, suid, giftId) {
+        if (!this.spokesmanId) { return; }
+        // 发言人收到礼物
+        if (ruid == this.spokesmanId) {
+            this.log(`[${this.getPlayerName(suid)}]给[${this.getPlayerName(ruid)}]发送礼物[${this.getGiftName(giftId)}]   回复次数[${this.situation_passive_numbers}]`);
+            if (this.situation_passive_numbers <= 0) { return; }
+            this.situation_passive_uid = suid;
+            this.situation_passive_giftId = giftId;
+            let time = this.situationPassiveRT();
+            this.startTimer(time, this.SITUATION_PASSIVE);
+        }
+    }
+
+    /**
+     * 
+     * @param {int} position 
+     */
+    operation(position) {
+        if (!this.spokesmanId) { return; }
+        if (!this.limit_numbers) { return; }
+        if (this.situation3Status == this.DONE) { return; }
+        // 剩余牌数没有达到要求不触发
+        if (__data.deskData.roomVo.surplus <= 0 || __data.deskData.roomVo.surplus >= 58) { return; }
+        this.operationPosition = position;
+        Laya.timer.once(this.slowTime, this, this.itsTooSlow);
+    }
+
+    /**
+     * 操作太慢了
+     */
+    itsTooSlow() {
+        this.situation3Status = this.DONE;
+        this.situation(this.SITUATION_3);
+    }
+
+    /**
+     * 取消计时
+     */
+    cancelSlowTimer() {
+        Laya.timer.clear(this, this.itsTooSlow);
+    }
+
+    /**
+     * 
+     * @param {int} position 
+     */
+    ting(position) {
+        if (!this.spokesmanId) { return; }
+        if (!this.limit_numbers) { return; }
+        this.cancelSlowTimer(); // 出现操作取消操作慢计时
+        let player = __data.deskData.roomVo.getPlayer(position);
+        let limit = 50; // 正常值   50
+        // 情况2 触发
+        if (player.id == this.spokesmanId && __data.deskData.roomVo.surplus >= limit) {
+            this.situation2Status = this.WAIT;
+        }
+        // 情况5触发
+        else if (player.id != this.spokesmanId && __data.deskData.roomVo.surplus >= limit) {
+            this.situation5Status = this.WAIT;
+        }
+    }
+
+    /**
+     * 打牌
+     * @param {int} position 
+     */
+    discard(position) {
+        if (!this.spokesmanId) { return; }
+        if (!this.limit_numbers) { return; }
+        this.cancelSlowTimer(); // 出现操作取消操作慢计时
+        let player = __data.deskData.roomVo.getPlayer(position);
+        // 情况1 触发
+        if (player.id == this.spokesmanId && this.situation1Status == this.WAIT) {
+            this.situation1Status = this.DONE;
+            let time = this.situation1RT();
+            this.startTimer(time, this.SITUATION_1);
+        }
+        // 情况2 触发
+        if (player.id == this.spokesmanId && this.situation2Status == this.WAIT) {
+            this.situation2Status = this.DONE;
+            let time = this.situation2RT();
+            this.startTimer(time, this.SITUATION_2);
+        }
+        // 情况4 触发
+        if (player.id != this.spokesmanId && this.situation4Status == this.WAIT) {
+            this.situation4Status = this.DONE;
+            let time = this.situation4RT();
+            this.startTimer(time, this.SITUATION_4);
+        }
+        // 情况5 触发
+        if (player.id != this.spokesmanId && this.situation5Status == this.WAIT) {
+            this.situation5Status = this.DONE;
+            let time = this.situation5RT();
+            this.startTimer(time, this.SITUATION_5);
+        }
+    }
+
+
+    /**
+     * 吃碰杠等
+     * @param {int} eaterPosition 
+     * @param {int} feedPosition 
+     */
+    feed(eaterPosition, feedPosition) {
+        if (!this.spokesmanId) { return; }
+        if (!this.limit_numbers) { return; }
+        this.log(`[${this.getPlayerName(feedPosition)}]给[${this.getPlayerName(eaterPosition)}]喂牌`);
+        let player = __data.deskData.roomVo.getPlayer(eaterPosition);
+        // 上一次操作来源和现在同一个位置
+        if (this.feedMaps[eaterPosition] == feedPosition) {
+            // 发言人连续 2 次触发同一人喂牌
+            if (player.id == this.spokesmanId && this.situation1Status == this.BLANK) {
+                this.situation1Status = this.WAIT;
+            }
+            // 其他人出现喂牌情况
+            else if (this.situation4Status == this.BLANK) {
+                this.situation_4_feedPosition = feedPosition;
+                this.situation4Status = this.WAIT;
+            }
+        } else {
+            this.feedMaps[eaterPosition] = feedPosition;
+        }
+    }
+
+
+    /**
+     * 发言人
+     */
+    getSpokesman() {
+        let ids = __data.deskData.roomVo.getPlayerIds();
+        let spokesman = 0;
+        for (let i = 0; i < ids.length; i++) {
+            this.log(`玩家Id[${ids[i]}]`);
+            if (ids[i].toString().length >= 10 && ids[i].toString().endsWith('5')) {
+                spokesman = Math.max(spokesman, ids[i]);
+            }
+        }
+        return spokesman;
+    }
+
+    /**
+     * 上报人
+     */
+    getReporter() {
+        let ids = __data.deskData.roomVo.getPlayerIds();
+        let reporter = 9999999999;
+        for (let i = 0; i < ids.length; i++) {
+            reporter = Math.min(reporter, ids[i]);
+        }
+        return reporter;
+    }
+
+    // 情况1随机事件 (2-4)秒
+    situation1RT() { return Math.floor(Math.random() * 2000) + 2000; }
+
+    // 情况2随机事件 (2-4)秒
+    situation2RT() { return Math.floor(Math.random() * 2000) + 2000; }
+
+    // 情况4随机事件 (2-4)秒
+    situation4RT() { return Math.floor(Math.random() * 2000) + 2000; }
+
+    // 情况5随机事件 (2-4)秒
+    situation5RT() { return Math.floor(Math.random() * 2000) + 2000; }
+
+    // 被动回复 情况随机事件 (1-3)秒
+    situationPassiveRT() { return Math.floor(Math.random() * 2000) + 1000; }
+
+    /**
+     * 打牌慢规定时间
+     * @returns 
+     */
+    createDiscardSlowTime() {
+        return (Math.floor(Math.random() * 5) + 8) * 1000;
+    }
+
+    /**
+     * 日志
+     * @param {string} content 
+     * @param {string} color 
+     */
+    log(content, color = '#7242ee') {
+        trace(`%cAIComponent-${content}`, `color:${color}`);
+    }
+
+    /**
+     * 礼物名称
+     * @param {int} giftId 
+     * @returns 
+     */
+    getGiftName(giftId) {
+        return PropIcon.icon[giftId] ? PropIcon.icon[giftId].name : '';
+    }
+
+    /**
+     * 对话内容
+     * @param {int} wordId 
+     * @returns 
+     */
+    getWordContent(wordId) {
+        for (let i = 0; i < Chat.wordConfig.length; i++) {
+            if (Chat.wordConfig[i].id == wordId) {
+                return Chat.wordConfig[i].content;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * 获取用户昵称
+     * @param {int} idOrPosition 
+     * @returns 
+     */
+    getPlayerName(idOrPosition) {
+        let vo = __data.deskData.roomVo.getPlayer(idOrPosition);
+        if (vo) {
+            return vo.name;
+        } else {
+            return "";
+        }
+    }
+
+
+    get SITUATION_1() { return '情况1'; }
+    get SITUATION_2() { return '情况2'; }
+    get SITUATION_3() { return '情况3'; }
+    get SITUATION_4() { return '情况4'; }
+    get SITUATION_5() { return '情况5'; }
+    get SITUATION_PASSIVE() { return '被动回复'; }
+
+    get WORD() { return "word"; }
+    get GIFT() { return "gift"; }
+
+    get BLANK() { return "blank"; }
+    get WAIT() { return "wait"; }
+    get DONE() { return "done"; }
+}

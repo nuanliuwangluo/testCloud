@@ -1,0 +1,51 @@
+class TestVideo extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'test/TestVideo',
+            layer: 'panel1'
+        })
+        this.btn_sure.addComponent(S_TestVideo_sure)
+        this.btn_toShare.addComponent(S_TestVideo_share)
+        this.btn_close.addComponent(S_TestVideo_stop)
+    }
+    added(adUnitId, new__successCallback, failCallback, useShareTips, stopCallback) {
+        this.adUnitId = adUnitId;
+        this.new__successCallback = new__successCallback;
+        this.failCallback = failCallback;
+        this.useShareTips = useShareTips;
+        this.stopCallback = stopCallback;
+    }
+    clickMask() { }
+}
+class S_TestVideo_stop extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        let b = game.scene.get(TestVideo).stopCallback;
+        b && b()
+        game.scene.remove(TestVideo)
+    }
+}
+class S_TestVideo_sure extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        let a = game.scene.get(TestVideo).new__successCallback
+        a && a()
+        game.scene.remove(TestVideo)
+    }
+}
+class S_TestVideo_share extends Laya.Script {
+    onClick(e) {
+        e && e.stopPropagation();
+        let a = game.scene.get(TestVideo).useShareTips
+        let b = game.scene.get(TestVideo).failCallback
+        let adUnitId = game.scene.get(TestVideo).adUnitId
+
+        a && __tips('暂无广告，请使用分享')
+        game.cb.event('update_video_ready', [{
+            adUnitId,
+            isSuccess: false,
+        }])
+        b && b()
+        game.scene.remove(TestVideo)
+    }
+}

@@ -1,0 +1,128 @@
+const DeskReplayUtils = new class {
+    getBottomScore(ruleId, rule) {
+        let bottom = 0;
+        try {
+            bottom = FriendRoomPlays.getPlay(ruleId).getScoreInfo(rule);
+        } catch (e) { }
+        return this.extractAllNumbers(bottom);
+    }
+    extractAllNumbers(str) {
+        // 匹配整数、小数、负数
+        const matches = str.toString().match(/-?\d+\.?\d*/g) || [];
+        return matches.join('');
+    }
+
+    set hallCityId(value) { this._cityId = value; }
+    get hallCityId() { return this._cityId; }
+
+    set lookOthers(value) { this._lookOthers = value; }
+    get lookOthers() { return this._lookOthers; }
+}();
+
+class DeskReplay extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'desk_common/DeskReplay',
+            "layer": 'panel1',
+            "offx": 0,
+            "offy": 0,
+            "centerx": true,
+            "centery": true,
+            "up": false,
+            "down": false,
+            "left": false,
+            "right": false
+        })
+        this.time__;
+        this.btn_stop.addComponent(DeskReplay_Script_stop)
+        this.btn_left.addComponent(DeskReplay_Script_left)
+        this.btn_play.addComponent(DeskReplay_Script_play).init(this)
+        this.btn_right.addComponent(DeskReplay_Script_right)
+        this.backScript = this.btn_back.addComponent(DeskReplay_Script_back);
+        // this.imgPlaySign.addComponent(DeskReplay_Script_updatePlaySing)
+        // game.utils.remove(this.btn_play)
+    }
+    onEnable() {
+        this.txt.text = __data.replayCode ? '回放码：' + __data.replayCode : '';
+        this.btn_play.getComponent(DeskReplay_Script_play).onClick()
+    }
+    onDisable() {
+        clearInterval(DeskReplay_time)
+    }
+    added(backFunc) {
+        this.backScript.back(backFunc);
+    }
+    clickMask() { }
+}
+class DeskReplay_Script_updatePlaySing extends Laya.Script {
+    onAwake() {
+        this.time = 0
+    }
+    onUpdate(e) {
+        this.time += (Laya.timer.delta)
+        if (this.time >= 500) {
+            this.time = 0;
+            // this.owner.skin = this.owner.skin == 'desk_common_replay/img_rec1.png' ? 'desk_common_replay/img_rec2.png' : 'desk_common_replay/img_rec1.png'
+        }
+    }
+}
+class DeskReplay_Script_left extends Laya.Script {
+    onClick(e) {
+        DeskReplay_delay += 100
+        if (DeskReplay_delay > 2000) DeskReplay_delay = 2000
+        clearInterval(DeskReplay_time)
+        DeskReplay_time = setInterval(DeskReplay.__DealNextReplayMsg, DeskReplay_delay)
+    }
+}
+class DeskReplay_Script_play extends Laya.Script {
+    init(a) {
+        this.replay = a;
+    }
+    // onEnable(){this.onClick()}
+    onClick(e) {
+        this.replay.addChild(this.replay.btn_stop)
+        game.utils.remove(this.replay.btn_play)
+        clearInterval(DeskReplay_time)
+        DeskReplay_time = setInterval(DeskReplay.__DealNextReplayMsg, DeskReplay_delay)
+    }
+}
+class DeskReplay_Script_right extends Laya.Script {
+    onClick(e) {
+        DeskReplay_delay -= 100
+        if (DeskReplay_delay < 100) DeskReplay_delay = 100
+        clearInterval(DeskReplay_time)
+        DeskReplay_time = setInterval(DeskReplay.__DealNextReplayMsg, DeskReplay_delay)
+    }
+}
+class DeskReplay_Script_back extends Laya.Script {
+    onClick(e) {
+        clearInterval(DeskReplay_time);
+        __data.deskData.roomVo.clear();
+        __data.lastSceneQueue.push(__showScene.show_hall)
+        __showScene.show_hall_play(DeskReplayUtils.hallCityId, 'friend', true, DeskReplayUtils.lookOthers);
+        // if (this._func) this._func();
+        // else __showScene.show_hall();
+        // sceneManager.showMainPanel()
+    }
+
+    back(func) {
+        this._func = func;
+    }
+}
+class DeskReplay_Script_stop extends Laya.Script {
+    onClick(e) {
+        this.owner.parent.addChild(this.owner.parent.btn_play);
+        game.utils.remove(this.owner.parent.btn_stop)
+        clearInterval(DeskReplay_time)
+    }
+}
+
+DeskReplay.__DealNextReplayMsg = null
+
+var DeskReplay_time
+var DeskReplay_msgArr
+var DeskReplay_delay = 1000
+
+function replayMsgDeal(msg_, type) {
+    if (!msg_) return
+}

@@ -1,0 +1,168 @@
+class GameMainEmailList extends game.ModuleBase {
+    static get loadResFolder() {
+        this._r1 = this._r1 ||
+            ['cdn.email', 'hall', 'common', 'bagIcon']
+        return this._r1
+    }
+    static get clearResFolder() {
+        this._r2 = this._r2 ||
+            ['cdn.email', 'hall', 'common', 'bagIcon']
+        return this._r2
+    }
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_emailList',
+            layer: 'panel'
+        })
+        this.__list.vScrollBarSkin = ''
+        this.btn_aKeyReceive.addComponent(S_email_akeyReceive)
+        this.btn_deleteHasRead.addComponent(S_email_deleteHasRead)
+    }
+    onEnable() {
+        // miniApi.showCustomAd_leftRight('down1')
+
+        game.server.send(2232)
+        this.update_email_data()
+        game.cb.on('update_email_data', this, this.update_email_data)
+    }
+
+    onDisable() {
+        game.cb.off('update_email_data', this, this.update_email_data)
+        ResUtils.clearClassTextureRes(GameMainEmailList, ['hall', 'common'])
+    }
+
+    update_email_data() {
+        this.__list.array = __data.email;
+        if (__data.email.length == 0) {
+            this.img_noEmail.visible = true;
+            this.img_listBg.visible = false;
+            this.__list.visible = false;
+            this.btn_aKeyReceive.visible = false;
+            this.btn_deleteHasRead.visible = false;
+            this.img_tips.visible = false;
+        } else {
+            this.img_noEmail.visible = false;
+            this.img_listBg.visible = true;
+            this.__list.visible = true;
+            this.btn_aKeyReceive.visible = true;
+            this.btn_deleteHasRead.visible = true;
+            this.img_tips.visible = true;
+        }
+    }
+}
+
+class S_email_akeyReceive extends Laya.Script {
+    onClick(e) {
+        game.server.send(2243)
+    }
+}
+
+class S_email_deleteHasRead extends Laya.Script {
+    onClick(e) {
+        __showScene.show_prompt_select('确定删除全部已读邮件吗？', () => {
+            game.server.send(2233)
+        })
+    }
+}
+
+class GameMainEmailItem extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_emailItem',
+            module: false
+        })
+        this.data;
+        this.addComponent(S_click_email_item)
+    }
+
+    set dataSource(value) {
+        if (!value) return;
+        this.data = value;
+        if (value.isReceive) {
+            this.txt_title.color = '#b9b7b5'
+            this.txt_date.color = '#cabfbd'
+            this.img_bg.skin = 'cdn/email/img_yj2.png'
+        } else {
+            this.txt_title.color = '#31415e'
+            this.txt_date.color = '#6a94b3'
+            this.img_bg.skin = 'cdn/email/img_yj1.png'
+        }
+        this.img_red.visible = value.isRead == 0;
+        this.txt_title.text = value.title;
+        this.txt_date.text = new Date(value.time).dateFormat("yyyy.MM.dd");
+    }
+}
+Laya.ClassUtils.regClass('ui.scene_hall.gameMain_emailItemUI', GameMainEmailItem);
+
+class S_click_email_item extends Laya.Script {
+    onClick(e) {
+        game.server.send(2234, this.owner.data.emailId)
+        // this.owner.data.des = '123ljfasklfjskldfj';
+        // this.owner.data.reward = '1|100_2|100';
+        // game.scene.add(GameMainEmailContent, [this.owner.data])
+    }
+}
+
+class GameMainEmailContent extends game.ModuleBase {
+    constructor() {
+        super({
+            map: 'scene_hall/gameMain_emailContent',
+            layer: 'panel'
+        })
+        this.btn_receive.addComponent(S_email_receive_a)
+        this.btn_delete.addComponent(S_email_delete_a)
+    }
+    added(emailVO) {
+        this.emailVO = emailVO;
+        this.update_email_content()
+        game.cb.on('update_email_data', this, this.update_email_content)
+    }
+
+    onDisable() {
+        game.cb.off('update_email_data', this, this.update_email_content)
+    }
+
+    update_email_content() {
+        this.txt_title.text = this.emailVO.title;
+        this.txt_date.text = new Date(this.emailVO.time).dateFormat("yyyy.MM.dd");
+        this.txt_des.text = this.emailVO.des;
+        let a = this.emailVO.reward
+        this.scene_prop0.visible = false
+        this.scene_prop1.visible = false
+        this.scene_prop2.visible = false
+        this.scene_prop3.visible = false
+        this.scene_prop4.visible = false
+        this.scene_prop5.visible = false
+        for (let index = 0, length = a.length; index < length; index++) {
+            const element = a[index];
+            this[`scene_prop${index}`].visible = true;
+            this[`scene_prop${index}`].vo = {
+                propId: element.id,
+                num: element.count
+            }
+        };
+        this.btn_receive.visible = false;
+        this.btn_delete.visible = false;
+        if (!a || !a.length) {
+            this.btn_delete.visible = true
+        }
+        else if (this.emailVO.isReceive) {
+            this.btn_delete.visible = true
+        }
+        else {
+            this.btn_receive.visible = true
+        }
+    }
+}
+class S_email_receive_a extends Laya.Script {
+    onClick(e) {
+        game.server.send(2235, this.owner.parent.emailVO.emailId)
+    }
+}
+class S_email_delete_a extends Laya.Script {
+    onClick(e) {
+        __showScene.show_prompt_select('确定删除此邮件吗？', () => {
+            game.server.send(2236, this.owner.parent.emailVO.emailId)
+        })
+    }
+}
